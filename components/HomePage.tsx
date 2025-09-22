@@ -6,6 +6,8 @@
 import React, { useState, useMemo } from 'react';
 import { useEditor } from '../context/EditorContext';
 import { tools, type ToolConfig, type ToolCategory } from '../config/tools';
+import SearchModule from './SearchModule';
+import RecentTools from './RecentTools';
 
 const categoryConfig: Record<ToolCategory, { title: string; description: string }> = {
     generation: { title: "Geração", description: "Dê vida às suas ideias. Crie imagens, padrões, logotipos e muito mais a partir de simples descrições de texto." },
@@ -13,7 +15,6 @@ const categoryConfig: Record<ToolCategory, { title: string; description: string 
     editing: { title: "Edição", description: "Aperfeiçoe suas imagens existentes com um conjunto completo de ferramentas de edição inteligentes e manuais." },
 };
 
-// Refactored ToolCard for a more engaging and modern look.
 const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
     const { setActiveTool } = useEditor()!;
     return (
@@ -33,20 +34,23 @@ const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
 };
 
 const HomePage: React.FC = () => {
+    const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<ToolCategory>('generation');
-
-    const toolsByCategory = useMemo(() => {
-        return tools.reduce((acc, tool) => {
-            (acc[tool.category] = acc[tool.category] || []).push(tool);
-            return acc;
-        }, {} as Record<ToolCategory, ToolConfig[]>);
-    }, []);
 
     const categoryKeys = Object.keys(categoryConfig) as ToolCategory[];
 
+    const filteredTools = useMemo(() => {
+        if (searchTerm.trim()) {
+            return tools.filter(tool =>
+                tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                tool.description.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+        return tools.filter(tool => tool.category === activeCategory);
+    }, [searchTerm, activeCategory]);
+
     return (
         <div className="container mx-auto px-4 py-8 sm:py-12 animate-fade-in">
-            {/* New header section */}
             <div className="text-center mb-10">
                 <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
                     Bem-vindo ao Pixshop AI
@@ -56,31 +60,43 @@ const HomePage: React.FC = () => {
                 </p>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="flex flex-col sm:flex-row justify-center mb-8 border-b border-gray-700">
-                {categoryKeys.map((key) => (
-                    <button
-                        key={key}
-                        onClick={() => setActiveCategory(key)}
-                        className={`px-4 sm:px-6 py-3 text-sm sm:text-base font-semibold transition-colors duration-200 border-b-2
-                            ${activeCategory === key
-                                ? 'border-blue-500 text-white'
-                                : 'border-transparent text-gray-400 hover:text-white hover:border-gray-500'
-                            }`}
-                    >
-                        {categoryConfig[key].title}
-                    </button>
-                ))}
-            </div>
+            <SearchModule searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+            
+            {!searchTerm.trim() && <RecentTools />}
 
-            {/* Content for the active tab */}
-            <section className="animate-fade-in">
-                <p className="text-gray-400 mb-8 text-center max-w-3xl mx-auto text-base sm:text-lg">{categoryConfig[activeCategory].description}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {toolsByCategory[activeCategory]?.map(tool => (
-                        <ToolCard key={tool.id} tool={tool} />
-                    ))}
-                </div>
+            {!searchTerm.trim() && (
+                <>
+                    <div className="flex flex-col sm:flex-row justify-center mt-8 border-b border-gray-700">
+                        {categoryKeys.map((key) => (
+                            <button
+                                key={key}
+                                onClick={() => setActiveCategory(key)}
+                                className={`px-4 sm:px-6 py-3 text-sm sm:text-base font-semibold transition-colors duration-200 border-b-2
+                                    ${activeCategory === key
+                                        ? 'border-blue-500 text-white'
+                                        : 'border-transparent text-gray-400 hover:text-white hover:border-gray-500'
+                                    }`}
+                            >
+                                {categoryConfig[key].title}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-gray-400 mt-8 text-center max-w-3xl mx-auto text-base sm:text-lg">{categoryConfig[activeCategory].description}</p>
+                </>
+            )}
+
+            <section className="mt-8 animate-fade-in">
+                 {filteredTools.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredTools.map(tool => (
+                            <ToolCard key={tool.id} tool={tool} />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-16">
+                        <p className="text-gray-400 text-lg">Nenhuma ferramenta encontrada para "{searchTerm}".</p>
+                    </div>
+                )}
             </section>
         </div>
     );

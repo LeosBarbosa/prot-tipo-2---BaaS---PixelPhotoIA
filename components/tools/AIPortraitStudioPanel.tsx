@@ -41,6 +41,14 @@ const caricatureSubStyles: CaricatureSubStyle[] = [
     { id: 'artistic', name: 'Artística', thumbnail: 'https://picsum.photos/seed/artistic/100/100', prompt: 'Estilo de caricatura artística, com traços de pintura digital e foco na expressão.' },
     { id: 'comic', name: 'HQ', thumbnail: 'https://picsum.photos/seed/comic/100/100', prompt: 'Estilo de caricatura de história em quadrinhos (HQ), com contornos fortes e cores chapadas.' },
     { id: 'classic', name: 'Clássica', thumbnail: 'https://picsum.photos/seed/classic/100/100', prompt: 'Estilo de caricatura clássica em preto e branco, com sombreamento de hachura.' },
+    { id: 'pencil-sketch-bw', name: 'Esboço a Lápis', thumbnail: 'https://picsum.photos/seed/pencil-bw/100/100', prompt: 'Converta a imagem para uma caricatura com estilo de esboço a lápis (pencil sketch). Exagere de forma artística as características faciais e mantenha a semelhança com a pessoa. Utilize um sombreamento detalhado, com hachuras e traços de lápis, para criar profundidade e textura. A paleta de cores deve ser em preto e branco com tons de cinza. O fundo deve ser limpo e branco, sem elementos adicionais.' },
+    { id: 'pencil-sketch-color', name: 'Esboço Colorido', thumbnail: 'https://picsum.photos/seed/pencil-color/100/100', prompt: 'Converta a imagem para uma caricatura com estilo de esboço a lápis colorido. Exagere de forma artística as características faciais e mantenha a semelhança com a pessoa. Utilize um sombreamento detalhado, com hachuras e traços de lápis, para criar profundidade e textura. A paleta de cores deve ser vibrante e expressiva, como um desenho a lápis colorido. O fundo deve ser limpo e branco, sem elementos adicionais.' },
+    {
+        id: 'artistic-portrait',
+        name: 'Retrato Artístico',
+        thumbnail: 'https://picsum.photos/seed/artistic-portrait/100/100',
+        prompt: 'Converta a imagem para uma caricatura colorida em estilo de desenho artístico. Exagere as características faciais de forma amigável e expressiva, mantendo uma forte semelhança com a pessoa. Utilize uma paleta de cores vibrante e expressiva, com sombreamento suave e gradientes sutis para dar profundidade e volume. Os contornos devem ser definidos, mas sem a rigidez de um desenho de HQ. O fundo deve ser uma cor sólida ou um gradiente simples para destacar o retrato. O resultado deve ter um acabamento de pintura digital de alta qualidade, sem textura de lápis.'
+    },
 ];
 
 const AIPortraitStudioPanel: React.FC = () => {

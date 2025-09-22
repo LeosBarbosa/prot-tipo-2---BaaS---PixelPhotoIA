@@ -51,7 +51,7 @@ const ImageViewer: React.FC = () => {
     const imageContainerRef = useRef<HTMLDivElement>(null);
 
     const [isPlaying, setIsPlaying] = useState(false);
-    // FIX: Initialize useRef with null to provide an initial value, resolving the "Expected 1 arguments, but got 0" error.
+    // FIX: Corrigida a inicialização do hook useRef. O erro "Expected 1 arguments, but got 0" provavelmente apontava para esta linha, já que useRef foi chamado sem um valor inicial. Inicializá-lo com `null` resolve o problema.
     const animationFrameRef = useRef<number | null>(null);
     const lastFrameTimeRef = useRef<number>(0);
     const playbackFrameIndexRef = useRef<number>(0);

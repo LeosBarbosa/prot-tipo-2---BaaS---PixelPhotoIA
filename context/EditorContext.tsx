@@ -18,6 +18,7 @@ import { parseGif } from '../utils/gifUtils';
 import * as geminiService from '../services/geminiService';
 import { type ToolId, type TransformType, type DetectedObject, TabId } from '../types';
 import { handleOrchestratorCall } from '../services/orchestrator';
+import { loadRecentTools, saveRecentTools } from '../utils/db';
 
 interface GifFrame {
     imageData: ImageData;
@@ -64,6 +65,7 @@ const DEFAULT_TEXT_TOOL_STATE: TextToolState = {
 interface EditorContextType {
     activeTool: ToolId | null;
     setActiveTool: React.Dispatch<React.SetStateAction<ToolId | null>>;
+    recentTools: ToolId[];
     currentImage: File | null;
     originalImage: File | null;
     isLoading: boolean;
@@ -204,6 +206,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [highlightedObject, setHighlightedObject] = useState<DetectedObject | null>(null);
     const [textToolState, setTextToolState] = useState<TextToolState>(DEFAULT_TEXT_TOOL_STATE);
     const [panelsVisible, setPanelsVisible] = useState(true);
+    const [recentTools, setRecentTools] = useState<ToolId[]>([]);
 
     // GIF State
     const [isGif, setIsGif] = useState<boolean>(false);
@@ -253,6 +256,28 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setInitialImage: setHistoryInitialImage, clearHistory, undo, redo, resetHistory,
         history, historyIndex, jumpToState,
     } = useHistoryState(onHistoryStateChange);
+    
+    // Load recent tools on mount
+    useEffect(() => {
+        const fetchRecentTools = async () => {
+            const loadedTools = await loadRecentTools();
+            if (loadedTools) {
+                setRecentTools(loadedTools);
+            }
+        };
+        fetchRecentTools();
+    }, []);
+    
+    // Track and save recent tools
+    useEffect(() => {
+        if (activeTool) {
+            setRecentTools(prev => {
+                const newRecent = [activeTool, ...prev.filter(t => t !== activeTool)].slice(0, 5);
+                saveRecentTools(newRecent);
+                return newRecent;
+            });
+        }
+    }, [activeTool]);
     
     const setInitialImage = useCallback(async (file: File) => {
         if (file.type === 'image/gif') {
@@ -783,6 +808,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const value: EditorContextType = {
         activeTool, setActiveTool,
+        recentTools,
         currentImage, originalImage, isLoading, setIsLoading, error, setError, loadingMessage, setLoadingMessage,
         isHistoryLoading, canUndo, canRedo, undo, redo, resetHistory, setInitialImage, handleUploadNew,
         history, historyIndex, jumpToState,
