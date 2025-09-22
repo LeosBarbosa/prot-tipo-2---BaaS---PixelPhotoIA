@@ -3,15 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import { dataURLtoFile, fileToDataURL } from '../utils/imageUtils';
+import { useState, useCallback, useMemo } from 'react';
 
 /**
  * @description Manages image editing history (undo/redo stack).
- * @param {() => void} onStateChange - Callback triggered on history changes to clear related editing states (masks, crops, etc.).
+ * @param {(newImage?: File) => void} onStateChange - Callback triggered on history changes to clear related editing states (masks, crops, etc.).
  * @returns {object} The history state and actions to manipulate it.
  */
-export const useHistoryState = (onStateChange: () => void) => {
+export const useHistoryState = (onStateChange: (newImage?: File) => void) => {
   const [history, setHistory] = useState<File[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const [isHistoryLoading, setIsHistoryLoading] = useState<boolean>(false); // Can be used for async loading from IDB in future
@@ -27,43 +26,53 @@ export const useHistoryState = (onStateChange: () => void) => {
     newHistory.push(newImageFile);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
-    onStateChange();
+    onStateChange(newImageFile);
   }, [history, historyIndex, onStateChange]);
   
   const setInitialImage = useCallback((file: File) => {
       const newHistory = [file];
       setHistory(newHistory);
       setHistoryIndex(0);
-      onStateChange();
+      onStateChange(file);
   }, [onStateChange]);
 
   const clearHistory = useCallback(() => {
     setHistory([]);
     setHistoryIndex(-1);
-    // onStateChange(); // Let the caller decide if UI should clear
-  }, []);
+    onStateChange();
+  }, [onStateChange]);
 
   const undo = useCallback(() => {
     if (canUndo) {
-      setHistoryIndex(historyIndex - 1);
-      onStateChange();
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      onStateChange(history[newIndex]);
     }
-  }, [canUndo, historyIndex, onStateChange]);
+  }, [canUndo, history, historyIndex, onStateChange]);
 
   const redo = useCallback(() => {
     if (canRedo) {
-      setHistoryIndex(historyIndex + 1);
-      onStateChange();
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      onStateChange(history[newIndex]);
     }
-  }, [canRedo, historyIndex, onStateChange]);
+  }, [canRedo, history, historyIndex, onStateChange]);
 
   const resetHistory = useCallback(() => {
     if (history.length > 0 && historyIndex > 0) {
-        setHistory([history[0]]);
+        const original = history[0];
+        setHistory([original]);
         setHistoryIndex(0);
-        onStateChange();
+        onStateChange(original);
     }
   }, [history, historyIndex, onStateChange]);
+
+  const jumpToState = useCallback((index: number) => {
+      if (index >= 0 && index < history.length) {
+          setHistoryIndex(index);
+          onStateChange(history[index]);
+      }
+  }, [history, onStateChange]);
 
   return {
     currentImage,
@@ -71,11 +80,14 @@ export const useHistoryState = (onStateChange: () => void) => {
     canUndo,
     canRedo,
     isHistoryLoading,
+    history,
+    historyIndex,
     addImageToHistory,
     setInitialImage,
     clearHistory,
     undo,
     redo,
     resetHistory,
+    jumpToState,
   };
 };

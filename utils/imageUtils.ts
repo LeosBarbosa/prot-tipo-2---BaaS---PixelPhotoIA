@@ -41,6 +41,39 @@ export const fileToDataURL = (file: File): Promise<string> => {
     });
 };
 
+export const frameToDataURL = (imageData: ImageData): string => {
+    const canvas = document.createElement('canvas');
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error("Could not create canvas context");
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL('image/png');
+};
+
+export const frameToFile = (imageData: ImageData, filename: string): File => {
+    const dataUrl = frameToDataURL(imageData);
+    return dataURLtoFile(dataUrl, filename);
+};
+
+
+export const dataURLToImageData = (dataUrl: string): Promise<ImageData> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject(new Error("Could not get canvas context"));
+            ctx.drawImage(img, 0, 0);
+            resolve(ctx.getImageData(0, 0, img.width, img.height));
+        };
+        img.onerror = reject;
+        img.src = dataUrl;
+    });
+};
+
 /**
  * Creates a mask image data URL from a crop selection.
  * @param crop The pixel crop object.
@@ -80,8 +113,8 @@ export const optimizeImage = (
     quality: number = 0.9
 ): Promise<File> => {
     return new Promise((resolve, reject) => {
-        if (!file.type.startsWith('image/')) {
-            // If it's not an image, just resolve with the original file
+        // Bypass non-images and GIFs. GIFs have a separate, more complex processing pipeline.
+        if (!file.type.startsWith('image/') || file.type === 'image/gif') {
             return resolve(file);
         }
 

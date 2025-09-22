@@ -45,7 +45,7 @@ export const handleApiResponse = (
     }
     
     // FIX: Acede à propriedade de texto diretamente da resposta.
-    const textFeedback = response.text?.trim();
+    const textFeedback = response.text;
     throw new Error(`O modelo de IA não retornou uma imagem. ` + 
         (textFeedback ? `O modelo respondeu com texto: "${textFeedback}"` : "Isto pode ser devido a filtros de segurança. Tente reformular o seu prompt."));
 };
@@ -196,6 +196,121 @@ export const generateVideo = async (prompt: string, aspectRatio: string): Promis
     return dummyVideoUrl;
 };
 
+const getBase64AndMimeFromDataUrl = (dataUrl: string): { data: string, mimeType: string } => {
+    const arr = dataUrl.split(',');
+    if (arr.length < 2) throw new Error("URL de dados inválida");
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch || !mimeMatch[1]) throw new Error("Não foi possível analisar o tipo MIME da URL de dados");
+    
+    const mimeType = mimeMatch[1];
+    const data = arr[1];
+    return { data, mimeType };
+};
+
+export const generateAnimationFromImage = async (image: File, prompt: string): Promise<string> => {
+    const dataUrl = await fileToDataURL(image);
+    const { data: imageBytes, mimeType } = getBase64AndMimeFromDataUrl(dataUrl);
+
+    let operation = await ai.models.generateVideos({
+        model: 'veo-2.0-generate-001',
+        prompt: `Animar o assunto principal na imagem fornecida com base na seguinte descrição: "${prompt}". A animação deve ser divertida, curta e em loop.`,
+        image: {
+            imageBytes: imageBytes,
+            mimeType: mimeType,
+        },
+        config: {
+            numberOfVideos: 1
+        }
+    });
+
+    while (!operation.done) {
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        operation = await ai.operations.getVideosOperation({operation: operation});
+    }
+
+    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+    if (!downloadLink) {
+        throw new Error("A geração de vídeo falhou ou não retornou um link para download.");
+    }
+    
+    return `${downloadLink}&key=${process.env.API_KEY!}`;
+};
+
+// --- NOVAS FERRAMENTAS DO PLANO DE AÇÃO ---
+export const generateSeamlessPattern = async (prompt: string): Promise<string> => {
+    const textPart = { text: `Você é um gerador de padrões de fundo sem costura. Crie um padrão digital sem emendas com base na seguinte descrição: "${prompt}". O padrão deve ser repetível em todas as direções para ser usado como papel de parede. A saída deve ser uma imagem PNG de alta qualidade. Retorne APENAS a imagem.` };
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
+export const applyTextEffect = async (image: File, prompt: string): Promise<string> => {
+    const imagePart = await fileToPart(image);
+    const textPart = { text: `Você é um especialista em efeitos de texto generativos. A sua tarefa é renderizar o texto da imagem fornecida, aplicando o seguinte efeito visual: "${prompt}". Mantenha o texto e a composição original, alterando apenas a sua aparência visual. Retorne APENAS a imagem editada.` };
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [imagePart, textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
+export const convertToVector = async (image: File): Promise<string> => {
+    const imagePart = await fileToPart(image);
+    const textPart = { text: `Você é um assistente de design vetorial. Analise a imagem bitmap fornecida e converta-a num estilo de arte vetorial. O resultado deve ter bordas nítidas, cores sólidas e um visual limpo, como um ícone. Retorne APENAS a imagem final com o estilo vetorial.` };
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [imagePart, textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
+export const generateLogo = async (prompt: string): Promise<string> => {
+    const textPart = { text: `Você é um designer de logotipos de IA. Crie um logotipo único e minimalista para uma empresa ou conceito com base na seguinte descrição: "${prompt}". O logotipo deve ser moderno, escalável e visualmente atraente, com um ícone e um texto opcional. O fundo deve ser transparente. Retorne APENAS a imagem do logotipo em alta resolução.` };
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
+export const generateSticker = async (prompt: string): Promise<string> => {
+    const textPart = { text: `Você é um ilustrador de adesivos. Gere uma imagem de adesivo vetorial, com um fundo transparente, a partir da descrição: "${prompt}". A ilustração deve ter um estilo de desenho animado (cartoon), com linhas de contorno grossas e cores sólidas ou gradientes simples. O resultado deve ser uma imagem pronta para ser usada como adesivo.` };
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
+export const generateCaricature = async (image: File, userPrompt: string): Promise<string> => {
+    const imagePart = await fileToPart(image);
+    const prompt = `Você é um caricaturista de IA. Pegue a imagem de retrato fornecida e transforme-a numa caricatura divertida e estilizada. Exagere as características faciais de forma artística, mas mantenha-a reconhecível. O estilo deve ser colorido e animado. Incorpore as seguintes instruções do usuário na cena: "${userPrompt}". Retorne APENAS a imagem final da caricatura.`;
+    const textPart = { text: prompt };
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [imagePart, textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
+export const generate3DModel = async (prompt: string): Promise<string> => {
+    const textPart = { text: `Você é um modelador 3D de IA. Crie um objeto 3D detalhado com base na seguinte descrição: "${prompt}". O modelo deve ser renderizado numa cena de estúdio com iluminação neutra e um fundo sólido e escuro. Retorne APENAS a imagem da renderização final do modelo 3D. (Nota: não posso gerar um arquivo de modelo 3D, apenas uma imagem da renderização)` };
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
 
 // --- FERRAMENTAS DE EDIÇÃO ---
 
@@ -340,7 +455,7 @@ export const detectObjects = async (image: File): Promise<DetectedObject[]> => {
     });
 
     try {
-        const jsonText = response.text.trim();
+        const jsonText = response.text;
         const objects = JSON.parse(jsonText);
         if (!Array.isArray(objects)) {
             throw new Error("A resposta da API não é um array.");
@@ -418,6 +533,115 @@ export const applyDustAndScratch = async (originalImage: File): Promise<string> 
     const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image-preview',
         contents: { parts: [originalImagePart, textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
+export const denoiseImage = async (originalImage: File): Promise<string> => {
+    const originalImagePart = await fileToPart(originalImage);
+    const prompt = `
+        Sua tarefa é remover o ruído e a granulação da imagem fornecida.
+        Ajuste as imperfeições causadas por fotos tiradas em baixa iluminação, preservando a nitidez e os detalhes finos do assunto.
+        O resultado deve ser uma imagem com aparência mais limpa e suave, mas sem parecer artificial ou plástica.
+        Saída: Retorne APENAS a imagem final aprimorada.
+    `;
+    const textPart = { text: prompt };
+
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [originalImagePart, textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
+export const applyFaceRecovery = async (originalImage: File): Promise<string> => {
+    const originalImagePart = await fileToPart(originalImage);
+    const prompt = `
+        Você é um especialista em restauração de fotos com IA, especializado em rostos (semelhante ao GFPGAN). 
+        A sua tarefa é aprimorar e restaurar o(s) rosto(s) na imagem fornecida. 
+        1.  **Foco Principal:** Corrija imperfeições como borrões, ruído e artefactos de compressão nos rostos.
+        2.  **Melhoria de Detalhes:** Aumente a nitidez dos olhos, cabelo e textura da pele de forma natural.
+        3.  **Realismo:** O resultado deve ser fotorrealista, preservando a identidade e as características únicas da pessoa. Não crie um visual artificial ou de "plástico".
+        4.  **Upscaling:** Aumente a resolução geral da imagem em 4x.
+        A sua saída deve ser APENAS a imagem final aprimorada.
+    `;
+    const textPart = { text: prompt };
+
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [originalImagePart, textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
+export const unblurImage = async (originalImage: File, sharpenLevel: number, denoiseLevel: number, model: string): Promise<string> => {
+    const originalImagePart = await fileToPart(originalImage);
+    const prompt = `
+        Sua tarefa é remover o desfoque da imagem. O desfoque principal é do tipo "${model}".
+        - Aplique um aguçamento no nível ${sharpenLevel}%.
+        - Reduza o ruído e a granulação no nível ${denoiseLevel}%.
+        - Restaure os detalhes do rosto, se houver.
+        - O resultado deve ser nítido e claro, corrigindo os defeitos da imagem original.
+        Saída: Retorne APENAS a imagem final nítida.
+    `;
+    const textPart = { text: prompt };
+
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [originalImagePart, textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
+export const applyDisneyPixarStyle = async (originalImage: File, userPrompt: string): Promise<string> => {
+    const originalImagePart = await fileToPart(originalImage);
+    const prompt = `
+        Crie uma imagem no estilo de um filme da Disney Pixar.
+        Transforme a pessoa na foto para um personagem 3D com a estética de animação da Pixar.
+        Mantenha as características faciais e a identidade da pessoa.
+        Adicione a seguinte descrição extra para guiar a cena: "${userPrompt}".
+        Saída: Retorne APENAS a imagem final, sem texto na imagem.
+    `;
+    const textPart = { text: prompt };
+
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [originalImagePart, textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
+export const generate3DMiniature = async (originalImage: File, userPrompt: string): Promise<string> => {
+    const originalImagePart = await fileToPart(originalImage);
+    const prompt = `
+        Crie uma miniatura comercializada em escala 1/6 da pessoa na imagem. O resultado deve ser hiper-realista, como uma foto de estúdio de uma figura de ação. A miniatura está sobre uma mesa de computador, com uma base acrílica redonda e transparente, sem texto. Na tela do computador, mostre o processo de modelagem 3D (ZBrush) desta mesma figura. Ao lado do monitor, coloque uma caixa de embalagem no estilo Bandai com a arte original em ilustrações bidimensionais.
+        Adicione a seguinte descrição extra do usuário para refinar o resultado: "${userPrompt}".
+        Saída: Retorne APENAS a imagem final, sem texto na imagem.
+    `;
+    const textPart = { text: prompt };
+
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [originalImagePart, textPart] },
+        config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
+    });
+    return handleApiResponse(response);
+};
+
+export const applyPolaroidEffect = async (personImage: File, celebrityImage: File): Promise<string> => {
+    const personPart = await fileToPart(personImage);
+    const celebrityPart = await fileToPart(celebrityImage);
+    const prompt = `Crie uma imagem de uma foto Polaroid em cima de uma mesa de madeira. A foto Polaroid deve mostrar a pessoa da primeira imagem e a celebridade da segunda imagem juntas, sorrindo e tirando uma selfie. A iluminação deve ser natural e a composição deve ser realista, como se a foto fosse real. Retorne APENAS a imagem final.`;
+    const textPart = { text: prompt };
+
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image-preview',
+        contents: { parts: [personPart, celebrityPart, textPart] },
         config: { responseModalities: [Modality.IMAGE, Modality.TEXT] },
     });
     return handleApiResponse(response);

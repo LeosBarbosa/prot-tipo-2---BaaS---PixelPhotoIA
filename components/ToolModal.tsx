@@ -2,7 +2,8 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import React, { useCallback, useEffect } from 'react';
+
+import React from 'react';
 import { useEditor } from '../context/EditorContext';
 import { CloseIcon } from './icons';
 
@@ -14,45 +15,22 @@ interface ToolModalProps {
 const ToolModal: React.FC<ToolModalProps> = ({ title, children }) => {
     const { setActiveTool } = useEditor()!;
 
-    // Memoiza a função para evitar recriação desnecessária
-    const handleClose = useCallback(() => {
-        setActiveTool(null);
-    }, [setActiveTool]);
-
-    // Adiciona listener para fechar com a tecla "Esc"
-    useEffect(() => {
-        const handleEsc = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                handleClose();
-            }
-        };
-
-        window.addEventListener('keydown', handleEsc);
-        return () => {
-            window.removeEventListener('keydown', handleEsc);
-        };
-    }, [handleClose]);
-
     return (
         <div 
-            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" 
-            onClick={handleClose} // Fecha ao clicar no fundo
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+            onClick={() => setActiveTool(null)}
         >
             <div 
-                className="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-7xl h-full flex flex-col overflow-hidden"
-                onClick={e => e.stopPropagation()} // Impede que o clique dentro do modal o feche
+                className="w-full h-full max-w-7xl max-h-[95vh] bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-700 animate-zoom-rise"
+                onClick={e => e.stopPropagation()}
             >
                 <header className="flex items-center justify-between p-4 border-b border-gray-700 flex-shrink-0">
-                    <h2 className="text-xl font-bold text-white">{title}</h2>
-                    <button 
-                        onClick={handleClose} 
-                        className="p-2 rounded-full hover:bg-gray-700/80 transition-colors"
-                        aria-label="Fechar modal"
-                    >
-                        <CloseIcon className="w-6 h-6 text-gray-300" />
+                    <h2 className="text-lg font-bold text-white">{title}</h2>
+                    <button onClick={() => setActiveTool(null)} className="text-gray-400 hover:text-white transition-colors">
+                        <CloseIcon className="w-6 h-6" />
                     </button>
                 </header>
-                <div className="flex-grow overflow-y-auto relative">
+                <div className="flex-grow overflow-y-auto">
                     {children}
                 </div>
             </div>
@@ -60,5 +38,4 @@ const ToolModal: React.FC<ToolModalProps> = ({ title, children }) => {
     );
 };
 
-// Memoiza o componente para evitar re-renderizações desnecessárias
-export default React.memo(ToolModal);
+export default ToolModal;

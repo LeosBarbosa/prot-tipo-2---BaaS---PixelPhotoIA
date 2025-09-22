@@ -18,19 +18,12 @@ const FooterActions: React.FC = React.memo(() => {
         redo,
         resetHistory,
         setIsComparisonModalOpen,
+        isGif,
+        handleDownload,
     } = useEditor()!;
-
-    const handleDownload = () => {
-        if (!currentImage) return;
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(currentImage);
-        link.download = `pixshop-edit-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
     
     const isCompareDisabled = !originalImage || originalImage === currentImage;
+    const isDownloadDisabled = !currentImage || isGif;
 
     return (
         <footer className="p-4 border-t border-gray-700/50 bg-gray-900/50 flex flex-col items-center justify-center gap-4 mt-auto flex-shrink-0">
@@ -55,10 +48,14 @@ const FooterActions: React.FC = React.memo(() => {
             {/* Ações Principais */}
             <div className="flex w-full gap-2 mt-2">
                 <button onClick={handleUploadNew} className="w-1/2 flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-3 px-5 rounded-md transition-colors text-sm"><UploadIcon className="w-5 h-5" />Nova Imagem</button>
-                <button onClick={handleDownload} disabled={!currentImage} className="w-1/2 bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-5 rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                    <DownloadIcon className="w-5 h-5" />
-                    Baixar
-                </button>
+                <div className="w-1/2 flex gap-2" title={isGif ? "O download de GIFs editados ainda não é suportado." : ""}>
+                    <button onClick={() => handleDownload('png')} disabled={isDownloadDisabled} className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                        PNG
+                    </button>
+                     <button onClick={() => handleDownload('jpeg')} disabled={isDownloadDisabled} className="w-full bg-gradient-to-br from-sky-600 to-sky-500 text-white font-bold py-3 px-4 rounded-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                        JPG
+                    </button>
+                </div>
             </div>
         </footer>
     );

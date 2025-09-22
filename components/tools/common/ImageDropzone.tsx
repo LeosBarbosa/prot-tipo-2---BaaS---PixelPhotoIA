@@ -13,6 +13,7 @@ interface ImageDropzoneProps {
 
 const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageFile, onFileSelect, label }) => {
     const [isDraggingOver, setIsDraggingOver] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const imageUrl = useMemo(() => {
         if (!imageFile) return null;
@@ -25,8 +26,14 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageFile, onFileSelect, 
     }, [imageFile]);
 
     const handleFileChange = useCallback((files: FileList | null) => {
+        setError(null);
         if (files && files[0]) {
-            onFileSelect(files[0]);
+            if (files[0].type.startsWith('image/')) {
+                onFileSelect(files[0]);
+            } else {
+                setError('Apenas arquivos de imagem são permitidos.');
+                setTimeout(() => setError(null), 3000); // Auto-clear error
+            }
         }
     }, [onFileSelect]);
 
@@ -44,15 +51,19 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageFile, onFileSelect, 
         e.stopPropagation();
         onFileSelect(null);
     };
+    
+    const borderColor = error
+        ? 'border-red-500'
+        : isDraggingOver
+        ? 'border-blue-500 bg-blue-500/10'
+        : 'border-gray-600 hover:border-blue-500';
 
     return (
         <div className="flex flex-col items-center gap-2 w-full">
             <h4 className="font-semibold text-gray-300 text-sm">{label}</h4>
             <label
                 htmlFor={`upload-${label.replace(/\s+/g, '-')}`}
-                className={`relative group w-full aspect-square bg-gray-900/50 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
-                    isDraggingOver ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 hover:border-blue-500'
-                }`}
+                className={`relative group w-full aspect-square bg-gray-900/50 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-all ${borderColor}`}
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingOver(true); }}
                 onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingOver(true); }}
                 onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingOver(false); }}
@@ -83,8 +94,9 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageFile, onFileSelect, 
                     onChange={(e) => handleFileChange(e.target.files)}
                 />
             </label>
-            {imageFile && (
-                 <p className="text-xs text-gray-400 w-full text-center truncate px-1" title={imageFile.name}>
+            {error && <p className="text-xs text-red-400 w-full text-center px-1 h-4">{error}</p>}
+            {imageFile && !error && (
+                 <p className="text-xs text-gray-400 w-full text-center truncate px-1 h-4" title={imageFile.name}>
                     {imageFile.name}
                 </p>
             )}

@@ -5,53 +5,107 @@
 
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { ArrowUpOnSquareIcon } from '../icons';
+import { ArrowUpOnSquareIcon, SparkleIcon } from '../icons';
+import ToggleSwitch from '../common/ToggleSwitch';
 
 const UpscalePanel: React.FC = () => {
-    const { isLoading, handleApplyUpscale } = useEditor();
-    const [factor, setFactor] = useState(2);
-    const [preserveFace, setPreserveFace] = useState(true);
+  const { 
+    isLoading, 
+    handleApplyUpscale, 
+    handleWonderModelUpscale,
+    currentImage 
+  } = useEditor();
+  
+  const [factor, setFactor] = useState<number>(4);
+  const [preserveFace, setPreserveFace] = useState<boolean>(true);
+  const [originalDimensions, setOriginalDimensions] = useState<{width: number, height: number} | null>(null);
 
-    return (
-        <div className="w-full flex flex-col gap-6 animate-fade-in">
-            <div className="text-center">
-                <h3 className="text-lg font-semibold text-gray-300">Melhorar Resolução (Upscale)</h3>
-                <p className="text-sm text-gray-400 -mt-1">Aumente a qualidade da sua imagem com IA.</p>
-            </div>
+  React.useEffect(() => {
+    let objectUrl: string | null = null;
+    if (currentImage) {
+        const image = new Image();
+        image.onload = () => {
+            setOriginalDimensions({ width: image.naturalWidth, height: image.naturalHeight });
+            if(objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+        objectUrl = URL.createObjectURL(currentImage);
+        image.src = objectUrl;
+    }
+    return () => {
+        if(objectUrl) URL.revokeObjectURL(objectUrl);
+    }
+  }, [currentImage]);
 
+
+  const finalDimensions = originalDimensions ? {
+    width: originalDimensions.width * factor,
+    height: originalDimensions.height * factor,
+  } : null;
+
+  const handleApply = () => {
+    handleApplyUpscale(factor, preserveFace);
+  };
+  
+  return (
+    <div className="w-full flex flex-col gap-4">
+      <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2 text-center">Fator de Aumento</label>
+          <div className="flex w-full bg-gray-800/50 border border-gray-600 rounded-lg p-1">
+              {[2, 4, 8].map(f => (
+                  <button key={f} type="button" onClick={() => setFactor(f)} disabled={isLoading} className={`w-full text-center font-semibold py-2 rounded-md transition-all text-sm ${factor === f ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-white/10'}`}>
+                  {f}x
+                  </button>
+              ))}
+          </div>
+      </div>
+
+      {originalDimensions && (
             <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Fator de Aumento</label>
-                <div className="flex w-full bg-gray-800/50 border border-gray-600 rounded-lg p-1">
-                    {[2, 4].map(f => (
-                        <button key={f} onClick={() => setFactor(f)} disabled={isLoading} className={`w-full text-center font-semibold py-2 rounded-md transition-all text-sm ${factor === f ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-white/10'}`}>
-                            {f}x
-                        </button>
-                    ))}
-                </div>
-            </div>
+              <label className="block text-sm font-medium text-gray-300 mb-2 text-center">Dimensões Finais</label>
+              <div className="flex items-center justify-center bg-gray-800/50 border border-gray-600 rounded-lg p-3 text-base font-mono text-white tracking-wider">
+                  {finalDimensions?.width ?? '...'}
+                  <span className="text-gray-500 mx-3">×</span>
+                  {finalDimensions?.height ?? '...'}
+                  <span className="text-gray-400 ml-2">px</span>
+              </div>
+          </div>
+      )}
+    
+      <div className="flex items-center justify-between">
+          <label htmlFor="preserve-face" className="font-semibold text-gray-200 text-sm cursor-pointer">Preservar Rosto</label>
+          <ToggleSwitch id="preserve-face" checked={preserveFace} onChange={setPreserveFace} disabled={isLoading} />
+      </div>
 
-            <div className="flex items-center justify-between bg-gray-800/50 p-3 rounded-lg">
-                <label htmlFor="preserve-face" className="text-sm font-medium text-gray-300">Otimizar Faces</label>
-                <input
-                    id="preserve-face"
-                    type="checkbox"
-                    checked={preserveFace}
-                    onChange={(e) => setPreserveFace(e.target.checked)}
-                    disabled={isLoading}
-                    className="h-4 w-4 rounded border-gray-500 bg-gray-700 text-blue-600 focus:ring-blue-500"
-                />
-            </div>
+      <button
+          onClick={handleApply}
+          disabled={isLoading}
+          className="w-full mt-2 bg-gradient-to-br from-emerald-600 to-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
+      >
+          <ArrowUpOnSquareIcon className="w-5 h-5" />
+          Aplicar Upscale
+      </button>
 
-            <button
-                onClick={() => handleApplyUpscale(factor, preserveFace)}
-                disabled={isLoading}
-                className="w-full mt-4 bg-gradient-to-br from-emerald-600 to-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
-            >
-                <ArrowUpOnSquareIcon className="w-5 h-5" />
-                Aplicar Upscale
-            </button>
+      <div className="w-full border-t border-gray-700/50 my-1"></div>
+
+      <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50 flex flex-col gap-3">
+        <div className="text-center">
+            <h3 className="text-sm font-semibold text-gray-200 flex items-center justify-center gap-2">
+                <SparkleIcon className="w-5 h-5 text-yellow-300" />
+                Modelo Wonder
+            </h3>
+            <p className="text-xs text-gray-400 mt-1">Qualidade máxima para restauração.</p>
         </div>
-    );
+        <button
+          onClick={handleWonderModelUpscale}
+          disabled={isLoading}
+          className="w-full bg-gradient-to-br from-purple-600 to-indigo-500 text-white font-bold py-2 px-4 rounded-lg transition-all text-sm flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
+        >
+          <SparkleIcon className="w-5 h-5" />
+          Aprimorar Imagem
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default UpscalePanel;

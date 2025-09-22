@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { CubeIcon, LowPolyIcon } from '../icons';
+// FIX: Corrected icon imports. CubeIcon was being used incorrectly for Pixel Art.
+import { PixelsIcon, LowPolyIcon } from '../icons';
 
 const StyleGenPanel: React.FC = () => {
     const { isLoading, handleApplyLowPoly, handleApplyStyle } = useEditor();
@@ -34,7 +35,8 @@ const StyleGenPanel: React.FC = () => {
             
             <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 flex flex-col items-center gap-3">
                 <h4 className="font-bold text-white text-md flex items-center gap-2">
-                    <CubeIcon className="w-5 h-5 text-green-400"/>
+                    {/* FIX: Used the correct icon for Pixel Art. */}
+                    <PixelsIcon className="w-5 h-5 text-green-400"/>
                     Pixel Art
                 </h4>
                 <p className="text-sm text-gray-400 text-center -mt-2">Transforma a imagem em pixel art de 16-bits.</p>

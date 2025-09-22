@@ -19,8 +19,9 @@ export const handleOrchestratorCall = async (image: File, prompt: string): Promi
     const textPart = { text: prompt };
 
     // Faz a primeira chamada ao modelo com as ferramentas disponíveis
+    // FIX: Using gemini-2.5-flash as it is better suited for function calling tasks.
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image-preview',
+        model: 'gemini-2.5-flash',
         contents: { parts: [imagePart, textPart] },
         // FIX: The 'tools' parameter must be placed inside the 'config' object.
         config: {
@@ -50,7 +51,7 @@ export const handleOrchestratorCall = async (image: File, prompt: string): Promi
     }
     
     // Se nenhuma chamada de função, verifique a resposta de texto como um fallback
-    const textResponse = response.text?.trim();
+    const textResponse = response.text;
     if (textResponse) {
         throw new Error(`A IA respondeu com texto em vez de uma ação: "${textResponse}"`);
     }

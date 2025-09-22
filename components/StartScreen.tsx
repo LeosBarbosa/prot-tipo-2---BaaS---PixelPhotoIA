@@ -8,31 +8,15 @@ import { UploadIcon } from './icons';
 
 interface StartScreenProps {
   onFileSelect: (file: File) => void;
+  onCancel?: () => void; // Optional cancel callback for modal context
 }
 
-const StartScreen: React.FC<StartScreenProps> = ({ onFileSelect }) => {
+const StartScreen: React.FC<StartScreenProps> = ({ onFileSelect, onCancel }) => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!selectedFile) {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        setPreviewUrl(null);
-      }
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(selectedFile);
-    setPreviewUrl(objectUrl);
-
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [selectedFile]);
-
+  
   const handleFileSelection = (files: FileList | null) => {
     if (files && files[0]) {
-      setSelectedFile(files[0]);
+      onFileSelect(files[0]);
     }
   };
 
@@ -46,43 +30,6 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFileSelect }) => {
     setIsDraggingOver(false);
     handleFileSelection(e.dataTransfer.files);
   };
-
-  const handleReset = () => {
-    setSelectedFile(null);
-    // Reset the input field value to allow re-selecting the same file
-    const input = document.getElementById('file-upload') as HTMLInputElement;
-    if (input) {
-      input.value = '';
-    }
-  };
-
-  if (selectedFile && previewUrl) {
-    return (
-      <div className="w-full max-w-3xl mx-auto text-center flex flex-col items-center justify-center p-4 animate-fade-in">
-        <h2 className="text-3xl font-bold text-white mb-4">Imagem Pronta para Edição</h2>
-        <div className="w-full max-w-md bg-gray-800/50 border border-gray-700 rounded-2xl p-6 flex flex-col items-center gap-4">
-          <img src={previewUrl} alt="Preview" className="max-h-60 w-auto rounded-lg shadow-lg" />
-          <p className="font-mono text-sm bg-gray-700/50 px-3 py-1 rounded-md text-gray-300 truncate w-full" title={selectedFile.name}>
-            {selectedFile.name}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 w-full mt-4">
-            <button
-              onClick={handleReset}
-              className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-            >
-              Trocar Imagem
-            </button>
-            <button
-              onClick={() => onFileSelect(selectedFile)}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-            >
-              Iniciar Edição
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full max-w-3xl mx-auto text-center flex flex-col items-center justify-center p-4">
@@ -109,6 +56,14 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFileSelect }) => {
         accept="image/*"
         onChange={handleFileChange}
       />
+      {onCancel && (
+        <button
+          onClick={onCancel}
+          className="mt-4 text-gray-400 hover:text-white transition-colors"
+        >
+          Cancelar
+        </button>
+      )}
     </div>
   );
 };

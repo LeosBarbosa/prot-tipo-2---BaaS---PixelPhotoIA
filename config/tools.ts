@@ -8,7 +8,9 @@ import {
     LandscapeIcon, FaceSmileIcon, VideoCameraIcon,
     AdjustmentsHorizontalIcon, CropIcon, PaletteIcon,
     ScissorsIcon, ArrowUpOnSquareIcon, TextToolIcon, LightbulbIcon,
-    MagicWandIcon, LowPolyIcon, UserIcon, FilmGrainIcon, BullseyeIcon
+    MagicWandIcon, LowPolyIcon, UserIcon, FilmGrainIcon, BullseyeIcon, DenoiseIcon, UnblurIcon,
+    PatternIcon, TextEffectsIcon, VectorIcon, LogoIcon, StickersIcon, CaricatureIcon, Model3DIcon,
+    BananaIcon
 } from '../components/icons';
 import { type ToolId } from '../types';
 
@@ -53,19 +55,41 @@ export const tools: ToolConfig[] = [
         category: 'generation',
     },
     {
-        id: 'imageVariation',
-        name: 'Variação de Imagem',
-        description: 'Crie múltiplas versões e estilos a partir de uma única imagem.',
-        icon: React.createElement(LayersIcon, { className: 'w-8 h-8 text-green-400' }),
+        id: 'patternGen',
+        name: 'Gerador de Padrões',
+        description: 'Crie padrões de fundo sem costura para papéis de parede e designs.',
+        icon: React.createElement(PatternIcon, { className: 'w-8 h-8 text-teal-400' }),
         category: 'generation',
     },
     {
-        id: 'productPhotography',
-        name: 'Fotografia de Produto AI',
-        description: 'Gere fotos de produtos com qualidade de estúdio em qualquer cenário.',
-        icon: React.createElement(SparkleIcon, { className: 'w-8 h-8 text-yellow-400' }),
+        id: 'textEffects',
+        name: 'Efeitos de Texto',
+        description: 'Aplique efeitos visuais incríveis a um texto a partir de uma imagem.',
+        icon: React.createElement(TextEffectsIcon, { className: 'w-8 h-8 text-amber-400' }),
         category: 'generation',
     },
+    {
+        id: 'logoGen',
+        name: 'Gerador de Logotipo AI',
+        description: 'Crie logotipos únicos e minimalistas a partir de um conceito.',
+        icon: React.createElement(LogoIcon, { className: 'w-8 h-8 text-indigo-400' }),
+        category: 'generation',
+    },
+    {
+        id: 'stickerCreator',
+        name: 'Criador de Adesivos AI',
+        description: 'Gere adesivos em estilo de desenho animado a partir de um prompt.',
+        icon: React.createElement(StickersIcon, { className: 'w-8 h-8 text-pink-400' }),
+        category: 'generation',
+    },
+    {
+        id: 'model3DGen',
+        name: 'Gerador de Modelo 3D',
+        description: 'Crie renderizações de objetos 3D a partir de uma descrição.',
+        icon: React.createElement(Model3DIcon, { className: 'w-8 h-8 text-orange-400' }),
+        category: 'generation',
+    },
+
 
     // Workflows
     {
@@ -110,6 +134,27 @@ export const tools: ToolConfig[] = [
         icon: React.createElement(SparkleIcon, { className: 'w-8 h-8 text-rose-400' }),
         category: 'workflow',
     },
+    {
+        id: 'productPhotography',
+        name: 'Fotografia de Produto AI',
+        description: 'Gere fotos de produtos com qualidade de estúdio em qualquer cenário.',
+        icon: React.createElement(SparkleIcon, { className: 'w-8 h-8 text-yellow-400' }),
+        category: 'workflow',
+    },
+     {
+        id: 'aiPortraitStudio',
+        name: 'Estúdio de Retrato IA',
+        description: 'Transforme retratos com estilos criativos como Caricatura, Pixar e mais.',
+        icon: React.createElement(CaricatureIcon, { className: 'w-8 h-8 text-lime-400' }),
+        category: 'workflow',
+    },
+    {
+        id: 'bananimate',
+        name: 'Bananimate',
+        description: 'Dê vida às suas fotos com animações divertidas e personalizadas.',
+        icon: React.createElement(BananaIcon, { className: 'w-8 h-8 text-yellow-400' }),
+        category: 'workflow',
+    },
 
     // Editing Tools
     {
@@ -140,6 +185,13 @@ export const tools: ToolConfig[] = [
         icon: React.createElement(PaletteIcon, { className: 'w-8 h-8 text-amber-400' }),
         category: 'editing',
     },
+     {
+        id: 'unblur',
+        name: 'Remover Desfoque',
+        description: 'Corrija desfoque de movimento e lente com IA para aguçar sua imagem.',
+        icon: React.createElement(UnblurIcon, { className: 'w-8 h-8 text-cyan-400' }),
+        category: 'editing',
+    },
     {
         id: 'generativeEdit',
         name: 'Edição Generativa',
@@ -166,6 +218,20 @@ export const tools: ToolConfig[] = [
         name: 'Melhorar Resolução',
         description: 'Aumente a resolução e a nitidez da imagem sem perder qualidade.',
         icon: React.createElement(ArrowUpOnSquareIcon, { className: 'w-8 h-8 text-emerald-400' }),
+        category: 'editing',
+    },
+     {
+        id: 'denoise',
+        name: 'Remover Ruído (Denoise)',
+        description: 'Limpe o ruído e a granulação de fotos com baixa iluminação.',
+        icon: React.createElement(DenoiseIcon, { className: 'w-8 h-8 text-blue-300' }),
+        category: 'editing',
+    },
+    {
+        id: 'faceRecovery',
+        name: 'Recuperação de Rosto',
+        description: 'Restaure detalhes faciais e melhore a qualidade de retratos.',
+        icon: React.createElement(FaceSmileIcon, { className: 'w-8 h-8 text-pink-400' }),
         category: 'editing',
     },
     {
@@ -229,6 +295,13 @@ export const tools: ToolConfig[] = [
         name: 'Tendências',
         description: 'Experimente estilos e efeitos populares do momento.',
         icon: React.createElement(LightbulbIcon, { className: 'w-8 h-8 text-pink-400' }),
+        category: 'editing',
+    },
+    {
+        id: 'vectorConverter',
+        name: 'Conversor de Vetor',
+        description: 'Converta imagens bitmap para um estilo de arte vetorial.',
+        icon: React.createElement(VectorIcon, { className: 'w-8 h-8 text-orange-400' }),
         category: 'editing',
     },
 ];

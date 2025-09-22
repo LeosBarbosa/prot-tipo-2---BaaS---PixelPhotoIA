@@ -159,13 +159,6 @@ const ToneCurve: React.FC<ToneCurveProps> = ({ histogram, onCurveChange, onReset
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
         />
-        <button
-            onClick={handleReset}
-            disabled={disabled}
-            className="w-full max-w-[256px] bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-        >
-            Resetar Curva
-        </button>
     </div>
   );
 };

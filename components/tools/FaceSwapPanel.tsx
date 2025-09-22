@@ -56,10 +56,10 @@ const FaceSwapPanel: React.FC = () => {
                 <button
                     onClick={handleGenerate}
                     disabled={isLoading || !sourceImage || !targetImage}
-                    className="w-full mt-auto bg-gradient-to-br from-red-600 to-orange-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full mt-auto bg-gradient-to-br from-red-600 to-rose-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                     <FaceSmileIcon className="w-5 h-5" />
-                    Trocar Rostos
+                    Trocar Rosto
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex items-center justify-center p-4">

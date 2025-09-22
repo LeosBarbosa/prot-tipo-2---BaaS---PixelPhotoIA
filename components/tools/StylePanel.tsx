@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
+import ApplyToAllToggle from '../common/ApplyToAllToggle';
 
 const styles = [
     { name: 'Anime', prompt: 'Estilo de anime dos anos 90, cores vibrantes, linhas nítidas.', bg: 'bg-gradient-to-br from-pink-400 to-purple-500' },
@@ -22,7 +23,8 @@ const styles = [
 ];
 
 const StylePanel: React.FC = () => {
-    const { isLoading, handleApplyStyle } = useEditor();
+    const { isLoading, handleApplyStyle, isGif } = useEditor();
+    const [applyToAll, setApplyToAll] = useState(true);
 
     return (
         <div className="w-full flex flex-col gap-4 animate-fade-in">
@@ -34,7 +36,7 @@ const StylePanel: React.FC = () => {
                 {styles.map(style => (
                     <button
                         key={style.name}
-                        onClick={() => handleApplyStyle(style.prompt)}
+                        onClick={() => handleApplyStyle(style.prompt, applyToAll)}
                         disabled={isLoading}
                         className="aspect-square bg-gray-800 rounded-lg text-center font-semibold text-white hover:scale-105 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex flex-col items-center justify-center p-2 relative overflow-hidden group"
                     >
@@ -43,6 +45,7 @@ const StylePanel: React.FC = () => {
                     </button>
                 ))}
             </div>
+            {isGif && <ApplyToAllToggle checked={applyToAll} onChange={setApplyToAll} />}
         </div>
     );
 };

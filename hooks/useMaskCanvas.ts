@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import { useState, useRef, useCallback } from 'react';
+// FIX: Import React to resolve 'Cannot find namespace React' error.
+import React, { useState, useRef, useCallback } from 'react';
 
 /**
  * @description Manages the state and drawing logic for a mask canvas.
