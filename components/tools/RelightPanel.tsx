@@ -6,6 +6,8 @@
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { SunIcon } from '../icons';
+import PromptEnhancer from './common/PromptEnhancer';
+import TipBox from '../common/TipBox';
 
 const RelightPanel: React.FC = () => {
   const { handleRelight, isLoading } = useEditor();
@@ -26,15 +28,22 @@ const RelightPanel: React.FC = () => {
         </p>
       </div>
       
-      <textarea
-        id="relight-prompt"
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Ex: 'luz quente da esquerda', 'iluminação suave de estúdio'..."
-        className="flex-grow bg-gray-800 border border-gray-600 text-gray-200 rounded-lg p-4 focus:ring-2 focus:ring-blue-500 focus:outline-none transition w-full disabled:cursor-not-allowed disabled:opacity-60 text-base min-h-[100px]"
-        disabled={isLoading}
-        rows={4}
-      />
+      <div className="relative">
+        <textarea
+          id="relight-prompt"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="Ex: 'luz quente da esquerda', 'iluminação suave de estúdio'..."
+          className="flex-grow bg-gray-800 border border-gray-600 text-gray-200 rounded-lg p-4 pr-12 focus:ring-2 focus:ring-blue-500 focus:outline-none transition w-full disabled:cursor-not-allowed disabled:opacity-60 text-base min-h-[100px]"
+          disabled={isLoading}
+          rows={4}
+        />
+        <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="relight" />
+      </div>
+
+       <TipBox>
+          Experimente prompts descritivos como "luz quente de vela vindo da esquerda" ou "iluminação dramática de palco por cima".
+      </TipBox>
 
       <button
         onClick={handleApply}

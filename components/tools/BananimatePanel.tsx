@@ -2,18 +2,32 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { generateAnimationFromImage } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
-import Spinner from '../Spinner';
 import { BananaIcon, DownloadIcon } from '../icons';
+import PromptEnhancer from './common/PromptEnhancer';
 
 const BananimatePanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, loadingMessage, setLoadingMessage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, setLoadingMessage, currentImage, setInitialImage } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [prompt, setPrompt] = useState('');
     const [resultVideoUrl, setResultVideoUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (currentImage && !sourceImage) {
+            setSourceImage(currentImage);
+        }
+    }, [currentImage, sourceImage]);
+
+    const handleFileSelect = (file: File | null) => {
+        setSourceImage(file);
+        if (file) {
+            setInitialImage(file);
+        }
+        setResultVideoUrl(null);
+    };
 
     const handleGenerate = async () => {
         if (!sourceImage) {
@@ -76,7 +90,7 @@ const BananimatePanel: React.FC = () => {
     };
 
     return (
-        <div className="p-4 md:p-6 h-full flex flex-col md:flex-row gap-6">
+        <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6">
             <aside className="w-full md:w-96 flex-shrink-0 bg-gray-900/30 rounded-lg p-4 flex flex-col gap-4 border border-gray-700/50">
                 <div className="text-center">
                     <h3 className="text-lg font-semibold text-gray-200">Bananimate</h3>
@@ -84,18 +98,21 @@ const BananimatePanel: React.FC = () => {
                 </div>
                 <ImageDropzone
                     imageFile={sourceImage}
-                    onFileSelect={setSourceImage}
+                    onFileSelect={handleFileSelect}
                     label="Sua Imagem"
                 />
-                <label className="block text-sm font-medium text-gray-300">Descrição da Animação</label>
-                <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Ex: faça o gato dançar, adicione vapor saindo da xícara..."
-                    className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base min-h-[120px]"
-                    disabled={isLoading}
-                    rows={5}
-                />
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Descrição da Animação</label>
+                  <textarea
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder="Ex: faça o gato dançar, adicione vapor saindo da xícara..."
+                      className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
+                      disabled={isLoading}
+                      rows={5}
+                  />
+                  <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="bananimate" />
+                </div>
                 <button
                     onClick={handleGenerate}
                     disabled={isLoading || !sourceImage || !prompt.trim()}
@@ -106,18 +123,6 @@ const BananimatePanel: React.FC = () => {
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center p-4">
-                {isLoading && (
-                    <div className="text-center text-gray-300 animate-fade-in">
-                        <Spinner />
-                        <p className="mt-4 font-semibold animate-pulse">{loadingMessage || "Processando..."}</p>
-                    </div>
-                )}
-                {error && !isLoading && (
-                    <div className="text-center text-red-400 animate-fade-in bg-red-500/10 border border-red-500/20 p-4 rounded-lg">
-                        <h3 className="font-bold text-red-300">Ocorreu um Erro</h3>
-                        <p className="text-sm mt-1">{error}</p>
-                    </div>
-                )}
                 {resultVideoUrl && !isLoading && (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-4 animate-fade-in">
                        <video src={resultVideoUrl} controls autoPlay loop className="max-w-full max-h-[80%] rounded-lg" />

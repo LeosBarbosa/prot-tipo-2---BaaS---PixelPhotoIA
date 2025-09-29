@@ -6,6 +6,7 @@
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { FilmGrainIcon } from '../icons';
+import TipBox from '../common/TipBox';
 
 const DustAndScratchesPanel: React.FC = () => {
     const { isLoading, handleApplyDustAndScratch } = useEditor();
@@ -31,6 +32,9 @@ const DustAndScratchesPanel: React.FC = () => {
                 <FilmGrainIcon className="w-5 h-5" />
                 Aplicar Efeito Vintage
             </button>
+            <TipBox>
+                Esta ferramenta é perfeita para dar um toque nostálgico e de filme antigo às suas fotografias digitais.
+            </TipBox>
         </div>
     );
 };

@@ -3,19 +3,23 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState } from 'react';
-import { useLoadingError } from '../../context/EditorContext';
+import React, { useState, useEffect } from 'react';
+import { useEditor, useLoadingError } from '../../context/EditorContext';
 import { outpaintImage } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { PhotoIcon } from '../icons';
+import { PhotoIcon, ExpandIcon } from '../icons';
+import CollapsibleToolPanel from '../CollapsibleToolPanel';
+import PromptEnhancer from './common/PromptEnhancer';
 
 const OutpaintingPanel: React.FC = () => {
     const { isLoading, error, setError, setIsLoading } = useLoadingError();
+    const { currentImage, setInitialImage } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
     const [aspectRatio, setAspectRatio] = useState('16:9');
+    const [isOptionsExpanded, setIsOptionsExpanded] = useState(true);
 
      const aspectRatios: { id: string, name: string }[] = [
         { id: '16:9', name: 'Paisagem' },
@@ -24,6 +28,20 @@ const OutpaintingPanel: React.FC = () => {
         { id: '4:3', name: 'Padrão' },
         { id: '3:4', name: 'Padrão (Vert.)' },
     ];
+
+    useEffect(() => {
+        if (currentImage && !sourceImage) {
+            setSourceImage(currentImage);
+        }
+    }, [currentImage, sourceImage]);
+
+    const handleFileSelect = (file: File | null) => {
+        setSourceImage(file);
+        if (file) {
+            setInitialImage(file);
+        }
+        setResultImage(null);
+    };
 
     const handleGenerate = async () => {
         if (!sourceImage) {
@@ -44,7 +62,7 @@ const OutpaintingPanel: React.FC = () => {
     };
 
     return (
-        <div className="p-4 md:p-6 h-full flex flex-col md:flex-row gap-6">
+        <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6">
             <aside className="w-full md:w-96 flex-shrink-0 bg-gray-900/30 rounded-lg p-4 flex flex-col gap-4 border border-gray-700/50">
                 <div className="text-center">
                     <h3 className="text-lg font-semibold text-gray-200">Pintura Expansiva (Outpainting)</h3>
@@ -52,25 +70,38 @@ const OutpaintingPanel: React.FC = () => {
                 </div>
                 <ImageDropzone 
                     imageFile={sourceImage}
-                    onFileSelect={setSourceImage}
+                    onFileSelect={handleFileSelect}
                     label="Imagem Original"
                 />
                 
-                <label className="block text-sm font-medium text-gray-300">Nova Proporção</label>
-                <select value={aspectRatio} onChange={e => setAspectRatio(e.target.value)} className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base">
-                    {aspectRatios.map(({ id, name }) => <option key={id} value={id}>{name} ({id})</option>)}
-                </select>
+                <CollapsibleToolPanel
+                    title="Opções de Expansão"
+                    icon={<ExpandIcon className="w-5 h-5" />}
+                    isExpanded={isOptionsExpanded}
+                    onExpandToggle={() => setIsOptionsExpanded(!isOptionsExpanded)}
+                >
+                    <div className="flex flex-col gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">Nova Proporção</label>
+                            <select value={aspectRatio} onChange={e => setAspectRatio(e.target.value)} className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base">
+                                {aspectRatios.map(({ id, name }) => <option key={id} value={id}>{name} ({id})</option>)}
+                            </select>
+                        </div>
+                        <div className="relative">
+                            <label className="block text-sm font-medium text-gray-300 mb-1">Prompt (Opcional)</label>
+                            <textarea
+                                value={prompt}
+                                onChange={(e) => setPrompt(e.target.value)}
+                                placeholder="Descreva o que adicionar no espaço expandido..."
+                                className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]"
+                                disabled={isLoading}
+                                rows={4}
+                            />
+                            <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="outpainting" />
+                        </div>
+                    </div>
+                </CollapsibleToolPanel>
 
-                <label className="block text-sm font-medium text-gray-300">Prompt (Opcional)</label>
-                <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Descreva o que adicionar no espaço expandido..."
-                    className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base min-h-[100px]"
-                    disabled={isLoading}
-                    rows={4}
-                />
-                
                 <button
                     onClick={handleGenerate}
                     disabled={isLoading || !sourceImage}

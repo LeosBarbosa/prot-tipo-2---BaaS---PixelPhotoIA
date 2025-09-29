@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-// FIX: Import React to resolve 'Cannot find namespace React' error.
 import React, { useState, useRef, useCallback } from 'react';
 
 /**
@@ -18,7 +17,6 @@ import React, { useState, useRef, useCallback } from 'react';
  * @property {() => void} stopDrawing - The onMouseUp/onMouseLeave event handler.
  * @property {(e: React.MouseEvent<HTMLCanvasElement>) => void} draw - The onMouseMove event handler.
  */
-// FIX: The hook now accepts brushSize as an argument instead of managing its own state.
 export const useMaskCanvas = (canvasRef: React.RefObject<HTMLCanvasElement>, brushSize: number) => {
     const [maskDataUrl, setMaskDataUrl] = useState<string | null>(null);
     const isDrawing = useRef(false);
@@ -38,7 +36,18 @@ export const useMaskCanvas = (canvasRef: React.RefObject<HTMLCanvasElement>, bru
         if (!coords) return;
         isDrawing.current = true;
         lastPos.current = coords;
-    }, [getCoords]);
+        
+        // Draw a single dot if the user just clicks
+        const ctx = canvasRef.current?.getContext('2d');
+        if (ctx) {
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.arc(coords.x, coords.y, brushSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.closePath();
+        }
+
+    }, [getCoords, brushSize, canvasRef]);
 
     const stopDrawing = useCallback(() => {
         if (!isDrawing.current) return;

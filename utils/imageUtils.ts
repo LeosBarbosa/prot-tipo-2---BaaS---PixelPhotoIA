@@ -4,6 +4,7 @@
 */
 
 import { type PixelCrop } from 'react-image-crop';
+import { type UploadProgressStatus } from '../types';
 
 /**
  * Converts a data URL string into a File object.
@@ -101,6 +102,7 @@ export const createMaskFromCrop = (crop: PixelCrop, imageWidth: number, imageHei
  * Optimizes an image by resizing and compressing it if it's too large.
  * This ensures better performance within the editor.
  * @param file The image file to optimize.
+ * @param onProgress A callback to report the optimization progress (0-100).
  * @param maxWidth The maximum width allowed.
  * @param maxHeight The maximum height allowed.
  * @param quality The quality for JPEG compression (0 to 1).
@@ -108,30 +110,41 @@ export const createMaskFromCrop = (crop: PixelCrop, imageWidth: number, imageHei
  */
 export const optimizeImage = (
     file: File,
-    maxWidth: number = 1920,
-    maxHeight: number = 1920,
-    quality: number = 0.9
+    onProgress: (status: UploadProgressStatus) => void,
+    maxWidth: number = 4096,
+    maxHeight: number = 4096,
+    quality: number = 0.95
 ): Promise<File> => {
     return new Promise((resolve, reject) => {
-        // Bypass non-images and GIFs. GIFs have a separate, more complex processing pipeline.
         if (!file.type.startsWith('image/') || file.type === 'image/gif') {
+            onProgress({ progress: 100, stage: 'done' });
             return resolve(file);
         }
 
         const reader = new FileReader();
         reader.readAsDataURL(file);
+        
+        reader.onprogress = (event) => {
+            if (event.lengthComputable) {
+                // Reading the file will be the first 50% of the progress
+                const percentLoaded = Math.round((event.loaded / event.total) * 50);
+                onProgress({ progress: percentLoaded, stage: 'reading' });
+            }
+        };
+
         reader.onload = (event) => {
+            onProgress({ progress: 50, stage: 'processing' });
             const img = new Image();
             img.src = event.target?.result as string;
             img.onload = () => {
+                onProgress({ progress: 75, stage: 'processing' });
                 let { width, height } = img;
 
                 if (width <= maxWidth && height <= maxHeight) {
-                    // Image is already within limits, no optimization needed.
+                    onProgress({ progress: 100, stage: 'done' });
                     return resolve(file);
                 }
 
-                // Calculate new dimensions while preserving aspect ratio
                 if (width > height) {
                     if (width > maxWidth) {
                         height = Math.round((height * maxWidth) / width);
@@ -150,21 +163,29 @@ export const optimizeImage = (
                 const ctx = canvas.getContext('2d');
 
                 if (!ctx) {
-                    return reject(new Error('Could not get canvas context.'));
+                    onProgress({ progress: 100, stage: 'done' });
+                    return reject(new Error('Não foi possível obter o contexto do canvas.'));
                 }
 
                 ctx.drawImage(img, 0, 0, width, height);
+                onProgress({ progress: 95, stage: 'compressing' });
 
-                // Convert canvas to data URL (JPEG for compression) and then to File
                 const dataUrl = canvas.toDataURL('image/jpeg', quality);
                 
                 const originalFilename = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
                 const newFilename = `${originalFilename}.jpg`;
 
+                onProgress({ progress: 100, stage: 'done' });
                 resolve(dataURLtoFile(dataUrl, newFilename));
             };
-            img.onerror = (error) => reject(error);
+            img.onerror = (error) => {
+                onProgress({ progress: 100, stage: 'done' });
+                reject(error);
+            };
         };
-        reader.onerror = (error) => reject(error);
+        reader.onerror = (error) => {
+            onProgress({ progress: 100, stage: 'done' });
+            reject(error);
+        };
     });
 };

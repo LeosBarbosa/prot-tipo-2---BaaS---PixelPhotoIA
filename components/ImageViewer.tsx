@@ -3,20 +3,25 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import ReactCrop from 'react-image-crop';
+import ReactCrop, { type Crop } from 'react-image-crop';
 import { useEditor } from '../context/EditorContext';
-import Spinner from './Spinner';
 import { type DetectedObject } from '../types';
+import ComparisonSlider from './ComparisonSlider';
+
+// Função auxiliar para encontrar o maior divisor comum para calcular a proporção
+const gcd = (a: number, b: number): number => {
+    return b === 0 ? a : gcd(b, a % b);
+};
 
 const ImageViewer: React.FC = () => {
     const {
-        activeTool,
+        activeTab,
         currentImage,
         currentImageUrl,
+        originalImageUrl,
         imgRef,
         canvasRef,
         isLoading,
-        loadingMessage,
         zoom,
         panOffset,
         handleWheel,
@@ -41,37 +46,19 @@ const ImageViewer: React.FC = () => {
         buildFilterString,
         textToolState,
         setTextToolState,
-        isGif,
-        gifFrames,
-        setCurrentFrameIndex
+        isInlineComparisonActive,
+        texturePreview,
     } = useEditor();
 
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const textOverlayRef = useRef<HTMLDivElement>(null);
     const imageContainerRef = useRef<HTMLDivElement>(null);
+    const [cropDimensions, setCropDimensions] = useState<string | null>(null);
 
-    const [isPlaying, setIsPlaying] = useState(false);
-    // FIX: Corrigida a inicialização do hook useRef. O erro "Expected 1 arguments, but got 0" provavelmente apontava para esta linha, já que useRef foi chamado sem um valor inicial. Inicializá-lo com `null` resolve o problema.
-    const animationFrameRef = useRef<number | null>(null);
-    const lastFrameTimeRef = useRef<number>(0);
-    const playbackFrameIndexRef = useRef<number>(0);
-    
     const cssFilter = hasLocalAdjustments ? buildFilterString(localFilters) : 'none';
     const pixelFontSize = imgRef.current ? (textToolState.fontSize / 100) * imgRef.current.clientWidth : 30;
 
-    const displayedImageUrl = useMemo(() => {
-        if (isGif && isPlaying && gifFrames.length > 0) {
-            const frameData = gifFrames[playbackFrameIndexRef.current]?.imageData;
-            if (frameData) {
-                const canvas = document.createElement('canvas');
-                canvas.width = frameData.width;
-                canvas.height = frameData.height;
-                canvas.getContext('2d')?.putImageData(frameData, 0, 0);
-                return canvas.toDataURL('image/png');
-            }
-        }
-        return currentImageUrl;
-    }, [isPlaying, currentImageUrl, isGif, gifFrames]);
+    const displayedImageUrl = currentImageUrl;
 
 
     // Reset crop when image changes
@@ -146,7 +133,7 @@ const ImageViewer: React.FC = () => {
     useEffect(() => {
         const textElement = textOverlayRef.current;
         const container = imageContainerRef.current;
-        if (!textElement || !container || activeTool !== 'text') return;
+        if (!textElement || !container || activeTab !== 'text') return;
 
         let isDragging = false;
         let offset = { x: 0, y: 0 };
@@ -197,12 +184,26 @@ const ImageViewer: React.FC = () => {
             document.body.style.cursor = '';
         }
 
-    }, [activeTool, textToolState, setTextToolState]);
+    }, [activeTab, textToolState, setTextToolState]);
 
 
-    const isCropping = activeTool === 'crop';
-    const isGenerativeEdit = activeTool === 'generativeEdit';
-    const isDrawingOnCanvas = isGenerativeEdit && !detectedObjects;
+    const isCropping = activeTab === 'crop';
+    const isDrawingOnCanvas = ['generativeEdit', 'objectRemover', 'localAdjust'].includes(activeTab) && !detectedObjects;
+    const isTextToolActive = activeTab === 'text';
+    const showComparisonSlider = isInlineComparisonActive && originalImageUrl && displayedImageUrl && !isCropping;
+
+    const handleCropChange = (c: Crop) => {
+        setCrop(c);
+        if (c.width && c.height) {
+            const w = Math.round(c.width);
+            const h = Math.round(c.height);
+            const commonDivisor = gcd(w, h);
+            const ratioStr = `${w / commonDivisor}:${h / commonDivisor}`;
+            setCropDimensions(`${w} x ${h} (${ratioStr})`);
+        } else {
+            setCropDimensions(null);
+        }
+    };
 
     return (
         <div
@@ -212,13 +213,6 @@ const ImageViewer: React.FC = () => {
             onMouseDown={handlePanStart}
             style={{ cursor: isPanModeActive ? (isCurrentlyPanning ? 'grabbing' : 'grab') : 'default' }}
         >
-            {isLoading && (
-                <div className="absolute inset-0 bg-black/70 z-30 flex flex-col items-center justify-center gap-4 animate-fade-in">
-                    <Spinner />
-                    <p className="text-gray-300 text-lg font-semibold animate-pulse">{loadingMessage || 'Processando...'}</p>
-                </div>
-            )}
-            
             {generatedVideoUrl && (
                 <div className="w-full h-full flex items-center justify-center z-10">
                     <video src={generatedVideoUrl} controls autoPlay loop className="max-w-full max-h-full rounded-lg" />
@@ -237,27 +231,64 @@ const ImageViewer: React.FC = () => {
                         justifyContent: 'center'
                     }}
                 >
-                    <ReactCrop
-                        crop={crop}
-                        onChange={c => setCrop(c)}
-                        onComplete={c => setCompletedCrop(c)}
-                        aspect={aspect}
-                        disabled={!isCropping || isLoading}
-                        className={isCropping ? 'ReactCrop--active' : ''}
-                    >
-                         <img
-                            ref={imgRef}
-                            src={displayedImageUrl!}
-                            alt="Imagem do Editor"
-                            className="max-w-full max-h-full object-contain block"
-                            style={{ 
-                                filter: cssFilter,
-                                pointerEvents: isPanModeActive ? 'none' : 'auto'
+                    {showComparisonSlider ? (
+                        <ComparisonSlider
+                            originalSrc={originalImageUrl!}
+                            modifiedSrc={displayedImageUrl!}
+                            filterStyle={cssFilter}
+                        />
+                    ) : (
+                        <ReactCrop
+                            crop={crop}
+                            onChange={handleCropChange}
+                            onComplete={c => setCompletedCrop(c)}
+                            aspect={aspect}
+                            disabled={!isCropping || isLoading}
+                            className={isCropping ? 'ReactCrop--active' : ''}
+                        >
+                            <img
+                                key={displayedImageUrl}
+                                ref={imgRef}
+                                src={displayedImageUrl!}
+                                alt="Imagem do Editor"
+                                className="max-w-full max-h-full object-contain block animate-fade-in"
+                                style={{ 
+                                    filter: cssFilter,
+                                    pointerEvents: isPanModeActive ? 'none' : 'auto',
+                                    transition: 'filter 0.15s linear',
+                                    animationDuration: '300ms',
+                                }}
+                            />
+                        </ReactCrop>
+                    )}
+
+                    {isCropping && crop?.width && cropDimensions && (
+                        <div
+                            className="absolute bg-black/70 text-white text-xs font-mono py-1 px-2 rounded-md pointer-events-none"
+                            style={{
+                                top: (crop.y || 0) + (crop.height || 0) + 10,
+                                left: (crop.x || 0) + (crop.width || 0) / 2,
+                                transform: 'translateX(-50%)',
+                                zIndex: 10,
+                            }}
+                        >
+                            {cropDimensions}
+                        </div>
+                    )}
+
+                    {texturePreview && (
+                        <div
+                            className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                            style={{
+                                backgroundImage: `url(${texturePreview.url})`,
+                                backgroundSize: 'cover',
+                                mixBlendMode: texturePreview.blendMode,
+                                opacity: texturePreview.opacity,
                             }}
                         />
-                    </ReactCrop>
+                    )}
                     
-                     {isDrawingOnCanvas && (
+                     {isDrawingOnCanvas && !showComparisonSlider && (
                         <canvas
                             ref={canvasRef}
                             width={imgRef.current?.naturalWidth}
@@ -271,14 +302,14 @@ const ImageViewer: React.FC = () => {
                         />
                     )}
 
-                    {detectedObjects && (
+                    {detectedObjects && !showComparisonSlider && (
                         <canvas
                             ref={overlayCanvasRef}
                             className="absolute top-0 left-0 w-full h-full pointer-events-none z-10"
                         />
                     )}
 
-                    {activeTool === 'text' && (
+                    {isTextToolActive && !showComparisonSlider && (
                          <div
                             ref={textOverlayRef}
                             className="absolute z-20 select-none p-2"

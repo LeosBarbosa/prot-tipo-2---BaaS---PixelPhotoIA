@@ -6,6 +6,7 @@
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { ScissorsIcon } from '../icons';
+import TipBox from '../common/TipBox';
 
 const RemoveBgPanel: React.FC = () => {
     const { isLoading, handleRemoveBackground } = useEditor();
@@ -24,6 +25,9 @@ const RemoveBgPanel: React.FC = () => {
                 <ScissorsIcon className="w-5 h-5" />
                 Remover Fundo
             </button>
+            <TipBox>
+                Esta ferramenta gera uma imagem PNG com fundo transparente, perfeita para sobrepor em outros designs.
+            </TipBox>
         </div>
     );
 };

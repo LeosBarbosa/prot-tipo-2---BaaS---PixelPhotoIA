@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState } from 'react';
-import { useLoadingError } from '../../context/EditorContext';
+import React, { useState, useEffect } from 'react';
+import { useEditor, useLoadingError } from '../../context/EditorContext';
 import { generateImageVariation } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
@@ -12,9 +12,24 @@ import { LayersIcon } from '../icons';
 
 const ImageVariationPanel: React.FC = () => {
     const { isLoading, error, setError, setIsLoading } = useLoadingError();
+    const { currentImage, setInitialImage } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [strength, setStrength] = useState(50);
+
+    useEffect(() => {
+        if (currentImage && !sourceImage) {
+            setSourceImage(currentImage);
+        }
+    }, [currentImage, sourceImage]);
+
+    const handleFileSelect = (file: File | null) => {
+        setSourceImage(file);
+        if (file) {
+            setInitialImage(file);
+        }
+        setResultImage(null);
+    };
 
     const handleGenerate = async () => {
         if (!sourceImage) {
@@ -35,7 +50,7 @@ const ImageVariationPanel: React.FC = () => {
     };
 
     return (
-        <div className="p-4 md:p-6 h-full flex flex-col md:flex-row gap-6">
+        <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6">
             <aside className="w-full md:w-96 flex-shrink-0 bg-gray-900/30 rounded-lg p-4 flex flex-col gap-4 border border-gray-700/50">
                 <div className="text-center">
                     <h3 className="text-lg font-semibold text-gray-200">Variação de Imagem</h3>
@@ -43,7 +58,7 @@ const ImageVariationPanel: React.FC = () => {
                 </div>
                 <ImageDropzone 
                     imageFile={sourceImage}
-                    onFileSelect={setSourceImage}
+                    onFileSelect={handleFileSelect}
                     label="Imagem Original"
                 />
                 <div className="flex flex-col gap-2">

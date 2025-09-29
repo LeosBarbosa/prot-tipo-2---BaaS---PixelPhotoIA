@@ -6,6 +6,8 @@
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { BrushIcon, SparkleIcon } from '../icons';
+import PromptEnhancer from './common/PromptEnhancer';
+import TipBox from '../common/TipBox';
 
 const GenerativeEditPanel: React.FC = () => {
     const {
@@ -103,20 +105,27 @@ const GenerativeEditPanel: React.FC = () => {
                 </div>
             )}
             
+             <TipBox>
+                Use a Seleção Mágica para detetar objetos automaticamente. Se a IA não encontrar o que você quer, mude para o modo Pincel para uma seleção manual precisa.
+            </TipBox>
+            
             <div className="border-t border-gray-700/50 my-1"></div>
 
             {/* UI Comum para Prompt e Gerar */}
             {maskDataUrl ? (
                  <div className="animate-fade-in flex flex-col gap-4">
-                    <textarea
-                        id="gen-fill-prompt"
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="Ex: um chapéu de pirata, remover a pessoa..."
-                        className="flex-grow bg-gray-800 border border-gray-600 text-gray-200 rounded-lg p-4 focus:ring-2 focus:ring-blue-500 focus:outline-none transition w-full disabled:cursor-not-allowed disabled:opacity-60 text-base min-h-[100px]"
-                        disabled={isLoading}
-                        rows={4}
-                    />
+                    <div className="relative">
+                        <textarea
+                            id="gen-fill-prompt"
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            placeholder="Ex: um chapéu de pirata, remover a pessoa..."
+                            className="flex-grow bg-gray-800 border border-gray-600 text-gray-200 rounded-lg p-4 pr-12 focus:ring-2 focus:ring-blue-500 focus:outline-none transition w-full disabled:cursor-not-allowed disabled:opacity-60 text-base min-h-[100px]"
+                            disabled={isLoading}
+                            rows={4}
+                        />
+                        <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="generativeEdit" />
+                    </div>
                     <div className="flex gap-2">
                         <button
                             type="button"

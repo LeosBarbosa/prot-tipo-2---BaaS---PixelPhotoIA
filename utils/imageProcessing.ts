@@ -100,3 +100,70 @@ export const applyLUT = (imageData: ImageData, lut: number[]): ImageData => {
   }
   return imageData;
 };
+
+// Helper to load an image from a data URL
+const loadImage = (url: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    // Handle CORS issues if images are from external sources
+    img.crossOrigin = "anonymous";
+    img.src = url;
+});
+
+
+/**
+ * Applies CSS-like filters to a specific area of an image defined by a mask.
+ * @param originalImageUrl The data URL of the original image.
+ * @param maskDataUrl The data URL of the black and white mask.
+ * @param filterString The CSS filter string to apply (e.g., 'brightness(1.5) contrast(1.2)').
+ * @returns A promise that resolves with the data URL of the edited image.
+ */
+export const applyFiltersToMaskedArea = async (
+    originalImageUrl: string,
+    maskDataUrl: string,
+    filterString: string
+): Promise<string> => {
+    const [originalImage, maskImage] = await Promise.all([
+        loadImage(originalImageUrl),
+        loadImage(maskDataUrl)
+    ]);
+
+    const { width, height } = originalImage;
+
+    // Main canvas for the final result
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error("Could not get main canvas context");
+
+    // Offscreen canvas for the filtered layer
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) throw new Error("Could not get temp canvas context");
+
+    // 1. Draw original image onto the main canvas. This will be the base.
+    ctx.drawImage(originalImage, 0, 0);
+
+    // 2. Create the masked, filtered layer in the offscreen temp canvas.
+    // 2a. Draw the original image onto the temp canvas.
+    tempCtx.drawImage(originalImage, 0, 0);
+    // 2b. Apply the desired filter to the entire temp canvas context.
+    tempCtx.filter = filterString;
+    // 2c. Redraw the image on the temp canvas. This action applies the filter to the pixels.
+    tempCtx.drawImage(originalImage, 0, 0); 
+    // 2d. Use 'destination-in' to mask the filtered image. This operation keeps the temp canvas's pixels
+    // only where they overlap with the mask image's opaque areas.
+    tempCtx.globalCompositeOperation = 'destination-in';
+    tempCtx.drawImage(maskImage, 0, 0, width, height);
+    
+    // 3. Draw the resulting masked, filtered layer from the temp canvas onto the main canvas.
+    // Since the temp canvas is now mostly transparent except for the masked area, this composites
+    // the filtered part perfectly on top of the original image.
+    ctx.drawImage(tempCanvas, 0, 0);
+    
+    return canvas.toDataURL('image/png');
+};

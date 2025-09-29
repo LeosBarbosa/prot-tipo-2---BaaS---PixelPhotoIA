@@ -6,6 +6,7 @@
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { BullseyeIcon } from '../icons';
+import TipBox from '../common/TipBox';
 
 const ExtractArtPanel: React.FC = () => {
     const { isLoading, handleExtractArt } = useEditor();
@@ -31,6 +32,9 @@ const ExtractArtPanel: React.FC = () => {
                 <BullseyeIcon className="w-5 h-5" />
                 Extrair Arte
             </button>
+            <TipBox>
+                O resultado é um esboço em preto e branco que pode ser usado como base para colorir ou como uma peça de arte minimalista.
+            </TipBox>
         </div>
     );
 };

@@ -5,7 +5,9 @@
 
 import React, { createContext, useState, useContext, ReactNode, useCallback, useRef, useMemo, useEffect } from 'react';
 import { type Crop, type PixelCrop } from 'react-image-crop';
-import { generateHistogram, applyLUT } from '../utils/imageProcessing';
+import { generateHistogram, applyLUT, applyFiltersToMaskedArea } from '../utils/imageProcessing';
+import GIFEncoder from 'gif-encoder-2';
+import saveAs from 'file-saver';
 
 // Hooks
 import { useHistoryState } from '../hooks/useHistoryState';
@@ -13,23 +15,39 @@ import { usePanAndZoom } from '../hooks/usePanAndZoom';
 import { useMaskCanvas } from '../hooks/useMaskCanvas';
 
 // Utils & Services
-import { dataURLtoFile, createMaskFromCrop, frameToFile, dataURLToImageData, frameToDataURL } from '../utils/imageUtils';
+import { dataURLtoFile, createMaskFromCrop, frameToFile, dataURLToImageData, frameToDataURL, fileToDataURL } from '../utils/imageUtils';
 import { parseGif } from '../utils/gifUtils';
 import * as geminiService from '../services/geminiService';
-import { type ToolId, type TransformType, type DetectedObject, TabId } from '../types';
+import { type ToolId, type TransformType, type DetectedObject, TabId, type ToastType, Workflow, SmartSearchResult, PredefinedSearch, type UploadProgressStatus, type ToolConfig, type VideoAspectRatio } from '../types';
 import { handleOrchestratorCall } from '../services/orchestrator';
-import { loadRecentTools, saveRecentTools } from '../utils/db';
+import * as db from '../utils/db';
+import { tools } from '../config/tools';
 
 interface GifFrame {
     imageData: ImageData;
     delay: number;
 }
 
-const DEFAULT_LOCAL_FILTERS = {
-    exposure: 0,
-    highlights: 100,
-    shadows: 100,
-    brightness: 100,
+interface ProactiveSuggestionState {
+    message: string;
+    acceptLabel: string;
+    onAccept: () => void;
+}
+
+interface TexturePreviewState {
+    url: string;
+    opacity: number;
+    blendMode: 'overlay' | 'multiply' | 'screen' | 'normal';
+}
+
+interface PreviewState {
+    url: string;
+    prompt: string;
+    applyToAll: boolean;
+}
+
+export const DEFAULT_LOCAL_FILTERS = {
+    brightness: 100, 
     contrast: 100, 
     saturate: 100, 
     sepia: 0, 
@@ -51,7 +69,7 @@ export interface TextToolState {
     position: { x: number, y: number };
 }
 
-const DEFAULT_TEXT_TOOL_STATE: TextToolState = {
+export const DEFAULT_TEXT_TOOL_STATE: TextToolState = {
     content: 'Texto de Exemplo',
     fontFamily: 'Impact',
     fontSize: 8,
@@ -63,20 +81,42 @@ const DEFAULT_TEXT_TOOL_STATE: TextToolState = {
 };
 
 interface EditorContextType {
+    // General State
     activeTool: ToolId | null;
-    setActiveTool: React.Dispatch<React.SetStateAction<ToolId | null>>;
-    recentTools: ToolId[];
-    currentImage: File | null;
-    originalImage: File | null;
+    setActiveTool: (toolId: ToolId | null) => void;
+    activeTab: TabId;
+    setActiveTab: React.Dispatch<React.SetStateAction<TabId>>;
     isLoading: boolean;
     setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
-    error: string | null;
-    setError: (message: string | null) => void;
     loadingMessage: string | null;
     setLoadingMessage: React.Dispatch<React.SetStateAction<string | null>>;
-    histogram: { r: number[], g: number[], b: number[] } | null;
-    setHistogram: React.Dispatch<React.SetStateAction<{ r: number[], g: number[], b: number[] } | null>>;
-    isHistoryLoading: boolean;
+    error: string | null;
+    setError: React.Dispatch<React.SetStateAction<string | null>>;
+    isComparisonModalOpen: boolean;
+    setIsComparisonModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    isInlineComparisonActive: boolean;
+    setIsInlineComparisonActive: React.Dispatch<React.SetStateAction<boolean>>;
+    toast: { message: string, type: ToastType } | null;
+    setToast: React.Dispatch<React.SetStateAction<{ message: string, type: ToastType } | null>>;
+    proactiveSuggestion: ProactiveSuggestionState | null;
+    setProactiveSuggestion: React.Dispatch<React.SetStateAction<ProactiveSuggestionState | null>>;
+    uploadProgress: UploadProgressStatus | null;
+    setUploadProgress: React.Dispatch<React.SetStateAction<UploadProgressStatus | null>>;
+    isSaveWorkflowModalOpen: boolean;
+    setIsSaveWorkflowModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    isLeftPanelVisible: boolean;
+    setIsLeftPanelVisible: React.Dispatch<React.SetStateAction<boolean>>;
+    isRightPanelVisible: boolean;
+    setIsRightPanelVisible: React.Dispatch<React.SetStateAction<boolean>>;
+
+    // Image & History State
+    currentImage: File | null;
+    currentImageUrl: string | null;
+    originalImage: File | null;
+    originalImageUrl: string | null;
+    imgRef: React.RefObject<HTMLImageElement>;
+    setInitialImage: (file: File | null) => void;
+    addImageToHistory: (newImageFile: File, toolId: ToolId) => void;
     canUndo: boolean;
     canRedo: boolean;
     undo: () => void;
@@ -84,754 +124,864 @@ interface EditorContextType {
     resetHistory: () => void;
     history: File[];
     historyIndex: number;
+    toolHistory: ToolId[];
     jumpToState: (index: number) => void;
-    setInitialImage: (file: File) => void;
-    handleUploadNew: () => void;
-    imgRef: React.RefObject<HTMLImageElement>;
-    canvasRef: React.RefObject<HTMLCanvasElement>;
-    currentImageUrl: string | null;
-    originalImageUrl: string | null;
-    prompt: string;
-    setPrompt: React.Dispatch<React.SetStateAction<string>>;
-    isComparisonModalOpen: boolean;
-    setIsComparisonModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    toast: { message: string } | null;
-    setToast: React.Dispatch<React.SetStateAction<{ message: string } | null>>;
+    hasRestoredSession: boolean;
+
+    // GIF State
+    isGif: boolean;
+    gifFrames: GifFrame[];
+    currentFrameIndex: number;
+    setCurrentFrameIndex: React.Dispatch<React.SetStateAction<number>>;
+
+    // Pan & Zoom State
     zoom: number;
     setZoom: React.Dispatch<React.SetStateAction<number>>;
-    panOffset: { x: number; y: number; };
+    panOffset: { x: number, y: number };
     isPanModeActive: boolean;
     setIsPanModeActive: React.Dispatch<React.SetStateAction<boolean>>;
     isCurrentlyPanning: boolean;
     handleWheel: (e: React.WheelEvent<HTMLDivElement>) => void;
     handlePanStart: (e: React.MouseEvent) => void;
     resetZoomAndPan: () => void;
-    crop?: Crop;
+
+    // Crop State
+    crop: Crop | undefined;
     setCrop: React.Dispatch<React.SetStateAction<Crop | undefined>>;
-    completedCrop?: PixelCrop;
+    completedCrop: PixelCrop | undefined;
     setCompletedCrop: React.Dispatch<React.SetStateAction<PixelCrop | undefined>>;
-    aspect?: number;
+    aspect: number | undefined;
     setAspect: React.Dispatch<React.SetStateAction<number | undefined>>;
-    handleApplyCrop: () => void;
+
+    // Masking State
+    canvasRef: React.RefObject<HTMLCanvasElement>;
     maskDataUrl: string | null;
+    setMaskDataUrl: React.Dispatch<React.SetStateAction<string | null>>;
     brushSize: number;
     setBrushSize: React.Dispatch<React.SetStateAction<number>>;
     clearMask: () => void;
     startDrawing: (e: React.MouseEvent<HTMLCanvasElement>) => void;
     stopDrawing: () => void;
     draw: (e: React.MouseEvent<HTMLCanvasElement>) => void;
-    handleAutoSelect: () => Promise<void>;
-    localFilters: typeof DEFAULT_LOCAL_FILTERS;
-    setLocalFilters: React.Dispatch<React.SetStateAction<typeof DEFAULT_LOCAL_FILTERS>>;
-    hasLocalAdjustments: boolean;
-    buildFilterString: (filters: typeof DEFAULT_LOCAL_FILTERS) => string;
-    handleApplyLocalAdjustments: (applyToAll?: boolean) => void;
-    resetLocalFilters: () => void;
-    handleApplyCurve: (lut: number[]) => void;
-    generativeMode: 'fill' | 'remove' | 'compose';
-    setGenerativeMode: React.Dispatch<React.SetStateAction<'fill' | 'remove' | 'compose'>>;
-    secondImageFile: File | null;
-    setSecondImageFile: React.Dispatch<React.SetStateAction<File | null>>;
-    generatedVideoUrl: string | null;
-    handleGenerateVideo: (prompt: string, aspectRatio: string) => Promise<void>;
+
+    // Object Detection State
     detectedObjects: DetectedObject[] | null;
     setDetectedObjects: React.Dispatch<React.SetStateAction<DetectedObject[] | null>>;
     highlightedObject: DetectedObject | null;
     setHighlightedObject: React.Dispatch<React.SetStateAction<DetectedObject | null>>;
-    handleDetectObjects: () => Promise<void>;
-    handleSelectObject: (object: DetectedObject) => void;
+
+    // Local Adjustments State
+    localFilters: typeof DEFAULT_LOCAL_FILTERS;
+    setLocalFilters: React.Dispatch<React.SetStateAction<typeof DEFAULT_LOCAL_FILTERS>>;
+    hasLocalAdjustments: boolean;
+    buildFilterString: (filters: typeof DEFAULT_LOCAL_FILTERS) => string;
+    resetLocalFilters: () => void;
+    histogram: { r: number[], g: number[], b: number[] } | null;
+    
+    // Local Adjustment Panel Specific Filters
+    localAdjustmentFilters: { brightness: number, contrast: number, saturate: number };
+    setLocalAdjustmentFilters: React.Dispatch<React.SetStateAction<{ brightness: number, contrast: number, saturate: number }>>;
+    
+    // AI Preview State
+    previewState: PreviewState | null;
+    setPreviewState: React.Dispatch<React.SetStateAction<PreviewState | null>>;
+    isPreviewLoading: boolean;
+
+    // Text Tool State
     textToolState: TextToolState;
     setTextToolState: React.Dispatch<React.SetStateAction<TextToolState>>;
+    resetTextToolState: () => void;
+
+    // Video Generation State
+    generatedVideoUrl: string | null;
+    setGeneratedVideoUrl: React.Dispatch<React.SetStateAction<string | null>>;
+
+    // Texture State
+    texturePreview: TexturePreviewState | null;
+    setTexturePreview: React.Dispatch<React.SetStateAction<TexturePreviewState | null>>;
+
+    // Smart Search State
+    isSmartSearching: boolean;
+    smartSearchResult: SmartSearchResult | null;
+    setSmartSearchResult: React.Dispatch<React.SetStateAction<SmartSearchResult | null>>;
+    
+    // Workflows State
+    savedWorkflows: Workflow[];
+    addWorkflow: (workflow: Workflow) => void;
+    recentTools: ToolId[];
+    
+    // Tool Handlers
+    executeWorkflow: (toolIds: ToolId[]) => void;
+    handlePredefinedSearchAction: (action: PredefinedSearch['action']) => void;
+    handleSmartSearch: (term: string) => void;
+    handleUploadNew: () => void;
+    handleExplicitSave: () => void;
+    handleApplyCrop: () => void;
+    handleTransform: (transformType: TransformType) => void;
+    handleRemoveBackground: () => void;
+    handleRelight: (prompt: string) => void;
+    handleMagicPrompt: (prompt: string) => void;
+    handleApplyLowPoly: () => void;
+    handleExtractArt: () => void;
+    handleApplyDustAndScratch: () => void;
+    handleDenoise: () => void;
+    handleApplyFaceRecovery: () => void;
+    handleGenerateProfessionalPortrait: (applyToAll: boolean) => void;
+    handleRestorePhoto: () => void;
+    handleApplyUpscale: (factor: number, preserveFace: boolean) => void;
+    handleUnblurImage: (sharpenLevel: number, denoiseLevel: number, model: string) => void;
+    handleGenerativeEdit: () => void;
+    handleObjectRemove: () => void;
+    handleDetectObjects: () => void;
+    handleSelectObject: (object: DetectedObject) => void;
+    // FIX: Update signature to handle optional boolean for applying to all GIF frames.
+    handleApplyLocalAdjustments: (applyToAll?: boolean) => void;
+    handleApplyCurve: (lut: number[]) => void;
+    handleApplyStyle: (stylePrompt: string, applyToAll: boolean) => void;
+    handleApplyAIAdjustment: (prompt: string, applyToAll: boolean) => void;
     handleApplyText: () => void;
-    handleApplyStyle: (stylePrompt: string, applyToAll?: boolean) => Promise<void>;
-    handleRemoveBackground: () => Promise<void>;
-    handleApplyAIAdjustment: (adjustmentPrompt: string) => Promise<void>;
-    handleGenerativeEdit: () => Promise<void>;
-    handleApplyUpscale: (factor: number, preserveFace: boolean) => Promise<void>;
-    handleRelight: (prompt: string) => Promise<void>;
-    handleTransform: (transformType: TransformType) => Promise<void>;
-    handleMagicPrompt: (prompt: string) => Promise<void>;
-    handleApplyLowPoly: () => Promise<void>;
-    handleGenerateProfessionalPortrait: () => Promise<void>;
-    handleWonderModelUpscale: () => Promise<void>;
-    handleExtractArt: () => Promise<void>;
-    handleApplyDustAndScratch: () => Promise<void>;
-    handleDenoise: () => Promise<void>;
-    handleApplyFaceRecovery: () => Promise<void>;
-    handleUnblurImage: (sharpenLevel: number, denoiseLevel: number, model: string) => Promise<void>;
-    isGif: boolean;
-    gifFrames: GifFrame[];
-    currentFrameIndex: number;
-    setCurrentFrameIndex: React.Dispatch<React.SetStateAction<number>>;
-    panelsVisible: boolean;
-    setPanelsVisible: React.Dispatch<React.SetStateAction<boolean>>;
-    handleDownload: (format: 'png' | 'jpeg') => void;
+    handleGenerateVideo: (prompt: string, aspectRatio: VideoAspectRatio) => void;
+    handleDownload: () => void;
+    handleApplyTexture: () => void;
+    // FIX: Add missing properties to the context type.
+    prompt: string;
+    setPrompt: React.Dispatch<React.SetStateAction<string>>;
+    generateAIPreview: (prompt: string, applyToAll: boolean) => void;
+    commitAIPreview: () => void;
+    resetLocalAdjustmentFilters: () => void;
 }
 
-const EditorContext = createContext<EditorContextType | null>(null);
+const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
-export const useEditor = () => {
+export const useEditor = (): EditorContextType => {
     const context = useContext(EditorContext);
     if (!context) {
-        throw new Error("useEditor must be used within an EditorProvider");
+        throw new Error('useEditor must be used within an EditorProvider');
     }
     return context;
 };
 
 export const useLoadingError = () => {
-    const { isLoading, error, setError, setIsLoading, loadingMessage, setLoadingMessage } = useEditor()!;
-    return { isLoading, error, setError, setIsLoading, loadingMessage, setLoadingMessage };
+    const { isLoading, error, setError, setIsLoading } = useEditor();
+    return { isLoading, error, setError, setIsLoading };
 };
 
 export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    // --- STATE MANAGEMENT ---
+    
+    // Core State
     const [activeTool, setActiveTool] = useState<ToolId | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [error, setErrorState] = useState<string | null>(null);
-    const [toast, setToast] = useState<{ message: string } | null>(null);
+    const [activeTab, setActiveTab] = useState<TabId>('crop');
+    const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
-    const [histogram, setHistogram] = useState<{ r: number[], g: number[], b: number[] } | null>(null);
-    const [prompt, setPrompt] = useState<string>('');
-    const [isComparisonModalOpen, setIsComparisonModalOpen] = useState<boolean>(false);
-    const imgRef = useRef<HTMLImageElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
+    const [uploadProgress, setUploadProgress] = useState<UploadProgressStatus | null>(null);
+    const [isLeftPanelVisible, setIsLeftPanelVisible] = useState(true);
+    const [isRightPanelVisible, setIsRightPanelVisible] = useState(true);
+    
+    // Modal States
+    const [isComparisonModalOpen, setIsComparisonModalOpen] = useState(false);
+    const [isInlineComparisonActive, setIsInlineComparisonActive] = useState(false);
+    const [isSaveWorkflowModalOpen, setIsSaveWorkflowModalOpen] = useState(false);
+    
+    // Image, History & GIF State
+    const [gifFrames, setGifFrames] = useState<GifFrame[]>([]);
+    const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
+    const isGif = gifFrames.length > 1;
+
+    const onHistoryStateChange = useCallback((newImage?: File) => {
+        // Reset transient states that depend on a specific image version
+        clearMask();
+        setCrop(undefined);
+        setCompletedCrop(undefined);
+        setDetectedObjects(null);
+        setHighlightedObject(null);
+        setPreviewState(null);
+        resetLocalFilters();
+        if(isGif) setCurrentFrameIndex(0);
+    }, [isGif]);
+
+    const { 
+        currentImage, originalImage, canUndo, canRedo, isHistoryLoading, 
+        history, historyIndex, toolHistory, hasRestoredSession, 
+        addImageToHistory: addImageToHistoryFromHook, 
+        setInitialImage: setHistoryInitialImage, 
+        clearHistory, 
+        undo: undoFromHook, 
+        redo: redoFromHook, 
+        resetHistory: resetHistoryFromHook, 
+        jumpToState: jumpToStateFromHook 
+    } = useHistoryState(onHistoryStateChange);
+    
+    // Pan, Zoom & Crop State
+    const { zoom, setZoom, panOffset, isPanModeActive, setIsPanModeActive, isCurrentlyPanning, handleWheel, handlePanStart, resetZoomAndPan } = usePanAndZoom();
     const [crop, setCrop] = useState<Crop>();
     const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
     const [aspect, setAspect] = useState<number | undefined>();
-    const [localFilters, setLocalFilters] = useState(DEFAULT_LOCAL_FILTERS);
-    const [generativeMode, setGenerativeMode] = useState<'fill' | 'remove' | 'compose'>('fill');
-    const [secondImageFile, setSecondImageFile] = useState<File | null>(null);
-    const [brushSize, setBrushSize] = useState<number>(30);
-    const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+    
+    // Masking State
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [brushSize, setBrushSize] = useState(40);
+    const { maskDataUrl, setMaskDataUrl, startDrawing, stopDrawing, draw, clearMask } = useMaskCanvas(canvasRef, brushSize);
+    
+    // Object Detection State
     const [detectedObjects, setDetectedObjects] = useState<DetectedObject[] | null>(null);
     const [highlightedObject, setHighlightedObject] = useState<DetectedObject | null>(null);
+
+    // AI & Preview State
+    const [prompt, setPrompt] = useState('');
+    const [previewState, setPreviewState] = useState<PreviewState | null>(null);
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+    const [proactiveSuggestion, setProactiveSuggestion] = useState<ProactiveSuggestionState | null>(null);
+    const [smartSearchResult, setSmartSearchResult] = useState<SmartSearchResult | null>(null);
+    const [isSmartSearching, setIsSmartSearching] = useState(false);
+    const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+
+    // Filter & Adjustment State
+    const [localFilters, setLocalFilters] = useState(DEFAULT_LOCAL_FILTERS);
+    const [localAdjustmentFilters, setLocalAdjustmentFilters] = useState({ brightness: 100, contrast: 100, saturate: 100 });
+    const [histogram, setHistogram] = useState<{ r: number[], g: number[], b: number[] } | null>(null);
+    const [texturePreview, setTexturePreview] = useState<TexturePreviewState | null>(null);
+    
+    // Text Tool State
     const [textToolState, setTextToolState] = useState<TextToolState>(DEFAULT_TEXT_TOOL_STATE);
-    const [panelsVisible, setPanelsVisible] = useState(true);
+
+    // Workflow & Recent Tools State
+    const [savedWorkflows, setSavedWorkflows] = useState<Workflow[]>([]);
     const [recentTools, setRecentTools] = useState<ToolId[]>([]);
-
-    // GIF State
-    const [isGif, setIsGif] = useState<boolean>(false);
-    const [gifFrames, setGifFrames] = useState<GifFrame[]>([]);
-    const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
-
-    const { maskDataUrl, setMaskDataUrl, clearMask, startDrawing, stopDrawing, draw } = useMaskCanvas(canvasRef, brushSize);
-    const { zoom, setZoom, panOffset, isPanModeActive, setIsPanModeActive, handleWheel, handlePanStart, resetZoomAndPan, isCurrentlyPanning } = usePanAndZoom();
-
-    const setError = useCallback((message: string | null) => {
-        setErrorState(message);
-        if (message) {
-            setToast({ message });
-        }
-    }, []);
-
-    const onHistoryStateChange = useCallback((newImage?: File) => {
-        clearMask();
-        setSecondImageFile(null);
-        setCrop(undefined);
-        setCompletedCrop(undefined);
-        setLocalFilters(DEFAULT_LOCAL_FILTERS);
-        setError(null);
-        setPrompt('');
-        setGeneratedVideoUrl(null);
-        setDetectedObjects(null);
-        setHighlightedObject(null);
-        setTextToolState(DEFAULT_TEXT_TOOL_STATE);
-        setIsComparisonModalOpen(false);
-        setPanelsVisible(true);
-
-        if (isGif && newImage) {
-            const updateFrames = async () => {
-                const newImageData = await dataURLToImageData(URL.createObjectURL(newImage));
-                setGifFrames(prevFrames => {
-                    const updatedFrames = [...prevFrames];
-                    updatedFrames[currentFrameIndex] = { ...updatedFrames[currentFrameIndex], imageData: newImageData };
-                    return updatedFrames;
-                });
-            };
-            updateFrames();
-        }
-    }, [clearMask, setError, isGif, currentFrameIndex]);
-
-    const {
-        currentImage, originalImage, canUndo, canRedo, isHistoryLoading, addImageToHistory,
-        setInitialImage: setHistoryInitialImage, clearHistory, undo, redo, resetHistory,
-        history, historyIndex, jumpToState,
-    } = useHistoryState(onHistoryStateChange);
     
-    // Load recent tools on mount
+    // Refs
+    const imgRef = useRef<HTMLImageElement>(null);
+    const lastAppliedToolRef = useRef<ToolId | null>(null);
+
+    // --- DERIVED STATE & MEMOS ---
+
+    const currentImageUrl = useMemo(() => currentImage ? URL.createObjectURL(currentImage) : null, [currentImage]);
+    const originalImageUrl = useMemo(() => originalImage ? URL.createObjectURL(originalImage) : null, [originalImage]);
+    
     useEffect(() => {
-        const fetchRecentTools = async () => {
-            const loadedTools = await loadRecentTools();
-            if (loadedTools) {
-                setRecentTools(loadedTools);
-            }
+        return () => {
+            if (currentImageUrl) URL.revokeObjectURL(currentImageUrl);
+            if (originalImageUrl) URL.revokeObjectURL(originalImageUrl);
         };
-        fetchRecentTools();
+    }, [currentImageUrl, originalImageUrl]);
+
+    const buildFilterString = useCallback((filters: typeof DEFAULT_LOCAL_FILTERS) => {
+        const { brightness, contrast, saturate, sepia, invert, grayscale, hueRotate, blur } = filters;
+        return `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) sepia(${sepia}%) invert(${invert}%) grayscale(${grayscale}%) hue-rotate(${hueRotate}deg) blur(${blur}px)`;
     }, []);
-    
-    // Track and save recent tools
+
+    const hasLocalAdjustments = useMemo(() => {
+        return Object.keys(localFilters).some(key => {
+            if (key === 'curve') return localFilters.curve !== undefined;
+            return localFilters[key as keyof typeof DEFAULT_LOCAL_FILTERS] !== DEFAULT_LOCAL_FILTERS[key as keyof typeof DEFAULT_LOCAL_FILTERS];
+        });
+    }, [localFilters]);
+
+    // --- EFFECTS ---
+
+    // Load workflows and recent tools from DB on mount
     useEffect(() => {
+        const loadData = async () => {
+            const [workflows, recents] = await Promise.all([db.loadWorkflows(), db.loadRecentTools()]);
+            setSavedWorkflows(workflows || []);
+            setRecentTools(recents || []);
+        };
+        loadData();
+    }, []);
+
+    // Active tool change handler
+    useEffect(() => {
+        setError(null);
         if (activeTool) {
-            setRecentTools(prev => {
-                const newRecent = [activeTool, ...prev.filter(t => t !== activeTool)].slice(0, 5);
-                saveRecentTools(newRecent);
-                return newRecent;
-            });
+            // Update recent tools list
+            const updatedRecents = [activeTool, ...recentTools.filter(t => t !== activeTool)].slice(0, 5);
+            setRecentTools(updatedRecents);
+            db.saveRecentTools(updatedRecents);
+
+            // Reset specific tool states
+            if (!editingToolIds.includes(activeTool)) {
+                setInitialImage(null);
+                setGeneratedVideoUrl(null);
+            }
         }
     }, [activeTool]);
-    
-    const setInitialImage = useCallback(async (file: File) => {
-        if (file.type === 'image/gif') {
-            setIsLoading(true);
-            setLoadingMessage("Processando GIF...");
-            try {
-                const frames = await parseGif(file);
-                setGifFrames(frames);
-                setIsGif(true);
-                setCurrentFrameIndex(0);
-                const firstFrameFile = frameToFile(frames[0].imageData, `frame_0.png`);
-                setHistoryInitialImage(firstFrameFile);
-            } catch(e) {
-                setError("Falha ao processar o arquivo GIF.");
-                setIsGif(false);
-            } finally {
-                setIsLoading(false);
-                setLoadingMessage(null);
-            }
-        } else {
-            setIsGif(false);
-            setGifFrames([]);
-            setCurrentFrameIndex(0);
-            setHistoryInitialImage(file);
-        }
-    }, [setHistoryInitialImage, setError]);
-    
+
+    const editingToolIds: ToolId[] = ['magicMontage', 'objectRemover', 'extractArt', 'crop', 'adjust', 'style', 'generativeEdit', 'removeBg', 'upscale', 'text', 'relight', 'lowPoly', 'pixelArt', 'portraits', 'styleGen', 'photoRestoration', 'dustAndScratches', 'neuralFilters', 'trends', 'unblur', 'texture', 'faceRecovery', 'denoise'];
+
+    // Histogram generation
     useEffect(() => {
-        if (activeTool !== 'videoGen') {
-            setGeneratedVideoUrl(null);
+        if (currentImageUrl && activeTab === 'adjust') {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0);
+                    const imageData = ctx.getImageData(0, 0, img.width, img.height);
+                    setHistogram(generateHistogram(imageData));
+                }
+            };
+            img.src = currentImageUrl;
+        } else {
+            setHistogram(null);
         }
-        setPanelsVisible(true);
-    }, [activeTool]);
+    }, [currentImageUrl, activeTab]);
 
-    const urlCache = useRef(new Map<File | ImageData, string>());
-    const getImageUrl = useCallback((data: File | ImageData | null): string | null => {
-        if (!data) return null;
-        if (urlCache.current.has(data)) return urlCache.current.get(data)!;
-        
-        let url;
-        if (data instanceof File) {
-            url = URL.createObjectURL(data);
-        } else { // It's ImageData
-            url = frameToDataURL(data);
+    // Proactive suggestions based on last tool used
+    useEffect(() => {
+        const lastTool = toolHistory[toolHistory.length - 1];
+        if (lastTool && lastTool !== lastAppliedToolRef.current) {
+            lastAppliedToolRef.current = lastTool;
+            let suggestion: ProactiveSuggestionState | null = null;
+            if (lastTool === 'removeBg') {
+                suggestion = {
+                    message: "Você removeu o fundo. Quer colocar seu produto em um novo cenário?",
+                    acceptLabel: "Fotografia de Produto",
+                    onAccept: () => setActiveTool('productPhotography')
+                };
+            } else if (lastTool === 'faceRecovery') {
+                 suggestion = {
+                    message: "O rosto foi restaurado. Gostaria de melhorar a resolução geral da imagem?",
+                    acceptLabel: "Melhorar Resolução",
+                    onAccept: () => setActiveTab('upscale')
+                };
+            }
+            if(suggestion) setProactiveSuggestion(suggestion);
         }
-        
-        urlCache.current.set(data, url);
-        return url;
-    }, []);
+    }, [toolHistory]);
 
-    useEffect(() => () => {
-        for (const url of urlCache.current.values()) {
-             if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-        }
-        urlCache.current.clear();
-    }, []);
 
-    const currentImageUrl = useMemo(() => {
-        if (isGif && gifFrames[currentFrameIndex]) {
-            return getImageUrl(gifFrames[currentFrameIndex].imageData);
-        }
-        return getImageUrl(currentImage);
-    }, [currentImage, getImageUrl, isGif, gifFrames, currentFrameIndex]);
+    // --- HANDLER FUNCTIONS ---
 
-    const originalImageUrl = useMemo(() => getImageUrl(originalImage), [originalImage, getImageUrl]);
-
-    const hasLocalAdjustments = useMemo(() => JSON.stringify(localFilters) !== JSON.stringify(DEFAULT_LOCAL_FILTERS), [localFilters]);
-
-    const handleApiCall = useCallback(async (apiFunc: (image: File) => Promise<string>, context: string, targetImage: File, applyToAll?: boolean) => {
-        if (!isGif || !applyToAll) {
-            setIsLoading(true);
-            setError(null);
-            try {
-                const resultUrl = await apiFunc(targetImage);
-                const newImageFile = dataURLtoFile(resultUrl, `${context}-${Date.now()}.png`);
-                addImageToHistory(newImageFile);
-            } catch (err) {
-                setError(`Falha na operação de ${context}. ${err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.'}`);
-            } finally {
+    const setInitialImage = useCallback(async (file: File | null) => {
+        setIsInlineComparisonActive(false); // Reset comparison on new image
+        if (file) {
+            if (file.type === 'image/gif') {
+                setIsLoading(true);
+                setLoadingMessage("Processando GIF...");
+                try {
+                    const frames = await parseGif(file);
+                    setGifFrames(frames);
+                } catch (e) {
+                    setError("Não foi possível processar este GIF.");
+                    setGifFrames([]);
+                }
                 setIsLoading(false);
                 setLoadingMessage(null);
+            } else {
+                setGifFrames([]);
             }
+            setHistoryInitialImage(file);
+        } else {
+            clearHistory();
+            setGifFrames([]);
+        }
+    }, [setHistoryInitialImage, clearHistory]);
+
+    const addImageToHistory = useCallback((newImageFile: File, toolId: ToolId) => {
+        addImageToHistoryFromHook(newImageFile, toolId);
+        setIsInlineComparisonActive(true);
+    }, [addImageToHistoryFromHook]);
+
+    const undo = useCallback(() => {
+        undoFromHook();
+        setIsInlineComparisonActive(false);
+    }, [undoFromHook]);
+    
+    const redo = useCallback(() => {
+        redoFromHook();
+        setIsInlineComparisonActive(true);
+    }, [redoFromHook]);
+
+    const resetHistory = useCallback(() => {
+        resetHistoryFromHook();
+        setIsInlineComparisonActive(false);
+    }, [resetHistoryFromHook]);
+    
+    const jumpToState = useCallback((index: number) => {
+        jumpToStateFromHook(index);
+        setIsInlineComparisonActive(index > 0);
+    }, [jumpToStateFromHook]);
+
+    const executeWithLoading = useCallback(async <T,>(
+        toolFunction: (image: File, ...args: any[]) => Promise<T>,
+        toolId: ToolId,
+        message: string,
+        ...args: any[]
+    ): Promise<T | void> => {
+        if (!currentImage) {
+            setError("Nenhuma imagem carregada.");
             return;
         }
-
-        // Apply to all GIF frames logic
         setIsLoading(true);
+        setLoadingMessage(message);
         setError(null);
-        const newFrames: GifFrame[] = [];
         try {
-            for (let i = 0; i < gifFrames.length; i++) {
-                setLoadingMessage(`Processando frame ${i + 1} de ${gifFrames.length}...`);
-                const frameFile = frameToFile(gifFrames[i].imageData, `frame_${i}.png`);
-                const resultUrl = await apiFunc(frameFile);
-                const newImageData = await dataURLToImageData(resultUrl);
-                newFrames.push({ ...gifFrames[i], imageData: newImageData });
+            const result = await toolFunction(currentImage, ...args);
+            if (typeof result === 'string' && result.startsWith('data:image')) {
+                addImageToHistory(dataURLtoFile(result, `${toolId}-result.png`), toolId);
             }
-            setGifFrames(newFrames);
-            const currentFrameFile = frameToFile(newFrames[currentFrameIndex].imageData, `frame_${currentFrameIndex}_updated.png`);
-            addImageToHistory(currentFrameFile);
-
-        } catch (err) {
-            setError(`Falha ao aplicar a todos os frames. ${err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.'}`);
+            return result;
+        } catch (e) {
+            const errorMessage = e instanceof Error ? e.message : "Ocorreu um erro desconhecido.";
+            setError(errorMessage);
+            setToast({ message: errorMessage, type: 'error' });
         } finally {
             setIsLoading(false);
             setLoadingMessage(null);
         }
-    }, [addImageToHistory, setError, isGif, gifFrames, currentFrameIndex]);
+    }, [currentImage, addImageToHistory, setError, setIsLoading, setLoadingMessage]);
     
-    const handleApplyStyle = useCallback(async (stylePrompt: string, applyToAll: boolean = false) => {
+    // Single function to handle most AI adjustments
+    const applyAIGeneratedChange = useCallback(async (
+        serviceFunction: (file: File, ...args: any[]) => Promise<string>,
+        toolId: ToolId,
+        applyToAllFrames: boolean = false,
+        ...args: any[]
+    ) => {
         if (!currentImage) return;
-        setLoadingMessage("A aplicar estilo...");
-        await handleApiCall((image) => geminiService.applyStyle(image, stylePrompt), 'aplicar-estilo', currentImage, applyToAll);
-    }, [currentImage, handleApiCall]);
 
-    const handleRemoveBackground = useCallback(async () => {
-        if (!currentImage) return;
-        setLoadingMessage("A remover fundo...");
-        await handleApiCall(geminiService.removeBackground, 'remover-fundo', currentImage);
-    }, [currentImage, handleApiCall]);
-
-    const handleApplyAIAdjustment = useCallback(async (adjustmentPrompt: string) => {
-        if (!currentImage) return;
-        setLoadingMessage("A aplicar ajuste...");
-        await handleApiCall((image) => geminiService.generateAdjustedImage(image, adjustmentPrompt), 'ajuste-ia', currentImage);
-    }, [currentImage, handleApiCall]);
-    
-    const handleGenerativeEdit = useCallback(async () => {
-        if (!currentImage) return;
-        setLoadingMessage("A editar com IA...");
-        await handleApiCall(async (image) => {
-            if (generativeMode === 'compose') {
-                if (!prompt.trim()) throw new Error("O prompt é necessário para a composição.");
-                return geminiService.generativeEdit(image, prompt, 'compose', { secondImage: secondImageFile ?? undefined });
-            }
-            if (!maskDataUrl) throw new Error("A máscara é necessária para preencher/remover.");
-            if (generativeMode === 'fill' && !prompt.trim()) throw new Error("O prompt é necessário para preencher.");
-            const maskFile = dataURLtoFile(maskDataUrl, 'mask.png');
-            return geminiService.generativeEdit(image, prompt, generativeMode, { maskImage: maskFile });
-        }, 'edicao-generativa', currentImage);
-    }, [currentImage, maskDataUrl, generativeMode, prompt, secondImageFile, handleApiCall]);
-
-    const handleApplyUpscale = useCallback(async (factor: number, preserveFace: boolean) => {
-        if (!currentImage) return;
-        setLoadingMessage(`A aumentar escala em ${factor}x...`);
-        await handleApiCall((image) => geminiService.upscaleImage(image, factor, preserveFace), 'upscale', currentImage);
-    }, [currentImage, handleApiCall]);
-    
-    const handleRelight = useCallback(async (prompt: string) => {
-        if (!currentImage) return;
-        setLoadingMessage("Ajustando iluminação...");
-        await handleApiCall((image) => geminiService.reacenderImage(image, prompt), 'reacender-imagem', currentImage);
-    }, [currentImage, handleApiCall]);
-    
-    const handleGenerateVideo = useCallback(async (prompt: string, aspectRatio: string) => {
         setIsLoading(true);
+        setLoadingMessage("Aplicando ajuste de IA...");
         setError(null);
-        setLoadingMessage("A gerar o seu vídeo, isto pode demorar alguns instantes...");
-        setGeneratedVideoUrl(null); 
+
         try {
-            const resultUrl = await geminiService.generateVideo(prompt, aspectRatio);
-            setGeneratedVideoUrl(resultUrl);
-        } catch (err) {
-            setError(`Falha na geração de vídeo. ${err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.'}`);
-        } finally {
-            setIsLoading(false);
-            setLoadingMessage(null);
-        }
-    }, [setError]);
-
-    const handleMagicPrompt = useCallback(async (prompt: string) => {
-        if (!currentImage) return;
-        setIsLoading(true);
-        setError(null);
-        setLoadingMessage("A IA está a pensar...");
-        try {
-            const resultUrl = await handleOrchestratorCall(currentImage, prompt);
-            const newImageFile = dataURLtoFile(resultUrl, `prompt-magico-${Date.now()}.png`);
-            addImageToHistory(newImageFile);
-            setIsComparisonModalOpen(true);
-        } catch (err) {
-            setError(`Falha na operação de prompt-magico. ${err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.'}`);
-        } finally {
-            setIsLoading(false);
-            setLoadingMessage(null);
-        }
-    }, [currentImage, addImageToHistory, setIsComparisonModalOpen, setError]);
-
-    const handleAutoSelect = useCallback(async () => {
-        if (!currentImage) return;
-        setIsLoading(true); setError(null); setLoadingMessage("A analisar imagem...");
-        try {
-            const generatedMaskDataUrl = await geminiService.generateMask(currentImage);
-            setMaskDataUrl(generatedMaskDataUrl);
-        } catch (err) {
-            setError(`Falha na seleção automática. ${err instanceof Error ? err.message : 'Erro desconhecido.'}`);
-        } finally {
-            setIsLoading(false); setLoadingMessage(null);
-        }
-    }, [currentImage, setMaskDataUrl, setError]);
-    
-    const buildFilterString = useCallback((filters: typeof DEFAULT_LOCAL_FILTERS) => {
-        const cssFilters = `
-            brightness(${filters.brightness}%) 
-            contrast(${filters.contrast}%) 
-            saturate(${filters.saturate}%) 
-            sepia(${filters.sepia}%) 
-            invert(${filters.invert}%) 
-            grayscale(${filters.grayscale}%) 
-            hue-rotate(${filters.hueRotate}deg) 
-            blur(${filters.blur}px)
-        `;
-        return cssFilters;
-    }, []);
-
-    const handleApplyLocalAdjustments = useCallback(async (applyToAll: boolean = false) => {
-        if (!currentImageUrl || !imgRef.current) return;
-    
-        const applyAdjustmentsToFrame = async (imageData: ImageData): Promise<ImageData> => {
-            const canvas = document.createElement('canvas');
-            canvas.width = imageData.width;
-            canvas.height = imageData.height;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            if (!ctx) throw new Error("Could not create canvas context.");
-            ctx.putImageData(imageData, 0, 0);
-            let finalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            if (localFilters.curve) {
-                finalImageData = applyLUT(finalImageData, localFilters.curve);
-            }
-            return finalImageData;
-        };
-
-        if (isGif && applyToAll) {
-            setIsLoading(true);
-            setLoadingMessage("Aplicando a todos os frames...");
-            try {
+            if (isGif && applyToAllFrames) {
                 const newFrames: GifFrame[] = [];
                 for (let i = 0; i < gifFrames.length; i++) {
-                    setLoadingMessage(`Processando frame ${i + 1} de ${gifFrames.length}...`);
-                    const adjustedImageData = await applyAdjustmentsToFrame(gifFrames[i].imageData);
-                    newFrames.push({ ...gifFrames[i], imageData: adjustedImageData });
+                    setLoadingMessage(`Processando frame ${i + 1}/${gifFrames.length}...`);
+                    const frameFile = frameToFile(gifFrames[i].imageData, `frame_${i}.png`);
+                    const resultDataUrl = await serviceFunction(frameFile, ...args);
+                    const newImageData = await dataURLToImageData(resultDataUrl);
+                    newFrames.push({ ...gifFrames[i], imageData: newImageData });
                 }
-                setGifFrames(newFrames);
-                const currentFrameFile = frameToFile(newFrames[currentFrameIndex].imageData, `frame_${currentFrameIndex}_adjusted.png`);
-                addImageToHistory(currentFrameFile);
-            } catch (err) {
-                 setError(err instanceof Error ? err.message : 'Erro desconhecido ao aplicar a todos os frames.');
-            } finally {
-                setIsLoading(false);
-                setLoadingMessage(null);
+                const newGifFile = await createGifFromFrames(newFrames, 'gif-edit.gif');
+                addImageToHistory(newGifFile, toolId);
+
+            } else {
+                const imageToProcess = isGif ? frameToFile(gifFrames[currentFrameIndex].imageData, 'current-frame.png') : currentImage;
+                const resultDataUrl = await serviceFunction(imageToProcess, ...args);
+                
+                if (isGif) {
+                    const newImageData = await dataURLToImageData(resultDataUrl);
+                    const updatedFrames = [...gifFrames];
+                    updatedFrames[currentFrameIndex] = { ...updatedFrames[currentFrameIndex], imageData: newImageData };
+                    const newGifFile = await createGifFromFrames(updatedFrames, 'gif-edit.gif');
+                    addImageToHistory(newGifFile, toolId);
+                } else {
+                    addImageToHistory(dataURLtoFile(resultDataUrl, `${toolId}-result.png`), toolId);
+                }
             }
-        } else {
-             const image = new Image();
-             image.crossOrigin = "Anonymous";
-             image.onload = async () => {
-                 const canvas = document.createElement('canvas');
-                 canvas.width = image.naturalWidth;
-                 canvas.height = image.naturalHeight;
-                 const ctx = canvas.getContext('2d');
-                 if (!ctx) return setError("Could not create canvas context.");
-                 ctx.drawImage(image, 0, 0);
-                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                 const adjustedImageData = await applyAdjustmentsToFrame(imageData);
-                 ctx.putImageData(adjustedImageData, 0, 0);
-                 const newImageFile = dataURLtoFile(canvas.toDataURL('image/png'), 'adjusted.png');
-                 addImageToHistory(newImageFile);
-             };
-             image.src = currentImageUrl;
+             setToast({ message: `${toolId} aplicado com sucesso!`, type: 'success' });
+        } catch (e) {
+            const errorMessage = e instanceof Error ? e.message : "Ocorreu um erro desconhecido.";
+            setError(errorMessage);
+            setToast({ message: errorMessage, type: 'error' });
+        } finally {
+            setIsLoading(false);
+            setLoadingMessage(null);
         }
-    }, [currentImageUrl, localFilters, addImageToHistory, setError, isGif, gifFrames, currentFrameIndex]);
-    
-    const handleApplyCurve = useCallback((lut: number[]) => {
-      setLocalFilters(prev => ({...prev, curve: lut}));
-    }, []);
-    
-    const resetLocalFilters = useCallback(() => setLocalFilters(DEFAULT_LOCAL_FILTERS), []);
-    
-    useEffect(() => {
-        const toolTabMap: Partial<Record<ToolId, TabId>> = {
-            adjust: 'localAdjust',
-            relight: 'adjust'
-        };
-        const currentTabId = activeTool ? toolTabMap[activeTool] : undefined;
+    }, [currentImage, isGif, gifFrames, currentFrameIndex, addImageToHistory, setError, setIsLoading, setLoadingMessage]);
 
-      if (currentImage && currentTabId === 'localAdjust') {
-        const image = new Image();
-        image.crossOrigin = "Anonymous";
-        image.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = image.naturalWidth;
-          canvas.height = image.naturalHeight;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return;
-          ctx.drawImage(image, 0, 0);
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          setHistogram(generateHistogram(imageData));
-        };
-        image.src = currentImageUrl!;
-      } else {
-        setHistogram(null);
-      }
-    }, [currentImage, currentImageUrl, activeTool]);
+    const createGifFromFrames = async (frames: GifFrame[], filename: string): Promise<File> => {
+        if (frames.length === 0) throw new Error("Não há frames para criar o GIF.");
+        const { width, height } = frames[0].imageData;
+        const encoder = new GIFEncoder(width, height, 'octree', true);
+        encoder.start();
+        encoder.setRepeat(0);
+        
+        for (const frame of frames) {
+            encoder.setDelay(frame.delay);
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.putImageData(frame.imageData, 0, 0);
+            encoder.addFrame(ctx as any);
+        }
+        encoder.finish();
+        const buffer = encoder.out.getData();
+        const blob = new Blob([buffer], { type: 'image/gif' });
+        return new File([blob], filename, { type: 'image/gif' });
+    };
 
-
-    const handleApplyCrop = useCallback(() => {
+    const handleApplyCrop = useCallback(async () => {
         if (!completedCrop || !imgRef.current) return;
         const image = imgRef.current;
-        const canvas = document.createElement('canvas');
-        const scaleX = image.naturalWidth / image.width; const scaleY = image.naturalHeight / image.height;
-        canvas.width = completedCrop.width; canvas.height = completedCrop.height;
-        const ctx = canvas.getContext('2d');
+        const scaleX = image.naturalWidth / image.width;
+        const scaleY = image.naturalHeight / image.height;
+
+        const cropCanvas = document.createElement('canvas');
+        cropCanvas.width = completedCrop.width;
+        cropCanvas.height = completedCrop.height;
+        const ctx = cropCanvas.getContext('2d');
         if (!ctx) return;
-        ctx.drawImage(image, completedCrop.x * scaleX, completedCrop.y * scaleY, completedCrop.width * scaleX, completedCrop.height * scaleY, 0, 0, completedCrop.width, completedCrop.height);
-        addImageToHistory(dataURLtoFile(canvas.toDataURL('image/png'), 'cropped.png'));
-    }, [completedCrop, addImageToHistory]);
+        
+        ctx.drawImage(
+            image,
+            completedCrop.x * scaleX,
+            completedCrop.y * scaleY,
+            completedCrop.width * scaleX,
+            completedCrop.height * scaleY,
+            0,
+            0,
+            completedCrop.width,
+            completedCrop.height
+        );
+        
+        const croppedDataUrl = cropCanvas.toDataURL(currentImage?.type);
+        addImageToHistory(dataURLtoFile(croppedDataUrl, 'cropped.png'), 'crop');
+
+    }, [completedCrop, currentImage, addImageToHistory]);
 
     const handleTransform = useCallback(async (transformType: TransformType) => {
         if (!currentImageUrl) return;
-        setIsLoading(true);
-        const image = new Image();
-        image.src = currentImageUrl;
-        await new Promise(res => image.onload = res);
+
+        const img = new Image();
+        img.src = currentImageUrl;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            let { width, height } = img;
+            if (transformType === 'rotate-left' || transformType === 'rotate-right') {
+                canvas.width = height;
+                canvas.height = width;
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate(transformType === 'rotate-left' ? -Math.PI / 2 : Math.PI / 2);
+                ctx.drawImage(img, -width / 2, -height / 2);
+            } else {
+                canvas.width = width;
+                canvas.height = height;
+                ctx.translate(transformType === 'flip-h' ? width : 0, transformType === 'flip-v' ? height : 0);
+                ctx.scale(transformType === 'flip-h' ? -1 : 1, transformType === 'flip-v' ? -1 : 1);
+                ctx.drawImage(img, 0, 0);
+            }
+            
+            const transformedDataUrl = canvas.toDataURL(currentImage?.type);
+            addImageToHistory(dataURLtoFile(transformedDataUrl, 'transformed.png'), 'crop');
+        };
+
+    }, [currentImageUrl, currentImage, addImageToHistory]);
+    
+    // -- Other Tool Handlers --
+    const handleRemoveBackground = () => applyAIGeneratedChange(geminiService.removeBackground, 'removeBg');
+    const handleApplyLowPoly = () => applyAIGeneratedChange(geminiService.generateLowPoly, 'lowPoly');
+    const handleExtractArt = () => applyAIGeneratedChange(geminiService.extractArt, 'extractArt');
+    const handleApplyDustAndScratch = () => applyAIGeneratedChange(geminiService.applyDustAndScratch, 'dustAndScratches');
+    const handleDenoise = () => applyAIGeneratedChange(geminiService.denoiseImage, 'denoise');
+    const handleApplyFaceRecovery = () => applyAIGeneratedChange(geminiService.applyFaceRecovery, 'faceRecovery');
+    const handleGenerateProfessionalPortrait = (applyToAll: boolean) => applyAIGeneratedChange(geminiService.generateProfessionalPortrait, 'portraits', applyToAll);
+    const handleRestorePhoto = () => applyAIGeneratedChange(geminiService.restorePhoto, 'photoRestoration');
+    const handleApplyUpscale = (factor: number, preserveFace: boolean) => applyAIGeneratedChange(geminiService.upscaleImage, 'upscale', false, factor, preserveFace);
+    const handleUnblurImage = (sharpenLevel: number, denoiseLevel: number, model: string) => applyAIGeneratedChange(geminiService.unblurImage, 'unblur', false, sharpenLevel, denoiseLevel, model);
+    const handleRelight = (prompt: string) => applyAIGeneratedChange(geminiService.reacenderImage, 'relight', false, prompt);
+    const handleApplyAIAdjustment = (prompt: string, applyToAll: boolean) => applyAIGeneratedChange(geminiService.generateAdjustedImage, 'adjust', applyToAll, prompt);
+    const handleApplyStyle = (prompt: string, applyToAll: boolean) => applyAIGeneratedChange(geminiService.applyStyle, 'style', applyToAll, prompt);
+    const handleApplyText = () => executeWithLoading(async (image: File) => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        const { width, height } = image;
-        if (transformType === 'rotate-left' || transformType === 'rotate-right') {
-            canvas.width = height; canvas.height = width;
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate((transformType === 'rotate-left' ? -90 : 90) * Math.PI / 180);
-            ctx.drawImage(image, -width / 2, -height / 2);
-        } else {
-            canvas.width = width; canvas.height = height;
-            if (transformType === 'flip-h') { ctx.translate(width, 0); ctx.scale(-1, 1); }
-            if (transformType === 'flip-v') { ctx.translate(0, height); ctx.scale(1, -1); }
-            ctx.drawImage(image, 0, 0);
+        const img = new Image();
+        const imgUrl = URL.createObjectURL(image);
+        await new Promise<void>((resolve) => {
+            img.onload = () => resolve();
+            img.src = imgUrl;
+        });
+        URL.revokeObjectURL(imgUrl);
+
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx!.drawImage(img, 0, 0);
+
+        const fontSizePx = (textToolState.fontSize / 100) * canvas.width;
+        ctx!.font = `${textToolState.italic ? 'italic ' : ''}${textToolState.bold ? 'bold ' : ''}${fontSizePx}px ${textToolState.fontFamily}`;
+        ctx!.fillStyle = textToolState.color;
+        ctx!.textAlign = textToolState.align;
+
+        const x = (textToolState.position.x / 100) * canvas.width;
+        const y = (textToolState.position.y / 100) * canvas.height;
+
+        const lines = textToolState.content.split('\n');
+        lines.forEach((line, index) => {
+            ctx!.fillText(line, x, y + (index * fontSizePx * 1.2));
+        });
+
+        return canvas.toDataURL(image.type);
+    }, 'text', 'Aplicando texto...');
+
+    // FIX: Implement generateAIPreview to handle style previews.
+    const generateAIPreview = useCallback(async (prompt: string, applyToAll: boolean) => {
+        if (!currentImage) return;
+        setIsPreviewLoading(true);
+        setPreviewState(null);
+        try {
+            const imageToProcess = isGif ? frameToFile(gifFrames[currentFrameIndex].imageData, 'frame.png') : currentImage;
+            const resultUrl = await geminiService.applyStyle(imageToProcess, prompt);
+            setPreviewState({ url: resultUrl, prompt, applyToAll });
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Falha ao gerar pré-visualização");
+        } finally {
+            setIsPreviewLoading(false);
         }
-        addImageToHistory(dataURLtoFile(canvas.toDataURL('image/png'), 'transformed.png'));
-        setIsLoading(false);
-    }, [currentImageUrl, addImageToHistory]);
+    }, [currentImage, isGif, gifFrames, currentFrameIndex]);
+
+    // FIX: Implement commitAIPreview to apply the generated preview.
+    const commitAIPreview = useCallback(() => {
+        if (!previewState) return;
+        applyAIGeneratedChange(geminiService.applyStyle, 'style', previewState.applyToAll, previewState.prompt);
+        setPreviewState(null);
+    }, [previewState, applyAIGeneratedChange]);
+
+    const handleGenerativeEdit = () => {
+        if (!maskDataUrl) { setError("Por favor, selecione uma área primeiro."); return; }
+        const maskFile = dataURLtoFile(maskDataUrl, 'mask.png');
+        applyAIGeneratedChange(geminiService.generativeEdit, 'generativeEdit', false, prompt, 'fill', { maskImage: maskFile });
+    };
     
-    const handleUploadNew = useCallback(() => {
-        clearHistory();
-        setIsGif(false);
-        setGifFrames([]);
-        setActiveTool(null);
-    }, [clearHistory]);
-    
+    const handleObjectRemove = () => {
+        if (!maskDataUrl) { setError("Por favor, pinte sobre o objeto a ser removido."); return; }
+        const maskFile = dataURLtoFile(maskDataUrl, 'mask.png');
+        applyAIGeneratedChange(geminiService.generativeEdit, 'objectRemover', false, "Remova o objeto na área mascarada e preencha o fundo de forma realista.", 'remove', { maskImage: maskFile });
+    };
+
     const handleDetectObjects = useCallback(async () => {
         if (!currentImage) return;
         setIsLoading(true);
-        setLoadingMessage("A detetar objetos...");
-        setError(null);
-        setDetectedObjects(null);
-        clearMask();
+        setLoadingMessage("Detectando objetos...");
         try {
             const objects = await geminiService.detectObjects(currentImage);
             setDetectedObjects(objects);
-        } catch (err) {
-            setError(`Falha na deteção de objetos. ${err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.'}`);
+        } catch(e) {
+            setError(e instanceof Error ? e.message : "Falha na detecção de objetos");
         } finally {
             setIsLoading(false);
             setLoadingMessage(null);
         }
-    }, [currentImage, clearMask, setError]);
-
-    const handleSelectObject = useCallback((object: DetectedObject) => {
+    }, [currentImage]);
+    
+    const handleSelectObject = useCallback(async (object: DetectedObject) => {
         if (!imgRef.current) return;
+        setHighlightedObject(object);
         const { naturalWidth, naturalHeight } = imgRef.current;
-        const { box } = object;
         const crop: PixelCrop = {
-            x: box.x_min * naturalWidth,
-            y: box.y_min * naturalHeight,
-            width: (box.x_max - box.x_min) * naturalWidth,
-            height: (box.y_max - box.y_min) * naturalHeight,
-            unit: 'px'
+            x: object.box.x_min * naturalWidth,
+            y: object.box.y_min * naturalHeight,
+            width: (object.box.x_max - object.box.x_min) * naturalWidth,
+            height: (object.box.y_max - object.box.y_min) * naturalHeight,
+            unit: 'px',
         };
-
-        const maskUrl = createMaskFromCrop(crop, naturalWidth, naturalHeight);
-        setMaskDataUrl(maskUrl);
-        setDetectedObjects(null);
-        setHighlightedObject(null);
-    }, [imgRef, setMaskDataUrl]);
-
-    const handleApplyText = useCallback(async () => {
-        if (!currentImageUrl || !imgRef.current) return;
-        setIsLoading(true);
-        const image = new Image();
-        image.crossOrigin = "Anonymous";
-        image.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                setError("Não foi possível criar o contexto do canvas.");
-                setIsLoading(false);
-                return;
-            }
-
-            const { naturalWidth, naturalHeight } = image;
-            canvas.width = naturalWidth;
-            canvas.height = naturalHeight;
-            ctx.drawImage(image, 0, 0, naturalWidth, naturalHeight);
-
-            const { content, fontFamily, fontSize, color, align, bold, italic, position } = textToolState;
-            const scaledFontSize = (fontSize / 100) * naturalWidth;
-
-            let fontStyle = '';
-            if (italic) fontStyle += 'italic ';
-            if (bold) fontStyle += 'bold ';
-            
-            ctx.font = `${fontStyle} ${scaledFontSize}px ${fontFamily}`;
-            ctx.fillStyle = color;
-            ctx.textAlign = align;
-            ctx.textBaseline = 'top';
-
-            ctx.strokeStyle = 'black';
-            ctx.lineWidth = scaledFontSize / 20;
-
-            const x = (position.x / 100) * naturalWidth;
-            const y = (position.y / 100) * naturalHeight;
-
-            const lines = content.split('\n');
-            lines.forEach((line, index) => {
-                const lineY = y + (index * scaledFontSize * 1.2);
-                ctx.strokeText(line, x, lineY);
-                ctx.fillText(line, x, lineY);
-            });
-
-            const newImageFile = dataURLtoFile(canvas.toDataURL('image/png'), 'text-added.png');
-            addImageToHistory(newImageFile);
-            setIsLoading(false);
-        };
-        image.src = currentImageUrl;
-    }, [currentImageUrl, addImageToHistory, textToolState, imgRef, setError]);
-
-    const handleApplyLowPoly = useCallback(async () => {
-        if (!currentImage) return;
-        setLoadingMessage("Aplicando estilo Low Poly...");
-        await handleApiCall(geminiService.generateLowPoly, 'aplicar-lowpoly', currentImage);
-    }, [currentImage, handleApiCall]);
-
-    const handleGenerateProfessionalPortrait = useCallback(async () => {
-        if (!currentImage) return;
-        setLoadingMessage("Gerando retrato profissional...");
-        await handleApiCall(geminiService.generateProfessionalPortrait, 'gerar-retrato-profissional', currentImage);
-    }, [currentImage, handleApiCall]);
-
-    const handleWonderModelUpscale = useCallback(async () => {
-        if (!currentImage) return;
-        setLoadingMessage("Aprimorando imagem com Modelo Wonder...");
-        await handleApiCall(geminiService.wonderModelUpscale, 'wonder-model', currentImage);
-    }, [currentImage, handleApiCall]);
+        const mask = createMaskFromCrop(crop, naturalWidth, naturalHeight);
+        setMaskDataUrl(mask);
+    }, []);
     
-    const handleExtractArt = useCallback(async () => {
-        if (!currentImage) return;
-        setLoadingMessage("Extraindo arte da imagem...");
-        await handleApiCall(geminiService.extractArt, 'extract-art', currentImage);
-    }, [currentImage, handleApiCall]);
+    const resetLocalFilters = useCallback(() => setLocalFilters(DEFAULT_LOCAL_FILTERS), []);
+    // FIX: Implement function to reset only local adjustment filters.
+    const resetLocalAdjustmentFilters = useCallback(() => setLocalAdjustmentFilters({ brightness: 100, contrast: 100, saturate: 100 }), []);
 
-    const handleApplyDustAndScratch = useCallback(async () => {
-        if (!currentImage) return;
-        setLoadingMessage("Aplicando efeito de filme antigo...");
-        await handleApiCall(geminiService.applyDustAndScratch, 'apply-dust-scratches', currentImage);
-    }, [currentImage, handleApiCall]);
-    
-    const handleDenoise = useCallback(async () => {
-        if (!currentImage) return;
-        setLoadingMessage("Removendo ruído da imagem...");
-        await handleApiCall(geminiService.denoiseImage, 'denoise', currentImage);
-    }, [currentImage, handleApiCall]);
+    // FIX: Update handleApplyLocalAdjustments to support GIFs.
+    const handleApplyLocalAdjustments = useCallback(async (applyToAllFrames: boolean = false) => {
+        if (!currentImage || !maskDataUrl) return;
 
-    const handleApplyFaceRecovery = useCallback(async () => {
-        if (!currentImage) return;
-        setLoadingMessage("Restaurando detalhes do rosto...");
-        await handleApiCall(geminiService.applyFaceRecovery, 'face-recovery', currentImage);
-    }, [currentImage, handleApiCall]);
-    
-    const handleUnblurImage = useCallback(async (sharpenLevel: number, denoiseLevel: number, model: string) => {
-        if (!currentImage) return;
-        setLoadingMessage("Removendo desfoque da imagem...");
-        await handleApiCall((image) => geminiService.unblurImage(image, sharpenLevel, denoiseLevel, model), 'unblur', currentImage);
-    }, [currentImage, handleApiCall]);
-    
-    const handleDownload = useCallback((format: 'png' | 'jpeg') => {
-        if (!currentImage) return;
-
-        const performDownload = (blob: Blob, extension: string) => {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `pixshop-edit-${Date.now()}.${extension}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        };
-
-        if (format === 'png' && currentImage.type === 'image/png') {
-            performDownload(currentImage, 'png');
-            return;
-        }
+        const filterString = `brightness(${localAdjustmentFilters.brightness}%) contrast(${localAdjustmentFilters.contrast}%) saturate(${localAdjustmentFilters.saturate}%)`;
         
-        const imageUrl = URL.createObjectURL(currentImage);
-        const image = new Image();
-        image.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = image.naturalWidth;
-            canvas.height = image.naturalHeight;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                 URL.revokeObjectURL(imageUrl);
-                 return;
-            }
-            ctx.drawImage(image, 0, 0);
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    performDownload(blob, format === 'jpeg' ? 'jpg' : 'png');
+        setIsLoading(true);
+        setLoadingMessage("Aplicando ajustes...");
+        setError(null);
+        try {
+            if (isGif && applyToAllFrames) {
+                const newFrames: GifFrame[] = [];
+                for (let i = 0; i < gifFrames.length; i++) {
+                    setLoadingMessage(`Processando frame ${i + 1}/${gifFrames.length}...`);
+                    const frameUrl = frameToDataURL(gifFrames[i].imageData);
+                    const resultDataUrl = await applyFiltersToMaskedArea(frameUrl, maskDataUrl, filterString);
+                    const newImageData = await dataURLToImageData(resultDataUrl);
+                    newFrames.push({ ...gifFrames[i], imageData: newImageData });
                 }
-                URL.revokeObjectURL(imageUrl);
-            }, `image/${format}`, format === 'jpeg' ? 0.9 : 1.0);
-        };
-        image.onerror = () => {
-            URL.revokeObjectURL(imageUrl);
-            setError("Não foi possível carregar a imagem para exportação.");
+                const newGifFile = await createGifFromFrames(newFrames, 'gif-local-adjust.gif');
+                addImageToHistory(newGifFile, 'localAdjust');
+            } else {
+                const imageToProcessUrl = isGif ? frameToDataURL(gifFrames[currentFrameIndex].imageData) : await fileToDataURL(currentImage);
+                const resultDataUrl = await applyFiltersToMaskedArea(imageToProcessUrl, maskDataUrl, filterString);
+                if (isGif) {
+                    const newImageData = await dataURLToImageData(resultDataUrl);
+                    const updatedFrames = [...gifFrames];
+                    updatedFrames[currentFrameIndex] = { ...updatedFrames[currentFrameIndex], imageData: newImageData };
+                    const newGifFile = await createGifFromFrames(updatedFrames, 'gif-edit.gif');
+                    addImageToHistory(newGifFile, 'localAdjust');
+                } else {
+                    addImageToHistory(dataURLtoFile(resultDataUrl, 'local-adjust.png'), 'localAdjust');
+                }
+            }
+            clearMask();
+            resetLocalAdjustmentFilters();
+        } catch(e) {
+            setError(e instanceof Error ? e.message : "Falha ao aplicar ajustes locais");
+        } finally {
+            setIsLoading(false);
+            setLoadingMessage(null);
         }
-        image.src = imageUrl;
-    }, [currentImage, setError]);
+    }, [currentImage, maskDataUrl, localAdjustmentFilters, addImageToHistory, clearMask, resetLocalAdjustmentFilters, isGif, gifFrames, currentFrameIndex]);
 
-    const value: EditorContextType = {
-        activeTool, setActiveTool,
-        recentTools,
-        currentImage, originalImage, isLoading, setIsLoading, error, setError, loadingMessage, setLoadingMessage,
-        isHistoryLoading, canUndo, canRedo, undo, redo, resetHistory, setInitialImage, handleUploadNew,
-        history, historyIndex, jumpToState,
-        imgRef, canvasRef, currentImageUrl, originalImageUrl,
-        prompt, setPrompt, isComparisonModalOpen, setIsComparisonModalOpen,
-        toast, setToast,
-        zoom, setZoom, panOffset, isPanModeActive, setIsPanModeActive, isCurrentlyPanning, handleWheel, handlePanStart, resetZoomAndPan,
-        crop, setCrop, completedCrop, setCompletedCrop, aspect, setAspect, handleApplyCrop,
-        maskDataUrl, brushSize, setBrushSize, clearMask, startDrawing, stopDrawing, draw, handleAutoSelect,
-        localFilters, setLocalFilters, hasLocalAdjustments, buildFilterString, handleApplyLocalAdjustments, resetLocalFilters,
-        generativeMode, setGenerativeMode, secondImageFile, setSecondImageFile,
-        generatedVideoUrl, handleGenerateVideo,
-        detectedObjects, setDetectedObjects, highlightedObject, setHighlightedObject, handleDetectObjects, handleSelectObject,
-        textToolState, setTextToolState, handleApplyText,
-        handleApplyStyle, handleRemoveBackground, handleApplyAIAdjustment, handleGenerativeEdit, handleApplyUpscale, handleRelight, handleTransform, handleMagicPrompt, handleApplyLowPoly, handleGenerateProfessionalPortrait, handleWonderModelUpscale, handleExtractArt, handleApplyDustAndScratch,
-        handleApplyCurve, histogram, setHistogram,
-        handleDenoise,
-        handleApplyFaceRecovery,
-        handleUnblurImage,
-        isGif, gifFrames, currentFrameIndex, setCurrentFrameIndex,
-        panelsVisible, setPanelsVisible,
-        handleDownload,
+    const handleApplyCurve = useCallback((lut: number[]) => {
+        setLocalFilters(prev => ({ ...prev, curve: lut }));
+    }, []);
+
+    const handleGenerateVideo = async (prompt: string, aspectRatio: VideoAspectRatio) => {
+        setIsLoading(true);
+        setError(null);
+        setGeneratedVideoUrl(null);
+        try {
+            const url = await geminiService.generateVideo(prompt, aspectRatio);
+            setGeneratedVideoUrl(url);
+        } catch(e) {
+            setError(e instanceof Error ? e.message : "Falha ao gerar vídeo.");
+        } finally {
+            setIsLoading(false);
+            setLoadingMessage(null);
+        }
+    };
+    
+    const handleDownload = useCallback(async () => {
+        if (generatedVideoUrl) {
+            saveAs(generatedVideoUrl, `video-${Date.now()}.mp4`);
+        } else if (currentImage) {
+            if (isGif) {
+                setIsLoading(true);
+                setLoadingMessage("Exportando GIF...");
+                const file = await createGifFromFrames(gifFrames, "edited.gif");
+                saveAs(file);
+                setIsLoading(false);
+                setLoadingMessage(null);
+            } else {
+                saveAs(currentImage, `edited-${currentImage.name}`);
+            }
+        }
+    }, [currentImage, generatedVideoUrl, isGif, gifFrames]);
+    
+    const handleSmartSearch = async (term: string) => {
+        setIsSmartSearching(true);
+        setError(null);
+        setSmartSearchResult(null);
+        try {
+            const result = await geminiService.suggestToolFromPrompt(term);
+            if (result) {
+                const toolConfig = tools.find(t => t.id === result.name);
+                if (toolConfig) {
+                    setSmartSearchResult({ tool: toolConfig, args: result.args });
+                }
+            } else {
+                setToast({ message: "A IA não conseguiu encontrar uma ferramenta. Tente a busca manual.", type: 'info' });
+            }
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Erro na busca inteligente");
+        } finally {
+            setIsSmartSearching(false);
+        }
     };
 
-    return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
+    const handlePredefinedSearchAction = (action: PredefinedSearch['action']) => {
+        if (action.type === 'tool') {
+            setActiveTool(action.payload as ToolId);
+        } else if (action.type === 'workflow') {
+            executeWorkflow(action.payload as ToolId[]);
+        }
+    };
+
+    const executeWorkflow = (toolIds: ToolId[]) => {
+        // Simple sequential execution for now
+        // A more advanced implementation might pass results between tools
+        if (toolIds.length > 0) {
+            setActiveTool(toolIds[0]);
+            // Logic to chain tools could be added here
+            setToast({ message: `Iniciando fluxo de trabalho: ${toolIds.join(' -> ')}`, type: 'info'});
+        }
+    };
+    
+    const addWorkflow = (workflow: Workflow) => {
+        db.addWorkflow(workflow);
+        setSavedWorkflows(prev => [...prev, workflow]);
+    };
+    
+    const handleUploadNew = () => {
+        setInitialImage(null);
+        setActiveTool(null);
+        clearHistory();
+    };
+
+    const handleExplicitSave = () => {
+        // History is saved automatically via useEffect in useHistoryState
+        setToast({ message: "Sessão salva! Pode fechar a aba e voltar mais tarde.", type: 'success' });
+    };
+    
+    const resetTextToolState = useCallback(() => setTextToolState(DEFAULT_TEXT_TOOL_STATE), []);
+
+    const handleApplyTexture = useCallback(async () => {
+        if (!currentImageUrl || !texturePreview) return;
+        setIsLoading(true);
+        setLoadingMessage("Aplicando textura...");
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const baseImage = new Image();
+        baseImage.src = currentImageUrl;
+        await new Promise(res => baseImage.onload = res);
+
+        canvas.width = baseImage.naturalWidth;
+        canvas.height = baseImage.naturalHeight;
+        
+        ctx!.globalAlpha = 1;
+        ctx!.drawImage(baseImage, 0, 0);
+
+        const textureImage = new Image();
+        textureImage.src = texturePreview.url;
+        await new Promise(res => textureImage.onload = res);
+
+        ctx!.globalCompositeOperation = texturePreview.blendMode;
+        ctx!.globalAlpha = texturePreview.opacity;
+        ctx!.drawImage(textureImage, 0, 0, canvas.width, canvas.height);
+        
+        const resultDataUrl = canvas.toDataURL('image/png');
+        addImageToHistory(dataURLtoFile(resultDataUrl, 'texture.png'), 'texture');
+        setTexturePreview(null);
+        setIsLoading(false);
+        setLoadingMessage(null);
+    }, [currentImageUrl, texturePreview, addImageToHistory, setIsLoading, setLoadingMessage]);
+
+    // FIX: Implement the handleMagicPrompt function.
+    const handleMagicPrompt = (prompt: string) => {
+        executeWithLoading(handleOrchestratorCall, 'magicMontage', "A IA está a processar o seu pedido...", prompt);
+    };
+
+    const value: EditorContextType = {
+        activeTool, setActiveTool, activeTab, setActiveTab, isLoading, setIsLoading, loadingMessage, setLoadingMessage,
+        error, setError, isComparisonModalOpen, setIsComparisonModalOpen, toast, setToast, proactiveSuggestion, setProactiveSuggestion,
+        uploadProgress, setUploadProgress, isSaveWorkflowModalOpen, setIsSaveWorkflowModalOpen, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible,
+        currentImage, currentImageUrl, originalImage, originalImageUrl, imgRef, setInitialImage, addImageToHistory, canUndo,
+        canRedo, undo, redo, resetHistory, history, historyIndex, toolHistory, jumpToState, hasRestoredSession, isGif, gifFrames,
+        currentFrameIndex, setCurrentFrameIndex, zoom, setZoom, panOffset, isPanModeActive, setIsPanModeActive, isCurrentlyPanning,
+        handleWheel, handlePanStart, resetZoomAndPan, crop, setCrop, completedCrop, setCompletedCrop, aspect, setAspect, canvasRef,
+        maskDataUrl, setMaskDataUrl, brushSize, setBrushSize, clearMask, startDrawing, stopDrawing, draw, detectedObjects, setDetectedObjects,
+        highlightedObject, setHighlightedObject, localFilters, setLocalFilters, hasLocalAdjustments, buildFilterString, resetLocalFilters,
+        histogram, localAdjustmentFilters, setLocalAdjustmentFilters, previewState, setPreviewState, isPreviewLoading, textToolState, setTextToolState,
+        resetTextToolState, generatedVideoUrl, setGeneratedVideoUrl, texturePreview, setTexturePreview, isSmartSearching, smartSearchResult,
+        setSmartSearchResult, savedWorkflows, addWorkflow, recentTools, executeWorkflow, handlePredefinedSearchAction, handleSmartSearch,
+        handleUploadNew, handleExplicitSave, handleApplyCrop, handleTransform, handleRemoveBackground, handleRelight, handleMagicPrompt,
+        handleApplyLowPoly, handleExtractArt, handleApplyDustAndScratch, handleDenoise, handleApplyFaceRecovery, handleGenerateProfessionalPortrait,
+        handleRestorePhoto, handleApplyUpscale, handleUnblurImage, handleGenerativeEdit, handleObjectRemove, handleDetectObjects,
+        handleSelectObject, handleApplyLocalAdjustments, handleApplyCurve, handleApplyStyle, handleApplyAIAdjustment, handleApplyText,
+        handleGenerateVideo, handleDownload, handleApplyTexture, isInlineComparisonActive, setIsInlineComparisonActive,
+        // FIX: Export the new properties and methods from the context provider.
+        prompt, setPrompt, generateAIPreview, commitAIPreview, resetLocalAdjustmentFilters,
+    };
+
+    return (
+        <EditorContext.Provider value={value}>
+            {!isHistoryLoading && children}
+        </EditorContext.Provider>
+    );
 };

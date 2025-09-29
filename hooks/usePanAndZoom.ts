@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-// FIX: Import React to resolve 'Cannot find namespace React' error.
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 
 /**

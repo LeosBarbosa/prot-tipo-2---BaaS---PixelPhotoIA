@@ -38,7 +38,7 @@ const PatternGenPanel: React.FC = () => {
     };
 
     return (
-        <div className="p-4 md:p-6 h-full flex flex-col md:flex-row gap-6">
+        <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6">
             <aside className="w-full md:w-96 flex-shrink-0 bg-gray-900/30 rounded-lg p-4 flex flex-col gap-4 border border-gray-700/50">
                 <div className="text-center">
                     <h3 className="text-lg font-semibold text-gray-200">Gerador de Padrões</h3>
@@ -47,10 +47,11 @@ const PatternGenPanel: React.FC = () => {
                  <CollapsiblePromptPanel
                   title="Descrição do Padrão"
                   prompt={prompt}
-                  onPromptChange={(e) => setPrompt(e.target.value)}
+                  setPrompt={setPrompt}
                   negativePrompt={negativePrompt}
                   onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
                   isLoading={isLoading}
+                  toolId="patternGen"
                 />
                 <button
                     onClick={handleGenerate}

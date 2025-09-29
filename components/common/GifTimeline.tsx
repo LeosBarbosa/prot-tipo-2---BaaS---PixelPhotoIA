@@ -12,7 +12,6 @@ const GifTimeline: React.FC = () => {
     const timelineRef = useRef<HTMLDivElement>(null);
     const frameRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-    // FIX: Corrigida a inicialização do hook useRef. O erro "Expected 1 arguments, but got 0" apontava para esta linha, já que useRef foi chamado sem um valor inicial. Inicializá-lo com `null` resolve o problema.
     const animationFrameRef = useRef<number | null>(null);
     const lastFrameTimeRef = useRef<number>(0);
 

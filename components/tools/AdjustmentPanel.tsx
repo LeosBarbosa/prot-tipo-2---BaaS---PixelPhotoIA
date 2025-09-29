@@ -8,6 +8,7 @@ import { useEditor } from '../../context/EditorContext';
 import ToneCurve from '../ToneCurve';
 import { ToneCurveIcon, SparkleIcon } from '../icons';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
+import TipBox from '../common/TipBox';
 
 const Slider: React.FC<{
     label: string;
@@ -44,6 +45,7 @@ const aiPresets = [
     { name: 'Lápis', prompt: 'transforme a imagem em um esboço detalhado a lápis preto e branco, com sombreamento realista e hachuras' },
     { name: 'Cartoon', prompt: 'converta a foto em um estilo de desenho animado 2D, com cores vivas, contornos pretos e espessos e sombreamento simplificado' },
     { name: 'Neon', prompt: 'aplique um efeito de luz de neon à imagem, fazendo com que os contornos do assunto principal brilhem com uma luz de neon vibrante contra um fundo escuro' },
+    { name: 'Hora Dourada', prompt: 'Aplique uma iluminação de "hora dourada" (golden hour) à imagem, com tons quentes, sombras longas e suaves e um brilho dourado atmosférico.' },
 ];
 
 
@@ -84,7 +86,7 @@ const AdjustmentPanel: React.FC = () => {
 
             <div>
                 <h4 className="text-md font-semibold text-gray-300 text-center mb-3">Filtros Rápidos</h4>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                     {cssPresets.map(preset => (
                         <button
                             key={preset.name}
@@ -108,6 +110,9 @@ const AdjustmentPanel: React.FC = () => {
                         </button>
                     ))}
                 </div>
+                 <TipBox>
+                    Experimente os "Filtros Rápidos com IA" para ajustes criativos e automáticos com base em descrições como 'estilo cartoon' ou 'luz de neon'.
+                </TipBox>
             </div>
             
             <div className="border-t border-gray-700/50 my-2"></div>

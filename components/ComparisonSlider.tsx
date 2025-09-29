@@ -8,9 +8,10 @@ import React, { useState, useRef, useCallback } from 'react';
 interface ComparisonSliderProps {
   originalSrc: string;
   modifiedSrc: string;
+  filterStyle?: string;
 }
 
-const ComparisonSlider: React.FC<ComparisonSliderProps> = ({ originalSrc, modifiedSrc }) => {
+const ComparisonSlider: React.FC<ComparisonSliderProps> = ({ originalSrc, modifiedSrc, filterStyle }) => {
   const [sliderPosition, setSliderPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -50,6 +51,7 @@ const ComparisonSlider: React.FC<ComparisonSliderProps> = ({ originalSrc, modifi
         src={modifiedSrc}
         alt="Modified"
         className="block w-full h-auto max-h-full object-contain"
+        style={{ filter: filterStyle, transition: 'filter 0.15s linear' }}
       />
       <div
         className="absolute top-0 left-0 h-full w-full overflow-hidden"

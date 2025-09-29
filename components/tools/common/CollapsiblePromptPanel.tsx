@@ -4,23 +4,28 @@
 */
 import React, { useState } from 'react';
 import { ChevronDownIcon } from '../../icons';
+import { type ToolId } from '../../../types';
+import PromptEnhancer from './PromptEnhancer';
+
 
 interface CollapsiblePromptPanelProps {
   title: string;
   prompt: string;
-  onPromptChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  setPrompt: React.Dispatch<React.SetStateAction<string>>;
   negativePrompt: string;
   onNegativePromptChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   isLoading: boolean;
+  toolId: ToolId;
 }
 
 const CollapsiblePromptPanel: React.FC<CollapsiblePromptPanelProps> = ({
   title,
   prompt,
-  onPromptChange,
+  setPrompt,
   negativePrompt,
   onNegativePromptChange,
   isLoading,
+  toolId,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -39,14 +44,17 @@ const CollapsiblePromptPanel: React.FC<CollapsiblePromptPanelProps> = ({
       >
         <div className="overflow-hidden">
           <div className="p-4 border-t border-gray-700/50 flex flex-col gap-4">
-            <textarea
-              value={prompt}
-              onChange={onPromptChange}
-              placeholder="Ex: um astronauta surfando em uma onda cósmica..."
-              className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base min-h-[120px]"
-              disabled={isLoading}
-              rows={5}
-            />
+            <div className="relative">
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Ex: um astronauta surfando em uma onda cósmica..."
+                className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
+                disabled={isLoading}
+                rows={5}
+              />
+              <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId={toolId} />
+            </div>
             <textarea
               value={negativePrompt}
               onChange={onNegativePromptChange}

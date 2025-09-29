@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import { GoogleGenAI } from "@google/genai";
-import { fileToPart, removeBackground, applyStyle, generateProfessionalPortrait } from './geminiService';
+import { fileToPart, removeBackground, applyStyle, generateProfessionalPortrait, upscaleImage } from './geminiService';
 import { availableTools } from './toolDeclarations';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
@@ -19,20 +19,18 @@ export const handleOrchestratorCall = async (image: File, prompt: string): Promi
     const textPart = { text: prompt };
 
     // Faz a primeira chamada ao modelo com as ferramentas disponíveis
-    // FIX: Using gemini-2.5-flash as it is better suited for function calling tasks.
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: { parts: [imagePart, textPart] },
-        // FIX: The 'tools' parameter must be placed inside the 'config' object.
         config: {
             tools: [{ functionDeclarations: availableTools }],
         },
     });
 
-    const functionCallPart = response.candidates?.[0]?.content?.parts?.find(part => part.functionCall);
+    const functionCall = response.functionCalls?.[0];
 
-    if (functionCallPart?.functionCall) {
-        const { name, args } = functionCallPart.functionCall;
+    if (functionCall) {
+        const { name, args } = functionCall;
         console.log(`IA solicitou chamar a função: ${name} com args:`, args);
 
         switch (name) {
@@ -45,6 +43,15 @@ export const handleOrchestratorCall = async (image: File, prompt: string): Promi
                     return applyStyle(image, args.stylePrompt);
                 }
                 throw new Error("O estilo (stylePrompt) é necessário para aplicar um estilo.");
+            case 'upscaleImage': {
+                const factor = args.factor as number;
+                // Default preserveFace to true if not provided, as it's a safe default for portraits
+                const preserveFace = typeof args.preserveFace === 'boolean' ? args.preserveFace : true;
+                if (typeof factor !== 'number' || ![2, 4, 8].includes(factor)) {
+                    throw new Error("O fator de aumento (factor) deve ser 2, 4 ou 8.");
+                }
+                return upscaleImage(image, factor, preserveFace);
+            }
             default:
                 throw new Error(`Função desconhecida solicitada pela IA: ${name}`);
         }

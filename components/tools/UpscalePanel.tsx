@@ -5,14 +5,14 @@
 
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { ArrowUpOnSquareIcon, SparkleIcon } from '../icons';
+import { ArrowUpOnSquareIcon } from '../icons';
 import ToggleSwitch from '../common/ToggleSwitch';
+import TipBox from '../common/TipBox';
 
 const UpscalePanel: React.FC = () => {
   const { 
     isLoading, 
     handleApplyUpscale, 
-    handleWonderModelUpscale,
     currentImage 
   } = useEditor();
   
@@ -71,10 +71,14 @@ const UpscalePanel: React.FC = () => {
           </div>
       )}
     
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between p-3 bg-gray-900/30 rounded-lg border border-gray-700/50">
           <label htmlFor="preserve-face" className="font-semibold text-gray-200 text-sm cursor-pointer">Preservar Rosto</label>
           <ToggleSwitch id="preserve-face" checked={preserveFace} onChange={setPreserveFace} disabled={isLoading} />
       </div>
+
+      <TipBox>
+          Ative a opção "Preservar Rosto" ao ampliar retratos para garantir que os detalhes faciais sejam aprimorados com realismo.
+      </TipBox>
 
       <button
           onClick={handleApply}
@@ -84,26 +88,6 @@ const UpscalePanel: React.FC = () => {
           <ArrowUpOnSquareIcon className="w-5 h-5" />
           Aplicar Upscale
       </button>
-
-      <div className="w-full border-t border-gray-700/50 my-1"></div>
-
-      <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50 flex flex-col gap-3">
-        <div className="text-center">
-            <h3 className="text-sm font-semibold text-gray-200 flex items-center justify-center gap-2">
-                <SparkleIcon className="w-5 h-5 text-yellow-300" />
-                Modelo Wonder
-            </h3>
-            <p className="text-xs text-gray-400 mt-1">Qualidade máxima para restauração.</p>
-        </div>
-        <button
-          onClick={handleWonderModelUpscale}
-          disabled={isLoading}
-          className="w-full bg-gradient-to-br from-purple-600 to-indigo-500 text-white font-bold py-2 px-4 rounded-lg transition-all text-sm flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
-        >
-          <SparkleIcon className="w-5 h-5" />
-          Aprimorar Imagem
-        </button>
-      </div>
     </div>
   );
 };

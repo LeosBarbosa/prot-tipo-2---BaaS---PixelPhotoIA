@@ -1,5 +1,5 @@
 {
-  "name": "protótipo-2---baas---pixelphotoia",
+  "name": "pixelphoto-ia",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -15,7 +15,9 @@
     "react-image-crop": "^11.0.6",
     "html2canvas": "^1.4.1",
     "idb": "^8.0.0",
-    "gifuct-js": "2.1.2"
+    "gifuct-js": "2.1.2",
+    "gif-encoder-2": "1.0.5",
+    "file-saver": "^2.0.5"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

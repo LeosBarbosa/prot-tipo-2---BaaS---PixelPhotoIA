@@ -6,6 +6,7 @@
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { CropIcon, RotateLeftIcon, RotateRightIcon, FlipHorizontalIcon, FlipVerticalIcon } from '../icons';
+import TipBox from '../common/TipBox';
 
 const CropPanel: React.FC = () => {
     const {
@@ -51,6 +52,10 @@ const CropPanel: React.FC = () => {
                     <button onClick={() => handleTransform('flip-v')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-white/10 p-3 rounded-lg hover:bg-white/20"><FlipVerticalIcon className="w-5 h-5" /> Inverter V</button>
                 </div>
             </div>
+
+            <TipBox>
+                Selecione uma proporção predefinida para manter o enquadramento consistente. Arraste as alças para ajustar o corte manualmente.
+            </TipBox>
 
             <div className="border-t border-gray-700/50 my-2"></div>
 

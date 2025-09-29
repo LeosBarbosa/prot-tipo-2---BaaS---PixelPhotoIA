@@ -5,24 +5,29 @@
 import React from 'react';
 import {
     BrushIcon, PhotoIcon, LayersIcon, SparkleIcon,
-    LandscapeIcon, FaceSmileIcon, VideoCameraIcon,
+    FaceSmileIcon, VideoCameraIcon,
     AdjustmentsHorizontalIcon, CropIcon, PaletteIcon,
     ScissorsIcon, ArrowUpOnSquareIcon, TextToolIcon, LightbulbIcon,
-    MagicWandIcon, LowPolyIcon, UserIcon, FilmGrainIcon, BullseyeIcon, DenoiseIcon, UnblurIcon,
+    MagicWandIcon, LowPolyIcon, UserIcon, FilmGrainIcon, UnblurIcon,
     PatternIcon, TextEffectsIcon, VectorIcon, LogoIcon, StickersIcon, CaricatureIcon, Model3DIcon,
-    BananaIcon
+    BananaIcon,
+    EraserIcon,
+    ShirtIcon,
+    CameraIcon,
+    PolaroidIcon,
+    TextureIcon,
+    HomeIcon,
+    BuildingIcon,
+    CombineIcon,
+    ExpandIcon,
+    SwapIcon,
+    LineArtIcon,
+    FaceSparkleIcon,
+    BoltIcon,
+    FireIcon,
+    PixelsIcon
 } from '../components/icons';
-import { type ToolId } from '../types';
-
-export type ToolCategory = 'generation' | 'workflow' | 'editing';
-
-export interface ToolConfig {
-    id: ToolId;
-    name: string;
-    description: string;
-    icon: React.ReactNode;
-    category: ToolCategory;
-}
+import { type ToolId, type ToolConfig, type ToolCategory } from '../types';
 
 export const tools: ToolConfig[] = [
     // Generation Tools
@@ -93,45 +98,45 @@ export const tools: ToolConfig[] = [
 
     // Workflows
     {
+        id: 'polaroid',
+        name: 'Polaroid com Artista IA',
+        description: 'Crie uma foto Polaroid sua com seu artista favorito.',
+        icon: React.createElement(PolaroidIcon, { className: 'w-8 h-8 text-stone-400' }),
+        category: 'workflow',
+    },
+    {
+        id: 'styledPortrait',
+        name: 'Retrato Estilizado',
+        description: 'Aplique o estilo (roupa, cenário, luz) de uma foto em outra, preservando o rosto original.',
+        icon: React.createElement(ShirtIcon, { className: 'w-8 h-8 text-teal-400' }),
+        category: 'workflow',
+    },
+    {
         id: 'interiorDesign',
         name: 'Reforma de Interiores',
         description: 'Visualize novos estilos de design em suas próprias fotos.',
-        icon: React.createElement(LandscapeIcon, { className: 'w-8 h-8 text-teal-400' }),
+        icon: React.createElement(HomeIcon, { className: 'w-8 h-8 text-teal-400' }),
         category: 'workflow',
     },
     {
         id: 'architecturalViz',
         name: 'Visualização Arquitetônica',
         description: 'Crie renderizações de alta qualidade para projetos arquitetônicos.',
-        icon: React.createElement(VideoCameraIcon, { className: 'w-8 h-8 text-orange-400' }),
+        icon: React.createElement(BuildingIcon, { className: 'w-8 h-8 text-orange-400' }),
         category: 'workflow',
     },
     {
         id: 'creativeFusion',
         name: 'Fusão Criativa',
         description: 'Combine a composição de uma imagem com o estilo de outra.',
-        icon: React.createElement(AdjustmentsHorizontalIcon, { className: 'w-8 h-8 text-pink-400' }),
+        icon: React.createElement(CombineIcon, { className: 'w-8 h-8 text-pink-400' }),
         category: 'workflow',
     },
     {
         id: 'outpainting',
         name: 'Pintura Expansiva',
         description: 'Amplie suas imagens expandindo o quadro em qualquer direção.',
-        icon: React.createElement(PhotoIcon, { className: 'w-8 h-8 text-indigo-400' }),
-        category: 'workflow',
-    },
-    {
-        id: 'faceSwap',
-        name: 'Troca de Rosto',
-        description: 'Substitua o rosto em uma foto pelo de outra de forma realista.',
-        icon: React.createElement(FaceSmileIcon, { className: 'w-8 h-8 text-red-400' }),
-        category: 'workflow',
-    },
-    {
-        id: 'aiPortrait',
-        name: 'Gerador de Retrato IA',
-        description: 'Transforme fotos casuais em retratos profissionais com IA.',
-        icon: React.createElement(SparkleIcon, { className: 'w-8 h-8 text-rose-400' }),
+        icon: React.createElement(ExpandIcon, { className: 'w-8 h-8 text-indigo-400' }),
         category: 'workflow',
     },
     {
@@ -158,10 +163,45 @@ export const tools: ToolConfig[] = [
 
     // Editing Tools
     {
+        id: 'magicMontage',
+        name: 'Montagem Mágica',
+        description: 'Descreva qualquer edição e deixe a IA transformar sua foto como um profissional.',
+        icon: React.createElement(MagicWandIcon, { className: 'w-8 h-8 text-purple-400' }),
+        category: 'editing',
+    },
+     {
+        id: 'objectRemover',
+        name: 'Removedor de Objetos',
+        description: 'Pinte sobre objetos indesejados para removê-los magicamente.',
+        icon: React.createElement(EraserIcon, { className: 'w-8 h-8 text-red-400' }),
+        category: 'editing',
+    },
+    {
+        id: 'photoStudio',
+        name: 'Foto Studio IA',
+        description: 'Transforme fotos em retratos de estúdio com iluminação cinematográfica.',
+        icon: React.createElement(CameraIcon, { className: 'w-8 h-8 text-sky-400' }),
+        category: 'editing',
+    },
+    {
+        id: 'faceSwap',
+        name: 'Troca de Rosto',
+        description: 'Substitua o rosto em uma foto pelo de outra de forma realista.',
+        icon: React.createElement(SwapIcon, { className: 'w-8 h-8 text-red-400' }),
+        category: 'editing',
+    },
+    {
+        id: 'generativeEdit',
+        name: 'Edição Generativa',
+        description: 'Selecione uma área para remover, adicionar ou alterar objetos com texto.',
+        icon: React.createElement(BrushIcon, { className: 'w-8 h-8 text-fuchsia-400' }),
+        category: 'editing',
+    },
+    {
         id: 'extractArt',
         name: 'Extrair Arte',
         description: 'Transforme sua foto em um esboço de linhas e contornos.',
-        icon: React.createElement(BullseyeIcon, { className: 'w-8 h-8 text-gray-400' }),
+        icon: React.createElement(LineArtIcon, { className: 'w-8 h-8 text-gray-400' }),
         category: 'editing',
     },
     {
@@ -193,13 +233,6 @@ export const tools: ToolConfig[] = [
         category: 'editing',
     },
     {
-        id: 'generativeEdit',
-        name: 'Edição Generativa',
-        description: 'Selecione uma área para remover, adicionar ou alterar objetos com texto.',
-        icon: React.createElement(BrushIcon, { className: 'w-8 h-8 text-fuchsia-400' }),
-        category: 'editing',
-    },
-    {
         id: 'text',
         name: 'Adicionar Texto',
         description: 'Adicione e estilize texto diretamente na sua imagem.',
@@ -220,18 +253,11 @@ export const tools: ToolConfig[] = [
         icon: React.createElement(ArrowUpOnSquareIcon, { className: 'w-8 h-8 text-emerald-400' }),
         category: 'editing',
     },
-     {
-        id: 'denoise',
-        name: 'Remover Ruído (Denoise)',
-        description: 'Limpe o ruído e a granulação de fotos com baixa iluminação.',
-        icon: React.createElement(DenoiseIcon, { className: 'w-8 h-8 text-blue-300' }),
-        category: 'editing',
-    },
     {
-        id: 'faceRecovery',
-        name: 'Recuperação de Rosto',
-        description: 'Restaure detalhes faciais e melhore a qualidade de retratos.',
-        icon: React.createElement(FaceSmileIcon, { className: 'w-8 h-8 text-pink-400' }),
+        id: 'photoRestoration',
+        name: 'Restauração de Foto',
+        description: 'Restaure fotos antigas removendo ruído, arranhões e melhorando rostos.',
+        icon: React.createElement(SparkleIcon, { className: 'w-8 h-8 text-yellow-300' }),
         category: 'editing',
     },
     {
@@ -242,17 +268,17 @@ export const tools: ToolConfig[] = [
         category: 'editing',
     },
     {
-        id: 'magicPrompt',
-        name: 'Prompt Mágico',
-        description: 'Descreva o que você quer fazer e deixe a IA escolher a ferramenta certa.',
-        icon: React.createElement(MagicWandIcon, { className: 'w-8 h-8 text-purple-400' }),
-        category: 'editing',
-    },
-    {
         id: 'lowPoly',
         name: 'Estilo Low Poly',
         description: 'Transforme sua foto em uma arte geométrica de polígonos.',
         icon: React.createElement(LowPolyIcon, { className: 'w-8 h-8 text-cyan-400' }),
+        category: 'editing',
+    },
+    {
+        id: 'pixelArt',
+        name: 'Pixel Art',
+        description: 'Converta sua imagem para o estilo clássico de pixel art.',
+        icon: React.createElement(PixelsIcon, { className: 'w-8 h-8 text-green-400' }),
         category: 'editing',
     },
     {
@@ -266,14 +292,7 @@ export const tools: ToolConfig[] = [
         id: 'styleGen',
         name: 'Estilos Rápidos',
         description: 'Aplique estilos artísticos predefinidos com um clique.',
-        icon: React.createElement(PaletteIcon, { className: 'w-8 h-8 text-teal-400' }),
-        category: 'editing',
-    },
-    {
-        id: 'wonderModel',
-        name: 'Modelo Wonder',
-        description: 'Aprimore, aumente a resolução e restaure imagens com qualidade máxima.',
-        icon: React.createElement(SparkleIcon, { className: 'w-8 h-8 text-yellow-300' }),
+        icon: React.createElement(BoltIcon, { className: 'w-8 h-8 text-teal-400' }),
         category: 'editing',
     },
     {
@@ -294,7 +313,7 @@ export const tools: ToolConfig[] = [
         id: 'trends',
         name: 'Tendências',
         description: 'Experimente estilos e efeitos populares do momento.',
-        icon: React.createElement(LightbulbIcon, { className: 'w-8 h-8 text-pink-400' }),
+        icon: React.createElement(FireIcon, { className: 'w-8 h-8 text-pink-400' }),
         category: 'editing',
     },
     {
@@ -302,6 +321,13 @@ export const tools: ToolConfig[] = [
         name: 'Conversor de Vetor',
         description: 'Converta imagens bitmap para um estilo de arte vetorial.',
         icon: React.createElement(VectorIcon, { className: 'w-8 h-8 text-orange-400' }),
+        category: 'editing',
+    },
+    {
+        id: 'texture',
+        name: 'Textura',
+        description: 'Aplique sobreposições de textura como grão de filme, papel e mais.',
+        icon: React.createElement(TextureIcon, { className: 'w-8 h-8 text-lime-400' }),
         category: 'editing',
     },
 ];

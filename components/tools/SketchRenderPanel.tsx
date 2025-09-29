@@ -3,18 +3,36 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState } from 'react';
-import { useLoadingError } from '../../context/EditorContext';
+import React, { useState, useEffect } from 'react';
+import { useEditor, useLoadingError } from '../../context/EditorContext';
 import { renderSketch } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import { BrushIcon } from '../icons';
+import CollapsibleToolPanel from '../CollapsibleToolPanel';
+import PromptEnhancer from './common/PromptEnhancer';
 
 const SketchRenderPanel: React.FC = () => {
     const { isLoading, error, setError, setIsLoading } = useLoadingError();
+    const { currentImage, setInitialImage } = useEditor();
     const [sketchImage, setSketchImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
+    const [isPromptExpanded, setIsPromptExpanded] = useState(true);
+
+    useEffect(() => {
+        if (currentImage && !sketchImage) {
+            setSketchImage(currentImage);
+        }
+    }, [currentImage, sketchImage]);
+
+    const handleFileSelect = (file: File | null) => {
+        setSketchImage(file);
+        if (file) {
+            setInitialImage(file);
+        }
+        setResultImage(null);
+    };
 
     const handleGenerate = async () => {
         if (!sketchImage) {
@@ -39,7 +57,7 @@ const SketchRenderPanel: React.FC = () => {
     };
 
     return (
-        <div className="p-4 md:p-6 h-full flex flex-col md:flex-row gap-6">
+        <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6">
             <aside className="w-full md:w-96 flex-shrink-0 bg-gray-900/30 rounded-lg p-4 flex flex-col gap-4 border border-gray-700/50">
                 <div className="text-center">
                     <h3 className="text-lg font-semibold text-gray-200">Renderização de Esboço</h3>
@@ -47,19 +65,28 @@ const SketchRenderPanel: React.FC = () => {
                 </div>
                 <ImageDropzone 
                     imageFile={sketchImage}
-                    onFileSelect={setSketchImage}
+                    onFileSelect={handleFileSelect}
                     label="Seu Esboço"
                 />
                 
-                <label className="block text-sm font-medium text-gray-300">Descrição do Render</label>
-                <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Ex: render 3D de um tênis esportivo, com materiais realistas, em um fundo de estúdio..."
-                    className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base min-h-[120px]"
-                    disabled={isLoading}
-                    rows={5}
-                />
+                <CollapsibleToolPanel
+                    title="Descrição do Render"
+                    icon={<BrushIcon className="w-5 h-5" />}
+                    isExpanded={isPromptExpanded}
+                    onExpandToggle={() => setIsPromptExpanded(!isPromptExpanded)}
+                >
+                    <div className="relative">
+                        <textarea
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            placeholder="Ex: render 3D de um tênis esportivo, com materiais realistas, em um fundo de estúdio..."
+                            className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
+                            disabled={isLoading}
+                            rows={5}
+                        />
+                         <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="sketchRender" />
+                    </div>
+                </CollapsibleToolPanel>
                 
                 <button
                     onClick={handleGenerate}

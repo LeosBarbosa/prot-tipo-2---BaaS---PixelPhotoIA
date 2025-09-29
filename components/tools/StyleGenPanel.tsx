@@ -5,8 +5,8 @@
 
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
-// FIX: Corrected icon imports. CubeIcon was being used incorrectly for Pixel Art.
 import { PixelsIcon, LowPolyIcon } from '../icons';
+import TipBox from '../common/TipBox';
 
 const StyleGenPanel: React.FC = () => {
     const { isLoading, handleApplyLowPoly, handleApplyStyle } = useEditor();
@@ -35,20 +35,21 @@ const StyleGenPanel: React.FC = () => {
             
             <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 flex flex-col items-center gap-3">
                 <h4 className="font-bold text-white text-md flex items-center gap-2">
-                    {/* FIX: Used the correct icon for Pixel Art. */}
                     <PixelsIcon className="w-5 h-5 text-green-400"/>
                     Pixel Art
                 </h4>
                 <p className="text-sm text-gray-400 text-center -mt-2">Transforma a imagem em pixel art de 16-bits.</p>
                 <button
-                    onClick={() => handleApplyStyle('Pixel art de 16 bits, paleta de cores limitada.')}
+                    onClick={() => handleApplyStyle('Pixel art de 16 bits, paleta de cores limitada.', true)}
                     disabled={isLoading}
                     className="w-full bg-gradient-to-br from-gray-500 to-slate-600 text-white font-bold py-3 px-6 rounded-lg transition-all disabled:opacity-50"
                 >
                     Aplicar Pixel Art
                 </button>
             </div>
-
+            <TipBox>
+                Estes são estilos de um clique que aplicam transformações artísticas complexas instantaneamente.
+            </TipBox>
         </div>
     );
 };

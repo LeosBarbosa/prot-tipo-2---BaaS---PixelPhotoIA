@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { saveHistory, loadHistory, clearHistoryDB } from '../utils/db';
+import { type ToolId } from '../types';
 
 /**
  * @description Manages image editing history (undo/redo stack) with IndexedDB persistence.
@@ -14,8 +15,10 @@ import { saveHistory, loadHistory, clearHistoryDB } from '../utils/db';
 export const useHistoryState = (onStateChange: (newImage?: File) => void) => {
   const [history, setHistory] = useState<File[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const [toolHistory, setToolHistory] = useState<ToolId[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState<boolean>(true);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [hasRestoredSession, setHasRestoredSession] = useState<boolean>(false);
 
   // Load from DB on mount
   useEffect(() => {
@@ -25,7 +28,9 @@ export const useHistoryState = (onStateChange: (newImage?: File) => void) => {
       if (savedState && savedState.history.length > 0) {
         setHistory(savedState.history);
         setHistoryIndex(savedState.historyIndex);
+        setToolHistory(savedState.toolHistory || []);
         onStateChange(savedState.history[savedState.historyIndex]);
+        setHasRestoredSession(true);
       }
       setIsHistoryLoading(false);
       setIsInitialized(true);
@@ -37,12 +42,12 @@ export const useHistoryState = (onStateChange: (newImage?: File) => void) => {
   useEffect(() => {
     if (isInitialized) {
       if (history.length > 0) {
-        saveHistory(history, historyIndex);
+        saveHistory(history, historyIndex, toolHistory);
       } else {
         clearHistoryDB();
       }
     }
-  }, [history, historyIndex, isInitialized]);
+  }, [history, historyIndex, toolHistory, isInitialized]);
   
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -50,25 +55,32 @@ export const useHistoryState = (onStateChange: (newImage?: File) => void) => {
   const currentImage = useMemo(() => history[historyIndex] ?? null, [history, historyIndex]);
   const originalImage = useMemo(() => history[0] ?? null, [history]);
 
-  const addImageToHistory = useCallback((newImageFile: File) => {
+  const addImageToHistory = useCallback((newImageFile: File, toolId: ToolId) => {
     const newHistory = history.slice(0, historyIndex + 1);
+    const newToolHistory = toolHistory.slice(0, historyIndex);
     newHistory.push(newImageFile);
+    newToolHistory.push(toolId);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
+    setToolHistory(newToolHistory);
     onStateChange(newImageFile);
-  }, [history, historyIndex, onStateChange]);
+  }, [history, historyIndex, toolHistory, onStateChange]);
   
   const setInitialImage = useCallback((file: File) => {
       const newHistory = [file];
       setHistory(newHistory);
       setHistoryIndex(0);
+      setToolHistory([]);
       onStateChange(file);
+      setHasRestoredSession(false);
   }, [onStateChange]);
 
   const clearHistory = useCallback(() => {
     setHistory([]);
     setHistoryIndex(-1);
+    setToolHistory([]);
     onStateChange();
+    setHasRestoredSession(false);
   }, [onStateChange]);
 
   const undo = useCallback(() => {
@@ -92,6 +104,7 @@ export const useHistoryState = (onStateChange: (newImage?: File) => void) => {
         const original = history[0];
         setHistory([original]);
         setHistoryIndex(0);
+        setToolHistory([]);
         onStateChange(original);
     }
   }, [history, historyIndex, onStateChange]);
@@ -111,6 +124,8 @@ export const useHistoryState = (onStateChange: (newImage?: File) => void) => {
     isHistoryLoading,
     history,
     historyIndex,
+    toolHistory,
+    hasRestoredSession,
     addImageToHistory,
     setInitialImage,
     clearHistory,

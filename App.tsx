@@ -14,6 +14,9 @@ import { type ToolId } from './types';
 import { optimizeImage } from './utils/imageUtils';
 import ComparisonModal from './components/ComparisonModal';
 import ToastNotification from './components/ToastNotification';
+import ProactiveSuggestion from './components/ProactiveSuggestion';
+import LoadingOverlay from './components/LoadingOverlay';
+import SaveWorkflowModal from './components/SaveWorkflowModal';
 
 // Import all the tool panels
 import SketchRenderPanel from './components/tools/SketchRenderPanel';
@@ -26,8 +29,9 @@ import CharacterDesignPanel from './components/tools/CharacterDesignPanel';
 import ArchitecturalVizPanel from './components/tools/ArchitecturalVizPanel';
 import InteriorDesignPanel from './components/tools/InteriorDesignPanel';
 import FaceSwapPanel from './components/tools/FaceSwapPanel';
-import AIPortraitPanel from './components/tools/AIPortraitPanel';
 import VideoGenPanel from './components/tools/VideoGenPanel';
+import StyledPortraitPanel from './components/tools/StyledPortraitPanel';
+import MagicMontagePanel from './components/tools/MagicMontagePanel';
 
 // Import restored editing panels
 import CropPanel from './components/tools/CropPanel';
@@ -38,34 +42,35 @@ import RemoveBgPanel from './components/tools/RemoveBgPanel';
 import UpscalePanel from './components/tools/UpscalePanel';
 import TextPanel from './components/tools/TextPanel';
 import RelightPanel from './components/tools/RelightPanel';
-import MagicPromptPanel from './components/tools/MagicPromptPanel';
 import LowPolyPanel from './components/tools/LowPolyPanel';
 import PortraitsPanel from './components/tools/PortraitsPanel';
 import StyleGenPanel from './components/tools/StyleGenPanel';
-import WonderPanel from './components/tools/WonderPanel';
 import DustAndScratchesPanel from './components/tools/DustAndScratchesPanel';
 import ExtractArtPanel from './components/tools/ExtractArtPanel';
 import NeuralFiltersPanel from './components/tools/NeuralFiltersPanel';
 import TrendsPanel from './components/tools/TrendsPanel';
 import LogoGenPanel from './components/tools/LogoGenPanel';
+import ObjectRemoverPanel from './components/tools/ObjectRemoverPanel';
+import FaceRecoveryPanel from './components/tools/FaceRecoveryPanel';
+import DenoisePanel from './components/tools/DenoisePanel';
 
-// FIX: Import new tool panels to resolve missing properties on toolMap.
+// Import new tool panels to resolve missing properties on toolMap.
 import PatternGenPanel from './components/tools/PatternGenPanel';
 import TextEffectsPanel from './components/tools/TextEffectsPanel';
 import VectorConverterPanel from './components/tools/VectorConverterPanel';
 import StickerCreatorPanel from './components/tools/StickerCreatorPanel';
 import Model3DGenPanel from './components/tools/Model3DGenPanel';
-import DenoisePanel from './components/tools/DenoisePanel';
-import FaceRecoveryPanel from './components/tools/FaceRecoveryPanel';
 import UnblurPanel from './components/tools/UnblurPanel';
 import BananimatePanel from './components/tools/BananimatePanel';
-// Replaced by AIPortraitStudioPanel
-// import CaricatureGenPanel from './components/tools/CaricatureGenPanel';
 import AIPortraitStudioPanel from './components/tools/AIPortraitStudioPanel';
+import PhotoStudioPanel from './components/tools/PhotoStudioPanel';
+import PolaroidPanel from './components/tools/PolaroidPanel';
+import TexturePanel from './components/tools/TexturePanel';
+import ImageRestorePanel from './components/tools/ImageRestorePanel';
+import PixelArtPanel from './components/tools/PixelArtPanel';
 
 
 // Map Tool IDs to their corresponding components and modal titles
-// FIX: Add missing tool definitions to toolMap to match the ToolId type.
 const toolMap: Record<ToolId, { Component: React.FC; title: string }> = {
     // Generation Tools
     sketchRender: { Component: SketchRenderPanel, title: 'Renderização de Esboço' },
@@ -78,19 +83,22 @@ const toolMap: Record<ToolId, { Component: React.FC; title: string }> = {
     architecturalViz: { Component: ArchitecturalVizPanel, title: 'Visualização Arquitetônica' },
     interiorDesign: { Component: InteriorDesignPanel, title: 'Reforma de Interiores' },
     faceSwap: { Component: FaceSwapPanel, title: 'Troca de Rosto (Face Swap)' },
-    aiPortrait: { Component: AIPortraitPanel, title: 'Gerador de Retrato IA' },
     videoGen: { Component: VideoGenPanel, title: 'Gerador de Vídeo AI' },
     logoGen: { Component: LogoGenPanel, title: 'Gerador de Logotipo AI' },
     patternGen: { Component: PatternGenPanel, title: 'Gerador de Padrões' },
     textEffects: { Component: TextEffectsPanel, title: 'Efeitos de Texto' },
     vectorConverter: { Component: VectorConverterPanel, title: 'Conversor de Vetor' },
     stickerCreator: { Component: StickerCreatorPanel, title: 'Criador de Adesivos AI' },
-    // Replaced caricatureGen with the new AIPortraitStudio
     aiPortraitStudio: { Component: AIPortraitStudioPanel, title: 'Estúdio de Retrato IA' },
     model3DGen: { Component: Model3DGenPanel, title: 'Gerador de Modelo 3D' },
     bananimate: { Component: BananimatePanel, title: 'Bananimate' },
+    styledPortrait: { Component: StyledPortraitPanel, title: 'Retrato Estilizado' },
+    photoStudio: { Component: PhotoStudioPanel, title: 'Foto Studio IA' },
+    polaroid: { Component: PolaroidPanel, title: 'Polaroid com Artista IA' },
 
     // Editing Tools
+    magicMontage: { Component: MagicMontagePanel, title: 'Montagem Mágica' },
+    objectRemover: { Component: ObjectRemoverPanel, title: 'Removedor de Objetos' },
     extractArt: { Component: ExtractArtPanel, title: 'Extrair Arte' },
     crop: { Component: CropPanel, title: 'Cortar e Girar' },
     adjust: { Component: AdjustmentPanel, title: 'Ajustes' },
@@ -100,28 +108,32 @@ const toolMap: Record<ToolId, { Component: React.FC; title: string }> = {
     upscale: { Component: UpscalePanel, title: 'Melhorar Resolução (Upscale)' },
     text: { Component: TextPanel, title: 'Adicionar Texto' },
     relight: { Component: RelightPanel, title: 'Reacender com IA' },
-    magicPrompt: { Component: MagicPromptPanel, title: 'Prompt Mágico' },
     lowPoly: { Component: LowPolyPanel, title: 'Estilo Low Poly' },
+    pixelArt: { Component: PixelArtPanel, title: 'Estilo Pixel Art' },
     portraits: { Component: PortraitsPanel, title: 'Retratos IA' },
     styleGen: { Component: StyleGenPanel, title: 'Estilos Rápidos' },
-    wonderModel: { Component: WonderPanel, title: 'Modelo Wonder' },
+    photoRestoration: { Component: ImageRestorePanel, title: 'Restauração de Foto' },
     dustAndScratches: { Component: DustAndScratchesPanel, title: 'Poeira e Arranhões' },
     neuralFilters: { Component: NeuralFiltersPanel, title: 'Filtros Neurais' },
     trends: { Component: TrendsPanel, title: 'Tendências' },
-    denoise: { Component: DenoisePanel, title: 'Remover Ruído (Denoise)' },
-    faceRecovery: { Component: FaceRecoveryPanel, title: 'Recuperação de Rosto' },
     unblur: { Component: UnblurPanel, title: 'Remover Desfoque' },
+    texture: { Component: TexturePanel, title: 'Textura' },
+    faceRecovery: { Component: FaceRecoveryPanel, title: 'Recuperação de Rosto' },
+    denoise: { Component: DenoisePanel, title: 'Remover Ruído' },
 };
 
-// FIX: Add new editing tool IDs and remove `videoGen` which is a generation tool.
-const editingToolIds: ToolId[] = ['extractArt', 'crop', 'adjust', 'style', 'generativeEdit', 'removeBg', 'upscale', 'text', 'relight', 'magicPrompt', 'lowPoly', 'portraits', 'styleGen', 'wonderModel', 'dustAndScratches', 'neuralFilters', 'trends', 'denoise', 'faceRecovery', 'unblur'];
+const editingToolIds: ToolId[] = [
+    'objectRemover', 'extractArt', 'crop', 'adjust', 'style', 
+    'generativeEdit', 'removeBg', 'upscale', 'text', 'relight', 'lowPoly', 
+    'pixelArt', 'portraits', 'styleGen', 'photoRestoration', 'dustAndScratches', 
+    'neuralFilters', 'trends', 'unblur', 'texture', 'faceRecovery', 'denoise'
+];
 
-// FIX: Add new tools that require an image to start.
 const toolsThatNeedImage: ToolId[] = [
     ...editingToolIds, 'imageVariation', 'creativeFusion', 'outpainting',
-    'productPhotography', 'faceSwap', 'aiPortrait', 'architecturalViz',
+    'productPhotography', 'faceSwap', 'architecturalViz',
     'interiorDesign', 'sketchRender', 'textEffects', 'vectorConverter', 'aiPortraitStudio',
-    'bananimate'
+    'bananimate', 'styledPortrait', 'photoStudio', 'polaroid', 'magicMontage'
 ];
 
 const AppContent: React.FC = () => {
@@ -129,7 +141,9 @@ const AppContent: React.FC = () => {
         activeTool, 
         currentImage, 
         setInitialImage,
+        isLoading,
         setIsLoading,
+        loadingMessage,
         setLoadingMessage,
         setError,
         isComparisonModalOpen,
@@ -138,6 +152,10 @@ const AppContent: React.FC = () => {
         currentImageUrl,
         toast,
         setToast,
+        proactiveSuggestion,
+        uploadProgress,
+        setUploadProgress,
+        isSaveWorkflowModalOpen,
     } = useEditor()!;
     
     const currentToolInfo = activeTool ? toolMap[activeTool] : null;
@@ -149,8 +167,9 @@ const AppContent: React.FC = () => {
         
         setIsLoading(true);
         setLoadingMessage("Otimizando imagem...");
+        setUploadProgress({ progress: 0, stage: 'reading' });
         try {
-            const optimizedFile = await optimizeImage(file);
+            const optimizedFile = await optimizeImage(file, setUploadProgress);
             setInitialImage(optimizedFile);
         } catch (error) {
             console.error("Erro ao otimizar:", error);
@@ -158,6 +177,7 @@ const AppContent: React.FC = () => {
         } finally {
             setIsLoading(false);
             setLoadingMessage(null);
+            setUploadProgress(null);
         }
     };
     
@@ -184,6 +204,9 @@ const AppContent: React.FC = () => {
     
     return (
         <div className="h-screen bg-gray-900 text-gray-100 flex flex-col">
+            {isLoading && loadingMessage && (
+                <LoadingOverlay message={loadingMessage} progressStatus={uploadProgress} />
+            )}
             <Header isEditingTool={isEditingTool} />
             <main className="flex-grow overflow-y-auto">
                 {isHomePageVisible ? (
@@ -204,10 +227,19 @@ const AppContent: React.FC = () => {
                     afterImage={currentImageUrl}
                 />
             )}
+            {isSaveWorkflowModalOpen && <SaveWorkflowModal />}
             {toast && (
                 <ToastNotification
                     message={toast.message}
+                    type={toast.type}
                     onClose={() => setToast(null)}
+                />
+            )}
+            {proactiveSuggestion && (
+                <ProactiveSuggestion
+                    message={proactiveSuggestion.message}
+                    acceptLabel={proactiveSuggestion.acceptLabel}
+                    onAccept={proactiveSuggestion.onAccept}
                 />
             )}
         </div>

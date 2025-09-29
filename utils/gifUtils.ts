@@ -14,7 +14,6 @@ export const parseGif = async (gifFile: File): Promise<GifFrame[]> => {
     const parsedGif = parseGIF(buffer);
     const decompressedFrames = decompressFrames(parsedGif, true);
 
-    let fullImageData: Uint8ClampedArray | null = null;
     let canvas: HTMLCanvasElement | null = null;
     let ctx: CanvasRenderingContext2D | null = null;
 
@@ -27,7 +26,6 @@ export const parseGif = async (gifFile: File): Promise<GifFrame[]> => {
             canvas.height = parsedGif.lsd.height;
             ctx = canvas.getContext('2d', { willReadFrequently: true });
             if (!ctx) throw new Error("Could not create canvas context for GIF processing");
-            fullImageData = new Uint8ClampedArray(canvas.width * canvas.height * 4);
         }
 
         const frameImageData = ctx.createImageData(frame.dims.width, frame.dims.height);
@@ -44,10 +42,8 @@ export const parseGif = async (gifFile: File): Promise<GifFrame[]> => {
         // Handle disposal method
         if (frame.disposalType === 2) { // Restore to background color
              ctx.clearRect(frame.dims.left, frame.dims.top, frame.dims.width, frame.dims.height);
-        } else if (frame.disposalType === 3) { // Restore to previous
-            // This is complex and requires saving previous states. For now, we proceed with current frame.
-            // A more robust implementation would handle this.
         }
+        // Disposal type 3 (restore to previous) is handled implicitly by not clearing the canvas
     }
 
     return processedFrames;

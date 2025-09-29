@@ -30,7 +30,7 @@ const MagicPromptPanel: React.FC = () => {
         id="magic-prompt"
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Ex: 'Remova o fundo', 'faça isto parecer um desenho animado', 'transforme-me num profissional'"
+        placeholder="Ex: 'Remova o fundo', 'faça isto parecer um desenho animado', 'melhore a resolução desta foto'"
         className="flex-grow bg-gray-800 border border-gray-600 text-gray-200 rounded-lg p-4 focus:ring-2 focus:ring-blue-500 focus:outline-none transition w-full disabled:cursor-not-allowed disabled:opacity-60 text-base min-h-[120px]"
         disabled={isLoading}
         rows={5}
@@ -42,6 +42,7 @@ const MagicPromptPanel: React.FC = () => {
             <li>Remover Fundo</li>
             <li>Retrato Profissional</li>
             <li>Aplicar Estilo Artístico</li>
+            <li>Melhorar Resolução</li>
         </ul>
       </div>
 

@@ -5,11 +5,12 @@
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { SparkleIcon } from '../icons';
+import TipBox from '../common/TipBox';
 
 const UnblurPanel: React.FC = () => {
     const { handleUnblurImage, isLoading } = useEditor();
-    const [sharpenLevel, setSharpenLevel] = useState(50);
-    const [denoiseLevel, setDenoiseLevel] = useState(50);
+    const [sharpenLevel, setSharpenLevel] = useState(75);
+    const [denoiseLevel, setDenoiseLevel] = useState(30);
     const [selectedModel, setSelectedModel] = useState('motion-blur');
 
     const models = [
@@ -75,21 +76,23 @@ const UnblurPanel: React.FC = () => {
                             key={model.value}
                             onClick={() => setSelectedModel(model.value)}
                             disabled={isLoading}
-                            className={`p-3 rounded-lg text-sm text-center font-semibold transition-all ${selectedModel === model.value ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-800/50 hover:bg-gray-700/50 text-gray-300'}`}
+                            className={`p-3 rounded-lg text-sm text-center font-semibold transition-all ${selectedModel === model.value ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-800/50 hover:bg-gray-700/50'}`}
+                            title={model.description}
                         >
                             {model.name}
                         </button>
                     ))}
                 </div>
-                 <p className="text-xs text-center text-gray-400 mt-2 h-8">
-                    {models.find(m => m.value === selectedModel)?.description}
-                </p>
             </div>
-            
+
+             <TipBox>
+                Escolha o modelo de correção que melhor corresponde ao tipo de desfoque em sua foto.
+            </TipBox>
+
             <button
                 onClick={handleApply}
                 disabled={isLoading}
-                className="w-full mt-4 bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
+                className="w-full mt-2 bg-gradient-to-br from-cyan-600 to-sky-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
             >
                 <SparkleIcon className="w-5 h-5" />
                 Aplicar Correção

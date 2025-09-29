@@ -6,6 +6,8 @@
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
+import StylePreview from '../common/StylePreview';
+import TipBox from '../common/TipBox';
 
 const styles = [
     { name: 'Anime', prompt: 'Estilo de anime dos anos 90, cores vibrantes, linhas nítidas.', bg: 'bg-gradient-to-br from-pink-400 to-purple-500' },
@@ -23,8 +25,12 @@ const styles = [
 ];
 
 const StylePanel: React.FC = () => {
-    const { isLoading, handleApplyStyle, isGif } = useEditor();
+    const { isLoading, isGif, generateAIPreview, isPreviewLoading, previewState } = useEditor();
     const [applyToAll, setApplyToAll] = useState(true);
+
+    const handleStyleClick = (prompt: string) => {
+        generateAIPreview(prompt, applyToAll);
+    };
 
     return (
         <div className="w-full flex flex-col gap-4 animate-fade-in">
@@ -32,20 +38,28 @@ const StylePanel: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-300">Estilos Artísticos com IA</h3>
                 <p className="text-sm text-gray-400 -mt-1">Transforme sua foto com um clique.</p>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-                {styles.map(style => (
-                    <button
-                        key={style.name}
-                        onClick={() => handleApplyStyle(style.prompt, applyToAll)}
-                        disabled={isLoading}
-                        className="aspect-square bg-gray-800 rounded-lg text-center font-semibold text-white hover:scale-105 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex flex-col items-center justify-center p-2 relative overflow-hidden group"
-                    >
-                        <div className={`absolute inset-0 ${style.bg} opacity-70 group-hover:opacity-90 transition-opacity`}></div>
-                        <span className="relative z-10 drop-shadow-md text-sm">{style.name}</span>
-                    </button>
-                ))}
+            
+            <StylePreview />
+
+            <div className={`transition-opacity duration-300 ${isPreviewLoading || previewState ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                <div className="grid grid-cols-3 gap-3">
+                    {styles.map(style => (
+                        <button
+                            key={style.name}
+                            onClick={() => handleStyleClick(style.prompt)}
+                            disabled={isLoading || isPreviewLoading}
+                            className="aspect-square bg-gray-800 rounded-lg text-center font-semibold text-white hover:scale-105 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex flex-col items-center justify-center p-2 relative overflow-hidden group"
+                        >
+                            <div className={`absolute inset-0 ${style.bg} opacity-70 group-hover:opacity-90 transition-opacity`}></div>
+                            <span className="relative z-10 drop-shadow-md text-sm">{style.name}</span>
+                        </button>
+                    ))}
+                </div>
+                 <TipBox>
+                    A IA reinterpreta sua imagem no estilo escolhido. Os resultados podem variar drasticamente, então experimente diferentes estilos para obter o visual perfeito!
+                </TipBox>
+                {isGif && <div className="mt-4"><ApplyToAllToggle checked={applyToAll} onChange={setApplyToAll} /></div>}
             </div>
-            {isGif && <ApplyToAllToggle checked={applyToAll} onChange={setApplyToAll} />}
         </div>
     );
 };

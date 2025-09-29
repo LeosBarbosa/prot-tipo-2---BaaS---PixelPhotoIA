@@ -6,6 +6,7 @@
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { LowPolyIcon } from '../icons';
+import TipBox from '../common/TipBox';
 
 const LowPolyPanel: React.FC = () => {
     const { isLoading, handleApplyLowPoly } = useEditor();
@@ -31,6 +32,9 @@ const LowPolyPanel: React.FC = () => {
                 <LowPolyIcon className="w-5 h-5" />
                 Aplicar Estilo Low Poly
             </button>
+            <TipBox>
+                Este efeito transforma sua imagem em uma arte geométrica, ideal para criar papéis de parede e avatares estilizados.
+            </TipBox>
         </div>
     );
 };

@@ -6,6 +6,7 @@
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { TextToolIcon } from '../icons';
+import TipBox from '../common/TipBox';
 
 const fontFamilies = [ 'Impact', 'Arial', 'Verdana', 'Georgia', 'Comic Sans MS', 'Times New Roman' ];
 
@@ -15,6 +16,7 @@ const TextPanel: React.FC = () => {
         textToolState,
         setTextToolState,
         handleApplyText,
+        resetTextToolState,
     } = useEditor();
 
     const updateState = (key: string, value: any) => {
@@ -91,17 +93,31 @@ const TextPanel: React.FC = () => {
                 </div>
             </div>
 
-            <div className="border-t border-gray-700/50 my-2"></div>
+             <TipBox>
+                Depois de adicionar o texto, você pode clicar e arrastá-lo diretamente na imagem para posicioná-lo onde quiser.
+            </TipBox>
 
-            <button
-                type="button"
-                onClick={handleApplyText}
-                disabled={isLoading || !textToolState.content.trim()}
-                className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
-            >
-                <TextToolIcon className="w-5 h-5" />
-                Aplicar Texto
-            </button>
+            <div className="border-t border-gray-700/50 my-2"></div>
+            
+            <div className="flex gap-2">
+                <button
+                    type="button"
+                    onClick={resetTextToolState}
+                    disabled={isLoading}
+                    className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50"
+                >
+                    Resetar
+                </button>
+                <button
+                    type="button"
+                    onClick={handleApplyText}
+                    disabled={isLoading || !textToolState.content.trim()}
+                    className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
+                >
+                    <TextToolIcon className="w-5 h-5" />
+                    Aplicar Texto
+                </button>
+            </div>
         </div>
     );
 };
