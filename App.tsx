@@ -3,255 +3,170 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React from 'react';
+import React, { lazy, Suspense, useMemo, useEffect } from 'react';
 import { EditorProvider, useEditor } from './context/EditorContext';
 import Header from './components/Header';
 import HomePage from './components/HomePage';
 import ToolModal from './components/ToolModal';
-import StartScreen from './components/StartScreen';
 import EditorModalLayout from './components/EditorModalLayout';
-import { type ToolId } from './types';
-import { optimizeImage } from './utils/imageUtils';
+import { type ToolId, type TabId } from './types';
 import ComparisonModal from './components/ComparisonModal';
 import ToastNotification from './components/ToastNotification';
 import ProactiveSuggestion from './components/ProactiveSuggestion';
 import LoadingOverlay from './components/LoadingOverlay';
 import SaveWorkflowModal from './components/SaveWorkflowModal';
+import Spinner from './components/Spinner';
 
-// Import all the tool panels
-import SketchRenderPanel from './components/tools/SketchRenderPanel';
-import ImageGenPanel from './components/tools/ImageGenPanel';
-import CreativeFusionPanel from './components/tools/CreativeFusionPanel';
-import OutpaintingPanel from './components/tools/OutpaintingPanel';
-import ImageVariationPanel from './components/tools/ImageVariationPanel';
-import ProductPhotographyPanel from './components/tools/ProductPhotographyPanel';
-import CharacterDesignPanel from './components/tools/CharacterDesignPanel';
-import ArchitecturalVizPanel from './components/tools/ArchitecturalVizPanel';
-import InteriorDesignPanel from './components/tools/InteriorDesignPanel';
-import FaceSwapPanel from './components/tools/FaceSwapPanel';
-import VideoGenPanel from './components/tools/VideoGenPanel';
-import StyledPortraitPanel from './components/tools/StyledPortraitPanel';
-import MagicMontagePanel from './components/tools/MagicMontagePanel';
+// Centralized dynamic imports for editing panels
+const editingPanelComponents: Partial<Record<TabId, React.LazyExoticComponent<React.FC<{}>>>> = {
+    crop: lazy(() => import(/* webpackChunkName: "tool-panel-crop" */ './components/tools/CropPanel')),
+    style: lazy(() => import(/* webpackChunkName: "tool-panel-style" */ './components/tools/StylePanel')),
+    adjust: lazy(() => import(/* webpackChunkName: "tool-panel-adjustment" */ './components/tools/AdjustmentPanel')),
+    generativeEdit: lazy(() => import(/* webpackChunkName: "tool-panel-generative-edit" */ './components/tools/GenerativeEditPanel')),
+    removeBg: lazy(() => import(/* webpackChunkName: "tool-panel-remove-bg" */ './components/tools/RemoveBgPanel')),
+    upscale: lazy(() => import(/* webpackChunkName: "tool-panel-upscale" */ './components/tools/UpscalePanel')),
+    portraits: lazy(() => import(/* webpackChunkName: "tool-panel-portraits" */ './components/tools/PortraitsPanel')),
+    styleGen: lazy(() => import(/* webpackChunkName: "tool-panel-style-gen" */ './components/tools/StyleGenPanel')),
+    relight: lazy(() => import(/* webpackChunkName: "tool-panel-relight" */ './components/tools/RelightPanel')),
+    extractArt: lazy(() => import(/* webpackChunkName: "tool-panel-extract-art" */ './components/tools/ExtractArtPanel')),
+    neuralFilters: lazy(() => import(/* webpackChunkName: "tool-panel-neural-filters" */ './components/tools/NeuralFiltersPanel')),
+    trends: lazy(() => import(/* webpackChunkName: "tool-panel-trends" */ './components/tools/TrendsPanel')),
+    unblur: lazy(() => import(/* webpackChunkName: "tool-panel-unblur" */ './components/tools/UnblurPanel')),
+    dustAndScratches: lazy(() => import(/* webpackChunkName: "tool-panel-dust-scratches" */ './components/tools/DustAndScratchesPanel')),
+    history: lazy(() => import(/* webpackChunkName: "panel-history" */ './components/HistoryPanel')),
+    objectRemover: lazy(() => import(/* webpackChunkName: "tool-panel-object-remover" */ './components/tools/ObjectRemoverPanel')),
+    texture: lazy(() => import(/* webpackChunkName: "tool-panel-texture" */ './components/tools/TexturePanel')),
+    magicMontage: lazy(() => import(/* webpackChunkName: "tool-panel-magic-montage" */ './components/tools/MagicMontagePanel')),
+    photoRestoration: lazy(() => import(/* webpackChunkName: "tool-panel-image-restore" */ './components/tools/ImageRestorePanel')),
+    text: lazy(() => import(/* webpackChunkName: "tool-panel-text" */ './components/tools/TextPanel')),
+    lowPoly: lazy(() => import(/* webpackChunkName: "tool-panel-low-poly" */ './components/tools/LowPolyPanel')),
+    pixelArt: lazy(() => import(/* webpackChunkName: "tool-panel-pixel-art" */ './components/tools/PixelArtPanel')),
+    localAdjust: lazy(() => import(/* webpackChunkName: "tool-panel-local-adjustment" */ './components/tools/LocalAdjustmentPanel')),
+    faceSwap: lazy(() => import(/* webpackChunkName: "tool-panel-face-swap" */ './components/tools/FaceSwapPanel')),
+};
 
-// Import restored editing panels
-import CropPanel from './components/tools/CropPanel';
-import StylePanel from './components/tools/StylePanel';
-import AdjustmentPanel from './components/tools/AdjustmentPanel';
-import GenerativeEditPanel from './components/tools/GenerativeEditPanel';
-import RemoveBgPanel from './components/tools/RemoveBgPanel';
-import UpscalePanel from './components/tools/UpscalePanel';
-import TextPanel from './components/tools/TextPanel';
-import RelightPanel from './components/tools/RelightPanel';
-import LowPolyPanel from './components/tools/LowPolyPanel';
-import PortraitsPanel from './components/tools/PortraitsPanel';
-import StyleGenPanel from './components/tools/StyleGenPanel';
-import DustAndScratchesPanel from './components/tools/DustAndScratchesPanel';
-import ExtractArtPanel from './components/tools/ExtractArtPanel';
-import NeuralFiltersPanel from './components/tools/NeuralFiltersPanel';
-import TrendsPanel from './components/tools/TrendsPanel';
-import LogoGenPanel from './components/tools/LogoGenPanel';
-import ObjectRemoverPanel from './components/tools/ObjectRemoverPanel';
-import FaceRecoveryPanel from './components/tools/FaceRecoveryPanel';
-import DenoisePanel from './components/tools/DenoisePanel';
-
-// Import new tool panels to resolve missing properties on toolMap.
-import PatternGenPanel from './components/tools/PatternGenPanel';
-import TextEffectsPanel from './components/tools/TextEffectsPanel';
-import VectorConverterPanel from './components/tools/VectorConverterPanel';
-import StickerCreatorPanel from './components/tools/StickerCreatorPanel';
-import Model3DGenPanel from './components/tools/Model3DGenPanel';
-import UnblurPanel from './components/tools/UnblurPanel';
-import BananimatePanel from './components/tools/BananimatePanel';
-import AIPortraitStudioPanel from './components/tools/AIPortraitStudioPanel';
-import PhotoStudioPanel from './components/tools/PhotoStudioPanel';
-import PolaroidPanel from './components/tools/PolaroidPanel';
-import TexturePanel from './components/tools/TexturePanel';
-import ImageRestorePanel from './components/tools/ImageRestorePanel';
-import PixelArtPanel from './components/tools/PixelArtPanel';
-
-
-// Map Tool IDs to their corresponding components and modal titles
-const toolMap: Record<ToolId, { Component: React.FC; title: string }> = {
+// Map Tool IDs to their corresponding components and modal titles for non-editing tools
+const toolMap: Partial<Record<ToolId, { Component: React.LazyExoticComponent<React.FC<{}>>; title: string }>> = {
     // Generation Tools
-    sketchRender: { Component: SketchRenderPanel, title: 'Renderização de Esboço' },
-    imageGen: { Component: ImageGenPanel, title: 'Gerador de Imagens AI' },
-    creativeFusion: { Component: CreativeFusionPanel, title: 'Fusão Criativa' },
-    outpainting: { Component: OutpaintingPanel, title: 'Pintura Expansiva (Outpainting)' },
-    imageVariation: { Component: ImageVariationPanel, title: 'Variação de Imagem' },
-    productPhotography: { Component: ProductPhotographyPanel, title: 'Fotografia de Produto AI' },
-    characterDesign: { Component: CharacterDesignPanel, title: 'Design de Personagem' },
-    architecturalViz: { Component: ArchitecturalVizPanel, title: 'Visualização Arquitetônica' },
-    interiorDesign: { Component: InteriorDesignPanel, title: 'Reforma de Interiores' },
-    faceSwap: { Component: FaceSwapPanel, title: 'Troca de Rosto (Face Swap)' },
-    videoGen: { Component: VideoGenPanel, title: 'Gerador de Vídeo AI' },
-    logoGen: { Component: LogoGenPanel, title: 'Gerador de Logotipo AI' },
-    patternGen: { Component: PatternGenPanel, title: 'Gerador de Padrões' },
-    textEffects: { Component: TextEffectsPanel, title: 'Efeitos de Texto' },
-    vectorConverter: { Component: VectorConverterPanel, title: 'Conversor de Vetor' },
-    stickerCreator: { Component: StickerCreatorPanel, title: 'Criador de Adesivos AI' },
-    aiPortraitStudio: { Component: AIPortraitStudioPanel, title: 'Estúdio de Retrato IA' },
-    model3DGen: { Component: Model3DGenPanel, title: 'Gerador de Modelo 3D' },
-    bananimate: { Component: BananimatePanel, title: 'Bananimate' },
-    styledPortrait: { Component: StyledPortraitPanel, title: 'Retrato Estilizado' },
-    photoStudio: { Component: PhotoStudioPanel, title: 'Foto Studio IA' },
-    polaroid: { Component: PolaroidPanel, title: 'Polaroid com Artista IA' },
-
-    // Editing Tools
-    magicMontage: { Component: MagicMontagePanel, title: 'Montagem Mágica' },
-    objectRemover: { Component: ObjectRemoverPanel, title: 'Removedor de Objetos' },
-    extractArt: { Component: ExtractArtPanel, title: 'Extrair Arte' },
-    crop: { Component: CropPanel, title: 'Cortar e Girar' },
-    adjust: { Component: AdjustmentPanel, title: 'Ajustes' },
-    style: { Component: StylePanel, title: 'Estilos Artísticos' },
-    generativeEdit: { Component: GenerativeEditPanel, title: 'Edição Generativa' },
-    removeBg: { Component: RemoveBgPanel, title: 'Removedor de Fundo' },
-    upscale: { Component: UpscalePanel, title: 'Melhorar Resolução (Upscale)' },
-    text: { Component: TextPanel, title: 'Adicionar Texto' },
-    relight: { Component: RelightPanel, title: 'Reacender com IA' },
-    lowPoly: { Component: LowPolyPanel, title: 'Estilo Low Poly' },
-    pixelArt: { Component: PixelArtPanel, title: 'Estilo Pixel Art' },
-    portraits: { Component: PortraitsPanel, title: 'Retratos IA' },
-    styleGen: { Component: StyleGenPanel, title: 'Estilos Rápidos' },
-    photoRestoration: { Component: ImageRestorePanel, title: 'Restauração de Foto' },
-    dustAndScratches: { Component: DustAndScratchesPanel, title: 'Poeira e Arranhões' },
-    neuralFilters: { Component: NeuralFiltersPanel, title: 'Filtros Neurais' },
-    trends: { Component: TrendsPanel, title: 'Tendências' },
-    unblur: { Component: UnblurPanel, title: 'Remover Desfoque' },
-    texture: { Component: TexturePanel, title: 'Textura' },
-    faceRecovery: { Component: FaceRecoveryPanel, title: 'Recuperação de Rosto' },
-    denoise: { Component: DenoisePanel, title: 'Remover Ruído' },
+    imageGen: { Component: lazy(() => import(/* webpackChunkName: "tool-image-gen" */ './components/tools/ImageGenPanel')), title: 'Gerador de Imagens AI' },
+    sketchRender: { Component: lazy(() => import(/* webpackChunkName: "tool-sketch-render" */ './components/tools/SketchRenderPanel')), title: 'Renderização de Esboço' },
+    creativeFusion: { Component: lazy(() => import(/* webpackChunkName: "tool-creative-fusion" */ './components/tools/CreativeFusionPanel')), title: 'Fusão Criativa' },
+    outpainting: { Component: lazy(() => import(/* webpackChunkName: "tool-outpainting" */ './components/tools/OutpaintingPanel')), title: 'Pintura Expansiva (Outpainting)' },
+    imageVariation: { Component: lazy(() => import(/* webpackChunkName: "tool-image-variation" */ './components/tools/ImageVariationPanel')), title: 'Variação de Imagem' },
+    productPhotography: { Component: lazy(() => import(/* webpackChunkName: "tool-product-photography" */ './components/tools/ProductPhotographyPanel')), title: 'Fotografia de Produto AI' },
+    characterDesign: { Component: lazy(() => import(/* webpackChunkName: "tool-character-design" */ './components/tools/CharacterDesignPanel')), title: 'Design de Personagem' },
+    architecturalViz: { Component: lazy(() => import(/* webpackChunkName: "tool-architectural-viz" */ './components/tools/ArchitecturalVizPanel')), title: 'Visualização Arquitetônica' },
+    interiorDesign: { Component: lazy(() => import(/* webpackChunkName: "tool-interior-design" */ './components/tools/InteriorDesignPanel')), title: 'Reforma de Interiores' },
+    videoGen: { Component: lazy(() => import(/* webpackChunkName: "tool-video-gen" */ './components/tools/VideoGenPanel')), title: 'Gerador de Vídeo AI' },
+    logoGen: { Component: lazy(() => import(/* webpackChunkName: "tool-logo-gen" */ './components/tools/LogoGenPanel')), title: 'Gerador de Logotipo AI' },
+    patternGen: { Component: lazy(() => import(/* webpackChunkName: "tool-panel-pattern-gen" */ './components/tools/PatternGenPanel')), title: 'Gerador de Padrões' },
+    textEffects: { Component: lazy(() => import(/* webpackChunkName: "tool-text-effects" */ './components/tools/TextEffectsPanel')), title: 'Efeitos de Texto' },
+    vectorConverter: { Component: lazy(() => import(/* webpackChunkName: "tool-vector-converter" */ './components/tools/VectorConverterPanel')), title: 'Conversor de Vetor' },
+    stickerCreator: { Component: lazy(() => import(/* webpackChunkName: "tool-sticker-creator" */ './components/tools/StickerCreatorPanel')), title: 'Criador de Adesivos AI' },
+    aiPortraitStudio: { Component: lazy(() => import(/* webpackChunkName: "tool-ai-portrait-studio" */ './components/tools/AIPortraitStudioPanel')), title: 'Estúdio de Retrato IA' },
+    model3DGen: { Component: lazy(() => import(/* webpackChunkName: "tool-model-3d-gen" */ './components/tools/Model3DGenPanel')), title: 'Gerador de Modelo 3D' },
+    bananimate: { Component: lazy(() => import(/* webpackChunkName: "tool-bananimate" */ './components/tools/BananimatePanel')), title: 'Bananimate' },
+    styledPortrait: { Component: lazy(() => import(/* webpackChunkName: "tool-styled-portrait" */ './components/tools/StyledPortraitPanel')), title: 'Retrato Estilizado' },
+    photoStudio: { Component: lazy(() => import(/* webpackChunkName: "tool-photo-studio" */ './components/tools/PhotoStudioPanel')), title: 'Ensaio Fotográfico IA' },
+    polaroid: { Component: lazy(() => import(/* webpackChunkName: "tool-polaroid" */ './components/tools/PolaroidPanel')), title: 'Polaroid com Artista IA' },
+    funkoPopStudio: { Component: lazy(() => import(/* webpackChunkName: "tool-funko-pop" */ './components/tools/FunkoPopStudioPanel')), title: 'Estúdio Funko Pop' },
+    tryOn: { Component: lazy(() => import(/* webpackChunkName: "tool-try-on" */ './components/tools/TryOnPanel')), title: 'Provador Virtual' },
 };
 
-const editingToolIds: ToolId[] = [
-    'objectRemover', 'extractArt', 'crop', 'adjust', 'style', 
-    'generativeEdit', 'removeBg', 'upscale', 'text', 'relight', 'lowPoly', 
-    'pixelArt', 'portraits', 'styleGen', 'photoRestoration', 'dustAndScratches', 
-    'neuralFilters', 'trends', 'unblur', 'texture', 'faceRecovery', 'denoise'
-];
+function AppContent() {
+  const { 
+    baseImageFile,
+    activeTool,
+    setActiveTool,
+    isLoading,
+    loadingMessage,
+    uploadProgress,
+    isComparisonModalOpen,
+    setIsComparisonModalOpen,
+    originalImageUrl,
+    currentImageUrl,
+    toast,
+    setToast,
+    proactiveSuggestion,
+    isSaveWorkflowModalOpen,
+    isLeftPanelVisible,
+    isRightPanelVisible,
+    hasRestoredSession,
+  } = useEditor();
 
-const toolsThatNeedImage: ToolId[] = [
-    ...editingToolIds, 'imageVariation', 'creativeFusion', 'outpainting',
-    'productPhotography', 'faceSwap', 'architecturalViz',
-    'interiorDesign', 'sketchRender', 'textEffects', 'vectorConverter', 'aiPortraitStudio',
-    'bananimate', 'styledPortrait', 'photoStudio', 'polaroid', 'magicMontage'
-];
+  const isEditingTool = baseImageFile && !activeTool && !hasRestoredSession;
+  const isHomePage = !baseImageFile && !activeTool && !hasRestoredSession;
 
-const AppContent: React.FC = () => {
-    const { 
-        activeTool, 
-        currentImage, 
-        setInitialImage,
-        isLoading,
-        setIsLoading,
-        loadingMessage,
-        setLoadingMessage,
-        setError,
-        isComparisonModalOpen,
-        setIsComparisonModalOpen,
-        originalImageUrl,
-        currentImageUrl,
-        toast,
-        setToast,
-        proactiveSuggestion,
-        uploadProgress,
-        setUploadProgress,
-        isSaveWorkflowModalOpen,
-    } = useEditor()!;
-    
-    const currentToolInfo = activeTool ? toolMap[activeTool] : null;
-    const requiresImage = activeTool ? toolsThatNeedImage.includes(activeTool) : false;
-    const isEditingTool = activeTool ? editingToolIds.includes(activeTool) : false;
+  const ActiveToolComponent = useMemo(() => {
+    if (!activeTool || !toolMap[activeTool]) return null;
+    return toolMap[activeTool]!.Component;
+  }, [activeTool]);
+  
+  const activeToolTitle = useMemo(() => {
+      if (!activeTool || !toolMap[activeTool]) return '';
+      return toolMap[activeTool]!.title;
+  }, [activeTool]);
+  
+  return (
+    <div className={`w-full min-h-screen flex flex-col bg-gray-900 text-gray-200 transition-colors duration-300 ${isLeftPanelVisible || isRightPanelVisible ? 'lg:overflow-hidden' : ''}`}>
+      <Header isEditingTool={!!isEditingTool} />
+      <main className="flex-grow flex flex-col relative">
+        {(isHomePage || hasRestoredSession) && <HomePage />}
+        {isEditingTool && (
+          <EditorModalLayout editingPanelComponents={editingPanelComponents} />
+        )}
 
-    const handleFileSelect = async (file: File) => {
-        if (!activeTool) return;
+        {ActiveToolComponent && (
+            <ToolModal title={activeToolTitle}>
+                <Suspense fallback={<div className="flex justify-center items-center h-full"><Spinner /></div>}>
+                    <ActiveToolComponent />
+                </Suspense>
+            </ToolModal>
+        )}
         
-        setIsLoading(true);
-        setLoadingMessage("Otimizando imagem...");
-        setUploadProgress({ progress: 0, stage: 'reading' });
-        try {
-            const optimizedFile = await optimizeImage(file, setUploadProgress);
-            setInitialImage(optimizedFile);
-        } catch (error) {
-            console.error("Erro ao otimizar:", error);
-            setError("Não foi possível processar a imagem. Por favor, tente outra.");
-        } finally {
-            setIsLoading(false);
-            setLoadingMessage(null);
-            setUploadProgress(null);
-        }
-    };
-    
-    const renderModalContent = () => {
-        if (requiresImage && !currentImage) {
-            return (
-                <div className="flex items-center justify-center h-full p-4">
-                    <StartScreen onFileSelect={handleFileSelect} />
-                </div>
-            );
-        }
+        {isLoading && loadingMessage && (
+            <LoadingOverlay message={loadingMessage} progressStatus={uploadProgress} />
+        )}
         
-        const Component = currentToolInfo?.Component;
-        if (!Component) return null;
-        
-        if (isEditingTool) {
-            return <EditorModalLayout />;
-        }
-        
-        return <Component />;
-    };
+        {isComparisonModalOpen && originalImageUrl && currentImageUrl && (
+            <ComparisonModal
+                isOpen={isComparisonModalOpen}
+                onClose={() => setIsComparisonModalOpen(false)}
+                beforeImage={originalImageUrl}
+                afterImage={currentImageUrl}
+            />
+        )}
 
-    const isHomePageVisible = !activeTool;
-    
-    return (
-        <div className="h-screen bg-gray-900 text-gray-100 flex flex-col">
-            {isLoading && loadingMessage && (
-                <LoadingOverlay message={loadingMessage} progressStatus={uploadProgress} />
-            )}
-            <Header isEditingTool={isEditingTool} />
-            <main className="flex-grow overflow-y-auto">
-                {isHomePageVisible ? (
-                    <HomePage />
-                ) : (
-                    currentToolInfo && (
-                        <ToolModal title={currentToolInfo.title}>
-                            {renderModalContent()}
-                        </ToolModal>
-                    )
-                )}
-            </main>
-             {originalImageUrl && currentImageUrl && (
-                <ComparisonModal
-                    isOpen={isComparisonModalOpen}
-                    onClose={() => setIsComparisonModalOpen(false)}
-                    beforeImage={originalImageUrl}
-                    afterImage={currentImageUrl}
-                />
-            )}
-            {isSaveWorkflowModalOpen && <SaveWorkflowModal />}
-            {toast && (
-                <ToastNotification
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast(null)}
-                />
-            )}
-            {proactiveSuggestion && (
-                <ProactiveSuggestion
-                    message={proactiveSuggestion.message}
-                    acceptLabel={proactiveSuggestion.acceptLabel}
-                    onAccept={proactiveSuggestion.onAccept}
-                />
-            )}
-        </div>
-    );
-};
+        {toast && (
+          <ToastNotification
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
+        
+        {proactiveSuggestion && (
+            <ProactiveSuggestion
+                message={proactiveSuggestion.message}
+                acceptLabel={proactiveSuggestion.acceptLabel}
+                onAccept={proactiveSuggestion.onAccept}
+            />
+        )}
+
+        {isSaveWorkflowModalOpen && <SaveWorkflowModal />}
+
+      </main>
+    </div>
+  );
+}
+
 
 const App: React.FC = () => {
-    return (
-        <EditorProvider>
-            <AppContent />
-        </EditorProvider>
-    );
+  return (
+    <EditorProvider>
+        <AppContent />
+    </EditorProvider>
+  );
 };
 
 export default App;

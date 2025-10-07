@@ -4,24 +4,23 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor, useLoadingError } from '../../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import { fuseImages } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import { AdjustmentsHorizontalIcon } from '../icons';
 
 const CreativeFusionPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading } = useLoadingError();
-    const { currentImage, setInitialImage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, baseImageFile, setInitialImage } = useEditor();
     const [compositionImage, setCompositionImage] = useState<File | null>(null);
     const [styleImage, setStyleImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
 
     useEffect(() => {
-        if (currentImage && !compositionImage) {
-            setCompositionImage(currentImage);
+        if (baseImageFile && !compositionImage) {
+            setCompositionImage(baseImageFile);
         }
-    }, [currentImage, compositionImage]);
+    }, [baseImageFile, compositionImage]);
 
     const handleCompositionFileSelect = (file: File | null) => {
         setCompositionImage(file);

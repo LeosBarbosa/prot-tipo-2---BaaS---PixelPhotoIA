@@ -8,18 +8,32 @@ import { generateAnimationFromImage } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import { BananaIcon, DownloadIcon } from '../icons';
 import PromptEnhancer from './common/PromptEnhancer';
+import Spinner from '../Spinner';
+import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
+import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
 
 const BananimatePanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, setLoadingMessage, currentImage, setInitialImage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, setLoadingMessage, baseImageFile, setInitialImage, loadingMessage, addPromptToHistory } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [prompt, setPrompt] = useState('');
     const [resultVideoUrl, setResultVideoUrl] = useState<string | null>(null);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const suggestions = usePromptSuggestions(prompt, 'bananimate');
 
     useEffect(() => {
-        if (currentImage && !sourceImage) {
-            setSourceImage(currentImage);
+        setShowSuggestions(suggestions.length > 0);
+    }, [suggestions]);
+
+    const handleSelectSuggestion = (suggestion: string) => {
+        setPrompt(suggestion);
+        setShowSuggestions(false);
+    };
+
+    useEffect(() => {
+        if (baseImageFile && !sourceImage) {
+            setSourceImage(baseImageFile);
         }
-    }, [currentImage, sourceImage]);
+    }, [baseImageFile, sourceImage]);
 
     const handleFileSelect = (file: File | null) => {
         setSourceImage(file);
@@ -41,6 +55,7 @@ const BananimatePanel: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setResultVideoUrl(null);
+        addPromptToHistory(prompt);
 
         const messages = [
             "Sua animação está sendo criada...",
@@ -106,12 +121,21 @@ const BananimatePanel: React.FC = () => {
                   <textarea
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                      onFocus={() => setShowSuggestions(suggestions.length > 0)}
                       placeholder="Ex: faça o gato dançar, adicione vapor saindo da xícara..."
                       className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
                       disabled={isLoading}
                       rows={5}
                   />
                   <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="bananimate" />
+                  {showSuggestions && (
+                    <PromptSuggestionsDropdown
+                        suggestions={suggestions}
+                        onSelect={handleSelectSuggestion}
+                        searchTerm={prompt}
+                    />
+                  )}
                 </div>
                 <button
                     onClick={handleGenerate}
@@ -123,6 +147,17 @@ const BananimatePanel: React.FC = () => {
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center p-4">
+                 {isLoading && (
+                    <div className="text-center text-gray-400 animate-fade-in">
+                        <Spinner />
+                        <p 
+                            key={loadingMessage}
+                            className="mt-4 font-semibold text-lg text-gray-200 animate-fade-in-text"
+                        >
+                            {loadingMessage}
+                        </p>
+                    </div>
+                )}
                 {resultVideoUrl && !isLoading && (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-4 animate-fade-in">
                        <video src={resultVideoUrl} controls autoPlay loop className="max-w-full max-h-[80%] rounded-lg" />
@@ -139,6 +174,12 @@ const BananimatePanel: React.FC = () => {
                      <div className="text-center text-gray-500 animate-fade-in">
                         <BananaIcon className="w-16 h-16 mx-auto text-yellow-500/50" />
                         <p className="mt-2 font-semibold">Sua animação aparecerá aqui</p>
+                    </div>
+                )}
+                 {error && !isLoading && (
+                     <div className="text-center text-red-400 bg-red-500/10 border border-red-500/20 p-4 rounded-lg animate-fade-in w-full max-w-md">
+                        <h3 className="font-bold text-red-300">Ocorreu um Erro</h3>
+                        <p className="text-sm mt-1">{error}</p>
                     </div>
                 )}
             </main>

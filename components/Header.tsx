@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { SparkleIcon, UploadIcon, SaveIcon, LayersIcon, AdjustmentsHorizontalIcon } from './icons';
+import { SparkleIcon, UploadIcon, SaveIcon, LayersIcon, AdjustmentsHorizontalIcon, SunIcon, MoonIcon, UndoIcon, RedoIcon, HomeIcon } from './icons';
 import { useEditor } from '../context/EditorContext';
 
 interface HeaderProps {
@@ -13,28 +13,87 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
   const { 
     handleUploadNew, 
-    currentImage, 
+    baseImageFile, 
     handleExplicitSave,
     isLeftPanelVisible,
     setIsLeftPanelVisible,
     isRightPanelVisible,
     setIsRightPanelVisible,
+    theme,
+    toggleTheme,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    setActiveTool,
   } = useEditor()!;
   
+  const handleLeftPanelToggle = () => {
+    const newLeftVisibility = !isLeftPanelVisible;
+    setIsLeftPanelVisible(newLeftVisibility);
+    if (newLeftVisibility) {
+        setIsRightPanelVisible(false);
+    }
+  };
+
+  const handleRightPanelToggle = () => {
+      const newRightVisibility = !isRightPanelVisible;
+      setIsRightPanelVisible(newRightVisibility);
+      if (newRightVisibility) {
+          setIsLeftPanelVisible(false);
+      }
+  };
+
   return (
-    <header className="w-full py-3 px-4 md:px-8 border-b border-gray-700 bg-gray-800/30 backdrop-blur-sm sticky top-0 z-50 flex items-center justify-between">
+    <header className="w-full py-3 px-4 md:px-8 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 flex items-center justify-between">
       <div className="flex items-center justify-center gap-3">
-          <SparkleIcon className="w-6 h-6 text-blue-400" />
-          <h1 className="text-xl font-bold tracking-tight text-gray-100">
+          {isEditingTool && (
+            <button 
+              onClick={handleUploadNew}
+              className="flex items-center justify-center w-10 h-10 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 rounded-full transition-all duration-200 ease-in-out active:scale-90"
+              title="Voltar ao Início"
+              aria-label="Voltar ao Início"
+            >
+              <HomeIcon className="w-5 h-5" />
+            </button>
+          )}
+          <SparkleIcon className="w-6 h-6 text-blue-500" />
+          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
             PixelPhoto IA
           </h1>
       </div>
       <div className="flex items-center gap-2">
-        {currentImage && (
+        <button 
+          onClick={toggleTheme}
+          className="flex items-center justify-center w-10 h-10 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 rounded-full transition-all duration-200 ease-in-out active:scale-90"
+          title="Alternar entre tema claro e escuro"
+          aria-label="Alternar entre tema claro e escuro"
+        >
+          {theme === 'dark' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
+        </button>
+        {baseImageFile && (
           <>
             <button 
+              onClick={undo}
+              disabled={!canUndo}
+              className="flex items-center justify-center w-10 h-10 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 rounded-full transition-all duration-200 ease-in-out active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Desfazer"
+              aria-label="Desfazer"
+            >
+              <UndoIcon className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={redo}
+              disabled={!canRedo}
+              className="flex items-center justify-center w-10 h-10 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 rounded-full transition-all duration-200 ease-in-out active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refazer"
+              aria-label="Refazer"
+            >
+              <RedoIcon className="w-5 h-5" />
+            </button>
+            <button 
               onClick={handleExplicitSave}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm"
+              className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out active:scale-95 text-sm"
               title="Salvar Sessão"
               aria-label="Salvar Sessão"
             >
@@ -43,7 +102,7 @@ const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
             </button>
             <button 
               onClick={handleUploadNew}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm"
+              className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out active:scale-95 text-sm"
               title="Carregar nova imagem"
               aria-label="Carregar nova imagem"
             >
@@ -53,16 +112,10 @@ const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
           </>
         )}
         {isEditingTool && (
-            <div className="lg:hidden flex items-center gap-2">
+            <div className="flex items-center gap-2">
                 <button 
-                    onClick={() => {
-                        const newVisibility = !isLeftPanelVisible;
-                        setIsLeftPanelVisible(newVisibility);
-                        if (newVisibility) {
-                            setIsRightPanelVisible(false);
-                        }
-                    }}
-                    className={`p-2 rounded-md transition-colors z-30 ${isLeftPanelVisible ? 'bg-blue-600 hover:bg-blue-500' : 'bg-white/10 hover:bg-white/20'} text-gray-200`}
+                    onClick={handleLeftPanelToggle}
+                    className={`p-2 rounded-md transition-all duration-200 ease-in-out active:scale-90 z-30 ${isLeftPanelVisible ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200'}`}
                     title="Alternar lista de ferramentas"
                     aria-label="Alternar lista de ferramentas"
                     aria-pressed={isLeftPanelVisible}
@@ -70,14 +123,8 @@ const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
                     <LayersIcon className="w-5 h-5" />
                 </button>
                  <button 
-                    onClick={() => {
-                        const newVisibility = !isRightPanelVisible;
-                        setIsRightPanelVisible(newVisibility);
-                        if (newVisibility) {
-                            setIsLeftPanelVisible(false);
-                        }
-                    }}
-                    className={`p-2 rounded-md transition-colors z-30 ${isRightPanelVisible ? 'bg-blue-600 hover:bg-blue-500' : 'bg-white/10 hover:bg-white/20'} text-gray-200`}
+                    onClick={handleRightPanelToggle}
+                    className={`p-2 rounded-md transition-all duration-200 ease-in-out active:scale-90 z-30 ${isRightPanelVisible ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200'}`}
                     title="Alternar opções da ferramenta"
                     aria-label="Alternar opções da ferramenta"
                     aria-pressed={isRightPanelVisible}

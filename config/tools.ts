@@ -25,7 +25,8 @@ import {
     FaceSparkleIcon,
     BoltIcon,
     FireIcon,
-    PixelsIcon
+    PixelsIcon,
+    ToyIcon
 } from '../components/icons';
 import { type ToolId, type ToolConfig, type ToolCategory } from '../types';
 
@@ -34,7 +35,7 @@ export const tools: ToolConfig[] = [
     {
         id: 'imageGen',
         name: 'Gerador de Imagens AI',
-        description: 'Crie imagens únicas a partir de descrições de texto detalhadas.',
+        description: 'Crie imagens a partir de descrições de texto.',
         icon: React.createElement(PhotoIcon, { className: 'w-8 h-8 text-purple-400' }),
         category: 'generation',
     },
@@ -98,6 +99,13 @@ export const tools: ToolConfig[] = [
 
     // Workflows
     {
+        id: 'photoStudio',
+        name: 'Ensaio Fotográfico IA',
+        description: 'Gere ensaios fotográficos realistas com cenários, roupas e iluminação personalizados.',
+        icon: React.createElement(CameraIcon, { className: 'w-8 h-8 text-sky-400' }),
+        category: 'workflow',
+    },
+    {
         id: 'polaroid',
         name: 'Polaroid com Artista IA',
         description: 'Crie uma foto Polaroid sua com seu artista favorito.',
@@ -109,6 +117,13 @@ export const tools: ToolConfig[] = [
         name: 'Retrato Estilizado',
         description: 'Aplique o estilo (roupa, cenário, luz) de uma foto em outra, preservando o rosto original.',
         icon: React.createElement(ShirtIcon, { className: 'w-8 h-8 text-teal-400' }),
+        category: 'workflow',
+    },
+     {
+        id: 'tryOn',
+        name: 'Provador Virtual',
+        description: 'Experimente roupas e calçados em uma foto sua usando IA.',
+        icon: React.createElement(ShirtIcon, { className: 'w-8 h-8 text-pink-400' }),
         category: 'workflow',
     },
     {
@@ -160,6 +175,13 @@ export const tools: ToolConfig[] = [
         icon: React.createElement(BananaIcon, { className: 'w-8 h-8 text-yellow-400' }),
         category: 'workflow',
     },
+    {
+        id: 'funkoPopStudio',
+        name: 'Estúdio Funko Pop',
+        description: 'Transforme fotos em colecionáveis Funko Pop 3D realistas com cenários personalizados.',
+        icon: React.createElement(ToyIcon, { className: 'w-8 h-8 text-stone-400' }),
+        category: 'workflow',
+    },
 
     // Editing Tools
     {
@@ -174,13 +196,6 @@ export const tools: ToolConfig[] = [
         name: 'Removedor de Objetos',
         description: 'Pinte sobre objetos indesejados para removê-los magicamente.',
         icon: React.createElement(EraserIcon, { className: 'w-8 h-8 text-red-400' }),
-        category: 'editing',
-    },
-    {
-        id: 'photoStudio',
-        name: 'Foto Studio IA',
-        description: 'Transforme fotos em retratos de estúdio com iluminação cinematográfica.',
-        icon: React.createElement(CameraIcon, { className: 'w-8 h-8 text-sky-400' }),
         category: 'editing',
     },
     {

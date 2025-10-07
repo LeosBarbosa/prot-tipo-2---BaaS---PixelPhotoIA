@@ -102,7 +102,7 @@ export const applyLUT = (imageData: ImageData, lut: number[]): ImageData => {
 };
 
 // Helper to load an image from a data URL
-const loadImage = (url: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+export const loadImage = (url: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = reject;

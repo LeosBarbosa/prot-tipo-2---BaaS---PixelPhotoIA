@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { SunIcon, UserIcon, StraightHairIcon, WavyHairIcon, CurlyHairIcon, AfroHairIcon, BraidsHairIcon } from '../icons';
+import { SunIcon, UserIcon, StraightHairIcon, WavyHairIcon, CurlyHairIcon, AfroHairIcon, BraidsHairIcon, SparkleIcon } from '../icons';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
 import TipBox from '../common/TipBox';
 
@@ -19,7 +19,19 @@ const hairstyles = [
 ];
 
 const PortraitsPanel: React.FC = () => {
-    const { isLoading, handleApplyAIAdjustment, handleGenerateProfessionalPortrait, isGif } = useEditor();
+    const { 
+        isLoading, 
+        handleApplyAIAdjustment, 
+        handleGenerateProfessionalPortrait, 
+        isGif,
+        handleDetectFaces,
+        detectedObjects,
+        handleSelectObject,
+        highlightedObject,
+        handleFaceRetouch,
+        maskDataUrl,
+        setHighlightedObject,
+    } = useEditor();
     const [applyToAll, setApplyToAll] = useState(true);
 
     return (
@@ -27,6 +39,53 @@ const PortraitsPanel: React.FC = () => {
             <div className="text-center mb-2">
                 <h3 className="text-lg font-semibold text-gray-300">Retratos com IA</h3>
                 <p className="text-sm text-gray-400 -mt-1">Melhore seus retratos com um clique.</p>
+            </div>
+            
+            <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 flex flex-col items-center gap-3">
+                <h4 className="font-bold text-white text-md flex items-center gap-2">
+                    <SparkleIcon className="w-5 h-5 text-pink-400"/>
+                    Retoque Facial com IA
+                </h4>
+                <p className="text-sm text-gray-400 text-center -mt-2">Melhore a pele, ilumine os olhos e muito mais.</p>
+                
+                {!detectedObjects ? (
+                    <button
+                        type="button"
+                        onClick={handleDetectFaces}
+                        disabled={isLoading}
+                        className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        1. Detectar Rostos
+                    </button>
+                ) : (
+                    <div className="w-full animate-fade-in">
+                        <p className="text-xs text-center text-gray-400 mb-2">2. Selecione um rosto para retocar:</p>
+                         <div className="bg-gray-900/30 p-2 rounded-lg border border-gray-700 max-h-40 overflow-y-auto" onMouseLeave={() => setHighlightedObject(null)}>
+                             <ul className="flex flex-wrap gap-2 justify-center">
+                                 {detectedObjects.length > 0 ? detectedObjects.map((obj, i) => (
+                                     <li key={`face-retouch-${i}`}>
+                                         <button
+                                             type="button"
+                                             onClick={() => handleSelectObject(obj)}
+                                             onMouseEnter={() => setHighlightedObject(obj)}
+                                             className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${highlightedObject === obj ? 'bg-blue-500 text-white' : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/70'}`}
+                                         >
+                                             Rosto {i + 1}
+                                         </button>
+                                     </li>
+                                 )) : <p className="text-sm text-gray-500">Nenhum rosto detectado.</p>}
+                             </ul>
+                         </div>
+                    </div>
+                )}
+                
+                <button
+                    onClick={handleFaceRetouch}
+                    disabled={isLoading || !maskDataUrl}
+                    className="w-full bg-gradient-to-br from-pink-500 to-rose-500 text-white font-bold py-3 px-6 rounded-lg transition-all disabled:opacity-50"
+                >
+                    3. Aplicar Retoque
+                </button>
             </div>
 
             <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 flex flex-col items-center gap-3">
@@ -80,7 +139,7 @@ const PortraitsPanel: React.FC = () => {
             </div>
 
             <TipBox>
-                As ferramentas de retrato preservam a identidade facial enquanto aplicam transformações. Ideal para fotos de perfil e avatares criativos.
+                As ferramentas de retrato preservam a identidade facial enquanto aplicam transformações. O Retoque Facial aprimora a foto existente sem alterar o fundo ou as roupas.
             </TipBox>
 
             {isGif && (

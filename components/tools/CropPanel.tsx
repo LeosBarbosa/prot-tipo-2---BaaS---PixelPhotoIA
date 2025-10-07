@@ -35,7 +35,7 @@ const CropPanel: React.FC = () => {
                             key={name}
                             onClick={() => setAspect(value)}
                             disabled={isLoading}
-                            className={`p-2 rounded-md text-sm font-semibold transition-all duration-200 aspect-square flex items-center justify-center text-center ${aspect === value ? 'bg-blue-600 text-white shadow-md' : 'bg-white/10 hover:bg-white/20 text-gray-200'}`}
+                            className={`p-2 rounded-md text-sm font-semibold transition-all duration-200 aspect-square flex items-center justify-center text-center ${aspect === value ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-800/50 hover:bg-gray-700/50 text-gray-200'}`}
                         >
                             {name}
                         </button>
@@ -46,10 +46,10 @@ const CropPanel: React.FC = () => {
             <div>
                 <h3 className="text-lg font-semibold text-gray-300 mb-2">Transformar</h3>
                 <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => handleTransform('rotate-left')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-white/10 p-3 rounded-lg hover:bg-white/20"><RotateLeftIcon className="w-5 h-5" /> Girar</button>
-                    <button onClick={() => handleTransform('rotate-right')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-white/10 p-3 rounded-lg hover:bg-white/20"><RotateRightIcon className="w-5 h-5" /> Girar</button>
-                    <button onClick={() => handleTransform('flip-h')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-white/10 p-3 rounded-lg hover:bg-white/20"><FlipHorizontalIcon className="w-5 h-5" /> Inverter H</button>
-                    <button onClick={() => handleTransform('flip-v')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-white/10 p-3 rounded-lg hover:bg-white/20"><FlipVerticalIcon className="w-5 h-5" /> Inverter V</button>
+                    <button onClick={() => handleTransform('rotate-left')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-gray-800/50 p-3 rounded-lg hover:bg-gray-700/50"><RotateLeftIcon className="w-5 h-5" /> Girar</button>
+                    <button onClick={() => handleTransform('rotate-right')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-gray-800/50 p-3 rounded-lg hover:bg-gray-700/50"><RotateRightIcon className="w-5 h-5" /> Girar</button>
+                    <button onClick={() => handleTransform('flip-h')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-gray-800/50 p-3 rounded-lg hover:bg-gray-700/50"><FlipHorizontalIcon className="w-5 h-5" /> Inverter H</button>
+                    <button onClick={() => handleTransform('flip-v')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-gray-800/50 p-3 rounded-lg hover:bg-gray-700/50"><FlipVerticalIcon className="w-5 h-5" /> Inverter V</button>
                 </div>
             </div>
 

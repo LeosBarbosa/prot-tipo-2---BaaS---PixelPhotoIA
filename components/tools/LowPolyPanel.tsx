@@ -9,7 +9,10 @@ import { LowPolyIcon } from '../icons';
 import TipBox from '../common/TipBox';
 
 const LowPolyPanel: React.FC = () => {
-    const { isLoading, handleApplyLowPoly } = useEditor();
+    const { isLoading, handleApplyLowPoly, activeLayerId, layers } = useEditor();
+    
+    const activeLayer = layers.find(l => l.id === activeLayerId);
+    const isDisabled = isLoading || !activeLayer || activeLayer.type !== 'image';
 
     return (
         <div className="w-full bg-gray-800/50 rounded-lg p-6 flex flex-col items-center gap-6 animate-fade-in backdrop-blur-sm">
@@ -26,7 +29,7 @@ const LowPolyPanel: React.FC = () => {
 
             <button
                 onClick={handleApplyLowPoly}
-                disabled={isLoading}
+                disabled={isDisabled}
                 className="w-full mt-4 bg-gradient-to-br from-cyan-600 to-teal-500 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-cyan-500/20 hover:shadow-xl hover:shadow-cyan-500/40 hover:-translate-y-px active:scale-95 text-base disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
                 <LowPolyIcon className="w-5 h-5" />

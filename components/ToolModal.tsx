@@ -21,7 +21,7 @@ const ToolModal: React.FC<ToolModalProps> = ({ title, children }) => {
             onClick={() => setActiveTool(null)}
         >
             <div 
-                className="w-full h-full max-w-7xl max-h-[95vh] bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-700 animate-zoom-rise"
+                className="w-full h-full max-w-7xl max-h-[95vh] bg-gray-800/90 backdrop-blur-lg rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-700 animate-zoom-rise"
                 onClick={e => e.stopPropagation()}
             >
                 <header className="flex items-center justify-between p-4 border-b border-gray-700 flex-shrink-0">

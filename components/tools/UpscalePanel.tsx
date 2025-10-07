@@ -13,7 +13,7 @@ const UpscalePanel: React.FC = () => {
   const { 
     isLoading, 
     handleApplyUpscale, 
-    currentImage 
+    baseImageFile 
   } = useEditor();
   
   const [factor, setFactor] = useState<number>(4);
@@ -22,19 +22,19 @@ const UpscalePanel: React.FC = () => {
 
   React.useEffect(() => {
     let objectUrl: string | null = null;
-    if (currentImage) {
+    if (baseImageFile) {
         const image = new Image();
         image.onload = () => {
             setOriginalDimensions({ width: image.naturalWidth, height: image.naturalHeight });
             if(objectUrl) URL.revokeObjectURL(objectUrl);
         };
-        objectUrl = URL.createObjectURL(currentImage);
+        objectUrl = URL.createObjectURL(baseImageFile);
         image.src = objectUrl;
     }
     return () => {
         if(objectUrl) URL.revokeObjectURL(objectUrl);
     }
-  }, [currentImage]);
+  }, [baseImageFile]);
 
 
   const finalDimensions = originalDimensions ? {
@@ -52,7 +52,7 @@ const UpscalePanel: React.FC = () => {
           <label className="block text-sm font-medium text-gray-300 mb-2 text-center">Fator de Aumento</label>
           <div className="flex w-full bg-gray-800/50 border border-gray-600 rounded-lg p-1">
               {[2, 4, 8].map(f => (
-                  <button key={f} type="button" onClick={() => setFactor(f)} disabled={isLoading} className={`w-full text-center font-semibold py-2 rounded-md transition-all text-sm ${factor === f ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-white/10'}`}>
+                  <button key={f} type="button" onClick={() => setFactor(f)} disabled={isLoading} className={`w-full text-center font-semibold py-2 rounded-md transition-all text-sm ${factor === f ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700/50'}`}>
                   {f}x
                   </button>
               ))}

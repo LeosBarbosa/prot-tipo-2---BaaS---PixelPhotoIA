@@ -2,12 +2,8 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { parseGIF, decompressFrames, ParsedFrame } from 'gifuct-js';
-
-interface GifFrame {
-    imageData: ImageData;
-    delay: number;
-}
+import { parseGIF, decompressFrames } from 'gifuct-js';
+import { type GifFrame } from '../types';
 
 export const parseGif = async (gifFile: File): Promise<GifFrame[]> => {
     const buffer = await gifFile.arrayBuffer();
@@ -32,18 +28,16 @@ export const parseGif = async (gifFile: File): Promise<GifFrame[]> => {
         frameImageData.data.set(frame.patch);
         ctx.putImageData(frameImageData, frame.dims.left, frame.dims.top);
 
-        const currentFullFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
         processedFrames.push({
-            imageData: currentFullFrame,
+            imageData: { data, width, height },
             delay: frame.delay,
         });
         
-        // Handle disposal method
         if (frame.disposalType === 2) { // Restore to background color
              ctx.clearRect(frame.dims.left, frame.dims.top, frame.dims.width, frame.dims.height);
         }
-        // Disposal type 3 (restore to previous) is handled implicitly by not clearing the canvas
     }
 
     return processedFrames;

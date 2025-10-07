@@ -8,11 +8,25 @@ import { useEditor } from '../../context/EditorContext';
 import { SparkleIcon, VideoCameraIcon } from '../icons';
 import { type VideoAspectRatio } from '../../types';
 import PromptEnhancer from './common/PromptEnhancer';
+import Spinner from '../Spinner';
+import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
+import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
 
 const VideoGenPanel: React.FC = () => {
-    const { isLoading, handleGenerateVideo, generatedVideoUrl, setLoadingMessage } = useEditor();
+    const { isLoading, handleGenerateVideo, generatedVideoUrl, setLoadingMessage, setError, loadingMessage, error, addPromptToHistory } = useEditor();
     const [prompt, setPrompt] = useState('');
     const [aspectRatio, setAspectRatio] = useState<VideoAspectRatio>('16:9');
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const suggestions = usePromptSuggestions(prompt, 'videoGen');
+
+    useEffect(() => {
+        setShowSuggestions(suggestions.length > 0);
+    }, [suggestions]);
+
+    const handleSelectSuggestion = (suggestion: string) => {
+        setPrompt(suggestion);
+        setShowSuggestions(false);
+    };
 
     useEffect(() => {
         let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -25,7 +39,6 @@ const VideoGenPanel: React.FC = () => {
                 "A dar os toques finais..."
             ];
             let messageIndex = 0;
-            // Set the first message immediately
             setLoadingMessage(messages[messageIndex]);
             intervalId = setInterval(() => {
                 messageIndex = (messageIndex + 1) % messages.length;
@@ -33,7 +46,6 @@ const VideoGenPanel: React.FC = () => {
             }, 8000);
         }
         
-        // Cleanup function
         return () => {
             if (intervalId) {
                 clearInterval(intervalId);
@@ -50,7 +62,12 @@ const VideoGenPanel: React.FC = () => {
 
     const handleGenerate = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!prompt.trim()) return;
+        if (!prompt.trim()) {
+            setError("Por favor, descreva a cena que você quer criar.");
+            return;
+        }
+        setError(null);
+        addPromptToHistory(prompt);
         handleGenerateVideo(prompt, aspectRatio);
     };
 
@@ -66,23 +83,35 @@ const VideoGenPanel: React.FC = () => {
                     <div className="flex-grow flex flex-col gap-4">
                         <div className="relative flex-grow flex flex-col">
                             <label htmlFor="video-prompt" className="sr-only">Descrição do Vídeo</label>
-                            <textarea
-                                id="video-prompt"
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                placeholder="Ex: um astronauta surfando em uma onda cósmica, com nebulosas coloridas ao fundo, estilo cinematográfico..."
-                                className="flex-grow bg-gray-800 border border-gray-600 text-gray-200 rounded-lg p-4 pr-12 focus:ring-2 focus:ring-blue-500 focus:outline-none transition w-full disabled:cursor-not-allowed disabled:opacity-60 text-base min-h-[120px]"
-                                disabled={isLoading}
-                                rows={5}
-                            />
-                            <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="videoGen" />
+                            <div className="relative">
+                                <textarea
+                                    id="video-prompt"
+                                    value={prompt}
+                                    onChange={(e) => setPrompt(e.target.value)}
+                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                                    onFocus={() => setShowSuggestions(suggestions.length > 0)}
+                                    placeholder="Ex: um astronauta surfando em uma onda cósmica, com nebulosas coloridas ao fundo, estilo cinematográfico..."
+                                    className="flex-grow bg-gray-800 border border-gray-600 text-gray-200 rounded-lg p-4 pr-12 focus:ring-2 focus:ring-blue-500 focus:outline-none transition w-full disabled:cursor-not-allowed disabled:opacity-60 text-base min-h-[120px]"
+                                    disabled={isLoading}
+                                    rows={5}
+                                />
+                                <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="videoGen" />
+                                {showSuggestions && (
+                                    <PromptSuggestionsDropdown
+                                        suggestions={suggestions}
+                                        onSelect={handleSelectSuggestion}
+                                        searchTerm={prompt}
+                                    />
+                                )}
+                                <p className="mt-1 text-xs text-gray-500 px-1">Descreva a ação, o movimento da câmera (ex: panorâmica, zoom) e o estilo cinematográfico.</p>
+                            </div>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-2">Proporção</label>
                             <div className="flex w-full bg-gray-900/50 border border-gray-600 rounded-lg p-1">
                                 {aspectRatios.map(({ id, name }) => (
-                                    <button key={id} type="button" onClick={() => setAspectRatio(id)} disabled={isLoading} className={`w-full text-center font-semibold py-2 rounded-md transition-all text-sm ${aspectRatio === id ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-white/10'}`}>
+                                    <button key={id} type="button" onClick={() => setAspectRatio(id)} disabled={isLoading} className={`w-full text-center font-semibold py-2 rounded-md transition-all text-sm ${aspectRatio === id ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700/50'}`}>
                                         {name} ({id})
                                     </button>
                                 ))}
@@ -101,15 +130,32 @@ const VideoGenPanel: React.FC = () => {
                 </form>
             </aside>
              <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center p-4">
+                {isLoading && (
+                    <div className="text-center text-gray-400 animate-fade-in">
+                        <Spinner />
+                        <p 
+                            key={loadingMessage} 
+                            className="mt-4 font-semibold text-lg text-gray-200 animate-fade-in-text"
+                        >
+                            {loadingMessage}
+                        </p>
+                    </div>
+                )}
                 {generatedVideoUrl && !isLoading && (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-4 animate-fade-in">
                        <video src={generatedVideoUrl} controls autoPlay loop className="max-w-full max-h-[80%] rounded-lg" />
                     </div>
                 )}
-                {!generatedVideoUrl && !isLoading && (
+                {!generatedVideoUrl && !isLoading && !error && (
                      <div className="text-center text-gray-500 animate-fade-in">
                         <VideoCameraIcon className="w-16 h-16 mx-auto" />
                         <p className="mt-2 font-semibold">O seu vídeo gerado aparecerá aqui</p>
+                    </div>
+                )}
+                {error && !isLoading && (
+                     <div className="text-center text-red-400 bg-red-500/10 border border-red-500/20 p-4 rounded-lg animate-fade-in w-full max-w-md">
+                        <h3 className="font-bold text-red-300">Ocorreu um Erro</h3>
+                        <p className="text-sm mt-1">{error}</p>
                     </div>
                 )}
             </main>

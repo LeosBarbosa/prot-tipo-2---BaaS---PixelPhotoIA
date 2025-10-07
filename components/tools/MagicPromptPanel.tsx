@@ -8,12 +8,15 @@ import { useEditor } from '../../context/EditorContext';
 import { MagicWandIcon } from '../icons';
 
 const MagicPromptPanel: React.FC = () => {
-  const { handleMagicPrompt, isLoading } = useEditor();
+  const { handleMagicPrompt, isLoading, setError } = useEditor();
   const [prompt, setPrompt] = useState('');
 
   const handleApply = () => {
     if (prompt.trim()) {
+      setError(null);
       handleMagicPrompt(prompt);
+    } else {
+      setError("Por favor, descreva a tarefa que você quer executar.");
     }
   };
 

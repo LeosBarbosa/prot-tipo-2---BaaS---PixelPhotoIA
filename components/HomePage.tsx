@@ -17,8 +17,10 @@ import { predefinedSearches } from '../config/predefinedSearches';
 import PredefinedSearchCard from './PredefinedSearchCard';
 import RestoredSessionCard from './RestoredSessionCard';
 import PromptSuggestions from './PromptSuggestions';
+import StartScreen from './StartScreen';
 
-const categoryConfig: Record<ToolCategory, { title: string; description: string; icon: React.ReactNode }> = {
+// FIX: Changed icon type to React.ReactElement<{ className?: string }> to be compatible with React.cloneElement and provide specific prop types.
+const categoryConfig: Record<ToolCategory, { title: string; description: string; icon: React.ReactElement<{ className?: string }> }> = {
     generation: { 
         title: "Geração", 
         description: "Dê vida às suas ideias. Crie imagens, padrões, logotipos e muito mais a partir de simples descrições de texto.",
@@ -41,7 +43,7 @@ const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
     return (
         <button
             onClick={() => setActiveTool(tool.id)}
-            className="group relative bg-gray-800/50 border border-gray-700 rounded-xl p-4 sm:p-6 text-center hover:bg-gray-700/50 hover:border-blue-500/50 transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-blue-500/10"
+            className="group relative bg-gray-800/70 border border-gray-700 rounded-xl p-4 sm:p-6 text-center hover:bg-gray-700/70 hover:border-blue-500/50 transition-all duration-300 transform hover:-translate-y-1 active:scale-95 shadow-lg hover:shadow-blue-500/10"
         >
             <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 flex items-center justify-center bg-gray-900/50 rounded-lg transition-all duration-300 group-hover:scale-110 group-hover:bg-blue-500/20">
                 {tool.icon}
@@ -55,7 +57,7 @@ const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
 };
 
 const HomePage: React.FC = () => {
-    const { handleSmartSearch, isSmartSearching, smartSearchResult, setSmartSearchResult, setActiveTool, hasRestoredSession } = useEditor();
+    const { handleSmartSearch, isSmartSearching, smartSearchResult, setSmartSearchResult, setActiveTool, hasRestoredSession, handleFileSelect } = useEditor()!;
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<ToolCategory>('generation');
     const [predefinedResult, setPredefinedResult] = useState<PredefinedSearch | null>(null);
@@ -139,17 +141,39 @@ const HomePage: React.FC = () => {
 
     return (
         <div className="container mx-auto px-4 py-8 sm:py-12 animate-fade-in">
+             {hasRestoredSession ? (
+                <>
+                    <RestoredSessionCard />
+                     <div className="text-center my-12 relative">
+                        <hr className="border-t border-gray-700" />
+                        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-4 text-gray-500 font-bold uppercase">OU</span>
+                    </div>
+                </>
+            ) : (
+                <div className="mb-12">
+                     <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-center bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 text-transparent bg-clip-text animate-text-gradient-pan">
+                        Dê Vida às Suas Imagens
+                    </h1>
+                    <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-400 text-center mb-8 animate-fade-in-text" style={{ animationDelay: '200ms' }}>
+                       Faça upload de uma foto para começar a editar ou use nossas ferramentas de IA para criar algo novo do zero.
+                    </p>
+                    <StartScreen onFileSelect={handleFileSelect} />
+                     <div className="text-center my-12 relative">
+                        <hr className="border-t border-gray-700" />
+                        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-4 text-gray-500 font-bold uppercase">OU</span>
+                    </div>
+                </div>
+            )}
+            
             <div className="text-center mb-10">
-                <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-                    Bem-vindo ao PixelPhoto IA
-                </h1>
-                <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-400">
+                <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 text-transparent bg-clip-text animate-text-gradient-pan" style={{ animationDelay: '5s' }}>
+                    Crie Algo Novo
+                </h2>
+                <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-400 animate-fade-in-text" style={{ animationDelay: '400ms' }}>
                     Sua suíte completa de ferramentas de IA para criar e editar imagens.
                 </p>
             </div>
             
-            {hasRestoredSession && <RestoredSessionCard />}
-
             <div ref={searchContainerRef}>
                 <SearchModule 
                     searchTerm={searchTerm} 
@@ -178,7 +202,7 @@ const HomePage: React.FC = () => {
                                         : 'border-transparent text-gray-400 hover:text-white hover:border-gray-500'
                                     }`}
                             >
-                                {React.cloneElement(categoryConfig[key].icon as React.ReactElement, { className: 'w-5 h-5' })}
+                                {React.cloneElement(categoryConfig[key].icon, { className: 'w-5 h-5' })}
                                 {categoryConfig[key].title}
                             </button>
                         ))}
@@ -188,7 +212,7 @@ const HomePage: React.FC = () => {
                         <>
                             <div className="text-center mt-8 max-w-3xl mx-auto px-4">
                                 <div className="inline-block p-3 bg-gray-800/50 border border-gray-700 rounded-xl mb-4">
-                                    {React.cloneElement(categoryConfig[activeCategory].icon as React.ReactElement, { className: 'w-8 h-8 text-blue-400' })}
+                                    {React.cloneElement(categoryConfig[activeCategory].icon, { className: 'w-8 h-8 text-blue-400' })}
                                 </div>
                                 <p className="text-gray-400 text-base sm:text-lg">{categoryConfig[activeCategory].description}</p>
                             </div>

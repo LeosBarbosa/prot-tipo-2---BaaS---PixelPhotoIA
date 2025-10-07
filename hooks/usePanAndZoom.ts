@@ -16,6 +16,26 @@ export const usePanAndZoom = () => {
   const isPanning = useRef(false);
   const panStart = useRef({ x: 0, y: 0 });
 
+  // Refs for touch gestures
+  const lastTouchDist = useRef(0);
+
+  // FIX: Changed parameter type from the DOM's TouchList to React.TouchList to match React's event types.
+  const getTouchDistance = (touches: React.TouchList) => {
+      const touch1 = touches[0];
+      const touch2 = touches[1];
+      return Math.sqrt(
+          Math.pow(touch2.clientX - touch1.clientX, 2) +
+          Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+  };
+
+  // FIX: Changed parameter type from the DOM's TouchList to React.TouchList to match React's event types.
+  const getTouchCenter = (touches: React.TouchList) => {
+      const touch1 = touches[0];
+      const touch2 = touches[1];
+      return { x: (touch1.clientX + touch2.clientX) / 2, y: (touch1.clientY + touch2.clientY) / 2 };
+  };
+
   // Automatically disable pan mode if zoom is reset.
   useEffect(() => {
     if (zoom <= 1) {
@@ -50,6 +70,66 @@ export const usePanAndZoom = () => {
     window.addEventListener('mousemove', handlePanMove);
     window.addEventListener('mouseup', handlePanEnd);
   }, [isPanModeActive, panOffset.x, panOffset.y, handlePanMove, handlePanEnd]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+      try {
+          if (e.touches.length === 2) {
+              e.preventDefault();
+              lastTouchDist.current = getTouchDistance(e.touches);
+          } else if (e.touches.length === 1 && isPanModeActive) {
+              e.preventDefault();
+              isPanning.current = true;
+              panStart.current = {
+                  x: e.touches[0].clientX - panOffset.x,
+                  y: e.touches[0].clientY - panOffset.y,
+              };
+          }
+      } catch (err) { /* Silently catch errors */ }
+  }, [isPanModeActive, panOffset.x, panOffset.y]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent, containerRect: DOMRect) => {
+      try {
+          if (e.touches.length === 2) {
+              e.preventDefault();
+              if (lastTouchDist.current === 0) return;
+              
+              const newDist = getTouchDistance(e.touches);
+              const distRatio = newDist / lastTouchDist.current;
+              lastTouchDist.current = newDist;
+
+              setZoom(prevZoom => {
+                  const newZoom = Math.max(1, Math.min(5, prevZoom * distRatio));
+                  const center = getTouchCenter(e.touches);
+                  const mouseX = center.x - containerRect.left;
+                  const mouseY = center.y - containerRect.top;
+
+                  setPanOffset(prevPan => {
+                      const imageX = (mouseX - prevPan.x) / prevZoom;
+                      const imageY = (mouseY - prevPan.y) / prevZoom;
+                      return {
+                          x: mouseX - imageX * newZoom,
+                          y: mouseY - imageY * newZoom
+                      };
+                  });
+
+                  return newZoom;
+              });
+          } else if (e.touches.length === 1 && isPanModeActive && isPanning.current) {
+              e.preventDefault();
+              setPanOffset({
+                  x: e.touches[0].clientX - panStart.current.x,
+                  y: e.touches[0].clientY - panStart.current.y,
+              });
+          }
+      } catch (err) { /* Silently catch errors */ }
+  }, [isPanModeActive]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+      isPanning.current = false;
+      if (e.touches.length < 2) {
+          lastTouchDist.current = 0;
+      }
+  }, []);
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     if (e.ctrlKey) {
@@ -86,5 +166,5 @@ export const usePanAndZoom = () => {
   
   const isCurrentlyPanning = isPanning.current;
 
-  return { zoom, setZoom, panOffset, isPanModeActive, setIsPanModeActive, handleWheel, handlePanStart, resetZoomAndPan, isCurrentlyPanning };
+  return { zoom, setZoom, panOffset, isPanModeActive, setIsPanModeActive, handleWheel, handlePanStart, resetZoomAndPan, isCurrentlyPanning, handleTouchStart, handleTouchMove, handleTouchEnd };
 };

@@ -15,8 +15,9 @@ const gcd = (a: number, b: number): number => {
 
 const ImageViewer: React.FC = () => {
     const {
+        activeTool,
         activeTab,
-        currentImage,
+        baseImageFile,
         currentImageUrl,
         originalImageUrl,
         imgRef,
@@ -26,6 +27,9 @@ const ImageViewer: React.FC = () => {
         panOffset,
         handleWheel,
         handlePanStart,
+        handleTouchStart,
+        handleTouchMove,
+        handleTouchEnd,
         isPanModeActive,
         isCurrentlyPanning,
         crop,
@@ -48,12 +52,14 @@ const ImageViewer: React.FC = () => {
         setTextToolState,
         isInlineComparisonActive,
         texturePreview,
+        brushSize,
     } = useEditor();
 
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const textOverlayRef = useRef<HTMLDivElement>(null);
     const imageContainerRef = useRef<HTMLDivElement>(null);
     const [cropDimensions, setCropDimensions] = useState<string | null>(null);
+    const [brushPreview, setBrushPreview] = useState<{ x: number; y: number; size: number } | null>(null);
 
     const cssFilter = hasLocalAdjustments ? buildFilterString(localFilters) : 'none';
     const pixelFontSize = imgRef.current ? (textToolState.fontSize / 100) * imgRef.current.clientWidth : 30;
@@ -65,7 +71,7 @@ const ImageViewer: React.FC = () => {
     useEffect(() => {
         setCompletedCrop(undefined);
         setCrop(undefined);
-    }, [currentImage, setCompletedCrop, setCrop]);
+    }, [baseImageFile, setCompletedCrop, setCrop]);
 
     // Effect to draw bounding boxes
     useEffect(() => {
@@ -102,9 +108,20 @@ const ImageViewer: React.FC = () => {
                 const width = (box.x_max - box.x_min) * image.naturalWidth * scaleX;
                 const height = (box.y_max - box.y_min) * image.naturalHeight * scaleY;
 
-                ctx.strokeStyle = isHighlighted ? '#3B82F6' : 'rgba(255, 255, 255, 0.7)';
-                ctx.lineWidth = isHighlighted ? 3 : 2;
+                if (isHighlighted) {
+                    ctx.strokeStyle = '#3B82F6'; // A strong blue for highlight
+                    ctx.lineWidth = 4;
+                    ctx.setLineDash([]); // Solid line
+                    ctx.fillStyle = '#3B82F6';
+                } else {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([6, 4]); // Dashed line for unselected
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                }
+                
                 ctx.strokeRect(x, y, width, height);
+                ctx.setLineDash([]); // Reset line dash for text background
                 
                 const labelText = obj.label;
                 ctx.font = 'bold 14px sans-serif';
@@ -112,7 +129,6 @@ const ImageViewer: React.FC = () => {
                 const textWidth = textMetrics.width;
                 const textHeight = 14;
                 
-                ctx.fillStyle = isHighlighted ? '#3B82F6' : 'rgba(0, 0, 0, 0.7)';
                 ctx.fillRect(x, y - textHeight - 4, textWidth + 8, textHeight + 4);
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fillText(labelText, x + 4, y - 4);
@@ -205,13 +221,68 @@ const ImageViewer: React.FC = () => {
         }
     };
 
+    const handleMouseMoveForBrush = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!isDrawingOnCanvas || isPanModeActive || isCurrentlyPanning) {
+            if (brushPreview) setBrushPreview(null);
+            return;
+        }
+        const image = imgRef.current;
+        if (!image) {
+            setBrushPreview(null);
+            return;
+        }
+
+        const containerRect = e.currentTarget.getBoundingClientRect();
+        const imageRect = image.getBoundingClientRect();
+
+        const scale = imageRect.width / image.naturalWidth;
+        const previewSize = brushSize * scale;
+
+        const x = e.clientX - containerRect.left;
+        const y = e.clientY - containerRect.top;
+        
+        if (
+            e.clientX >= imageRect.left &&
+            e.clientX <= imageRect.right &&
+            e.clientY >= imageRect.top &&
+            e.clientY <= imageRect.bottom
+        ) {
+            setBrushPreview({ x, y, size: previewSize });
+        } else {
+            setBrushPreview(null);
+        }
+    };
+
+    const handleMouseLeaveForBrush = () => {
+        setBrushPreview(null);
+    };
+
+    const cursorStyle = useMemo(() => {
+        if (isPanModeActive) return isCurrentlyPanning ? 'grabbing' : 'grab';
+        if (isDrawingOnCanvas) return 'none'; // Hide cursor when brush preview is active
+        return 'default';
+    }, [isPanModeActive, isCurrentlyPanning, isDrawingOnCanvas]);
+
+
+    const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (imageContainerRef.current) {
+            const rect = imageContainerRef.current.getBoundingClientRect();
+            handleTouchMove(e, rect);
+        }
+    };
+
     return (
         <div
             ref={imageContainerRef}
             className="relative w-full h-full flex items-center justify-center overflow-hidden"
             onWheel={handleWheel}
             onMouseDown={handlePanStart}
-            style={{ cursor: isPanModeActive ? (isCurrentlyPanning ? 'grabbing' : 'grab') : 'default' }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{ cursor: cursorStyle }}
+            onMouseMove={handleMouseMoveForBrush}
+            onMouseLeave={handleMouseLeaveForBrush}
         >
             {generatedVideoUrl && (
                 <div className="w-full h-full flex items-center justify-center z-10">
@@ -298,7 +369,7 @@ const ImageViewer: React.FC = () => {
                             onMouseMove={draw}
                             onMouseLeave={stopDrawing}
                             className="absolute top-0 left-0 w-full h-full opacity-50"
-                            style={{ cursor: 'crosshair', pointerEvents: isLoading ? 'none' : 'auto' }}
+                            style={{ pointerEvents: isLoading ? 'none' : 'auto' }}
                         />
                     )}
 
@@ -338,6 +409,20 @@ const ImageViewer: React.FC = () => {
                         </div>
                     )}
                 </div>
+            )}
+             {brushPreview && (
+                <div
+                    className="absolute rounded-full border-2 border-dashed border-white bg-white/20 pointer-events-none"
+                    style={{
+                        left: `${brushPreview.x}px`,
+                        top: `${brushPreview.y}px`,
+                        width: `${brushPreview.size}px`,
+                        height: `${brushPreview.size}px`,
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 20,
+                    }}
+                    aria-hidden="true"
+                />
             )}
         </div>
     );

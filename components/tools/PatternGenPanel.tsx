@@ -52,6 +52,8 @@ const PatternGenPanel: React.FC = () => {
                   onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
                   isLoading={isLoading}
                   toolId="patternGen"
+                  promptHelperText="Descreva os elementos que se repetem, a paleta de cores e o estilo (ex: geométrico, floral)."
+                  negativePromptHelperText="Ex: elementos que não se encaixam, cores indesejadas."
                 />
                 <button
                     onClick={handleGenerate}

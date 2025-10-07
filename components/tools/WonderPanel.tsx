@@ -24,7 +24,7 @@ const WonderPanel: React.FC = () => {
             </p>
 
             <button
-                onClick={handleRestorePhoto}
+                onClick={() => handleRestorePhoto(true)}
                 disabled={isLoading}
                 className="w-full mt-4 bg-gradient-to-br from-purple-600 to-indigo-500 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/40 hover:-translate-y-px active:scale-95 text-base disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >

@@ -3,23 +3,26 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useEffect } from 'react';
-import { useEditor, useLoadingError } from '../../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import { convertToVector } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import { VectorIcon } from '../icons';
+import CollapsibleToolPanel from '../CollapsibleToolPanel';
+import PromptEnhancer from './common/PromptEnhancer';
 
 const VectorConverterPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading } = useLoadingError();
-    const { currentImage, setInitialImage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, baseImageFile, setInitialImage } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
+    const [prompt, setPrompt] = useState('');
+    const [isOptionsExpanded, setIsOptionsExpanded] = useState(true);
 
     useEffect(() => {
-        if (currentImage && !sourceImage) {
-            setSourceImage(currentImage);
+        if (baseImageFile && !sourceImage) {
+            setSourceImage(baseImageFile);
         }
-    }, [currentImage, sourceImage]);
+    }, [baseImageFile, sourceImage]);
 
     const handleFileSelect = (file: File | null) => {
         setSourceImage(file);
@@ -38,7 +41,7 @@ const VectorConverterPanel: React.FC = () => {
         setError(null);
         setResultImage(null);
         try {
-            const result = await convertToVector(sourceImage);
+            const result = await convertToVector(sourceImage, prompt);
             setResultImage(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -59,6 +62,27 @@ const VectorConverterPanel: React.FC = () => {
                     onFileSelect={handleFileSelect}
                     label="Imagem Original"
                 />
+                 <CollapsibleToolPanel
+                    title="Estilo do Vetor (Opcional)"
+                    icon={<VectorIcon className="w-5 h-5" />}
+                    isExpanded={isOptionsExpanded}
+                    onExpandToggle={() => setIsOptionsExpanded(!isOptionsExpanded)}
+                >
+                    <div>
+                        <div className="relative">
+                            <textarea
+                                value={prompt}
+                                onChange={(e) => setPrompt(e.target.value)}
+                                placeholder="Ex: estilo de adesivo, cores vibrantes, arte de linha minimalista..."
+                                className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]"
+                                disabled={isLoading}
+                                rows={4}
+                            />
+                            <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="vectorConverter" />
+                        </div>
+                         <p className="mt-1 text-xs text-gray-500 px-1">Dê instruções sobre o peso da linha, paleta de cores (ex: chapada, gradiente) e nível de detalhe.</p>
+                    </div>
+                </CollapsibleToolPanel>
                 <button
                     onClick={handleGenerate}
                     disabled={isLoading || !sourceImage}

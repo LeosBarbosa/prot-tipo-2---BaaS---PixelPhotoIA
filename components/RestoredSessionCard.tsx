@@ -8,7 +8,7 @@ import { useEditor } from '../context/EditorContext';
 import { SparkleIcon } from './icons';
 
 const RestoredSessionCard: React.FC = () => {
-    const { handleUploadNew, setActiveTool, currentImage, currentImageUrl } = useEditor();
+    const { handleUploadNew, setActiveTool, currentImageUrl } = useEditor();
 
     const handleContinue = () => {
         // Just open the editor view by selecting a default tool

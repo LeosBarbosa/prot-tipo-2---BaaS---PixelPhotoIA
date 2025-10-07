@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useEffect } from 'react';
-import { useEditor, useLoadingError } from '../../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import { applyTextEffect } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
@@ -11,18 +11,17 @@ import { TextEffectsIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 
 const TextEffectsPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading } = useLoadingError();
-    const { currentImage, setInitialImage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, baseImageFile, setInitialImage } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
     const [negativePrompt, setNegativePrompt] = useState('');
 
     useEffect(() => {
-        if (currentImage && !sourceImage) {
-            setSourceImage(currentImage);
+        if (baseImageFile && !sourceImage) {
+            setSourceImage(baseImageFile);
         }
-    }, [currentImage, sourceImage]);
+    }, [baseImageFile, sourceImage]);
 
     const handleFileSelect = (file: File | null) => {
         setSourceImage(file);
@@ -78,6 +77,9 @@ const TextEffectsPanel: React.FC = () => {
                   onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
                   isLoading={isLoading}
                   toolId="textEffects"
+                  promptPlaceholder="Ex: feito de ouro derretido, textura de grama..."
+                  promptHelperText="Descreva o material, textura ou efeito que você quer aplicar ao texto na imagem."
+                  negativePromptHelperText="Ex: alterar o fundo, distorcer a imagem."
                 />
                 <button
                     onClick={handleGenerate}

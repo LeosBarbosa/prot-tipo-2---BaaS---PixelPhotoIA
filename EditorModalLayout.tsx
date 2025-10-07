@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useEditor } from '../context/EditorContext';
 import ImageViewer from './ImageViewer';
 import FloatingControls from './FloatingControls';
@@ -35,31 +35,50 @@ const toolToTabMap: Partial<Record<ToolId, TabId>> = {
     photoRestoration: 'photoRestoration',
     text: 'text',
     lowPoly: 'lowPoly',
+    pixelArt: 'pixelArt',
     denoise: 'photoRestoration',
 };
 
-const EditorModalLayout: React.FC = () => {
-    // FIX: Replaced `panelsVisible` with `isLeftPanelVisible` and `isRightPanelVisible` to align with the EditorContext state.
-    const { activeTool, isGif, isLeftPanelVisible, isRightPanelVisible, activeTab, setActiveTab } = useEditor();
+interface EditorModalLayoutProps {
+    editingPanelComponents: Partial<Record<TabId, React.LazyExoticComponent<React.FC<{}>>>>;
+}
 
+const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelComponents }) => {
+    const { activeTool, isGif, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, activeTab, setActiveTab } = useEditor();
+    
+    // Quando a ferramenta inicial da página inicial muda, atualize a aba ativa
     useEffect(() => {
-        if(activeTool) {
-            const initialTab = toolToTabMap[activeTool] || 'adjust';
+        if (activeTool) {
+            const initialTab = toolToTabMap[activeTool] ?? 'adjust'; // Padrão para 'adjust' se não mapeado
             setActiveTab(initialTab);
         }
     }, [activeTool, setActiveTab]);
-    
+
     const activeTabConfig = useMemo(() => editingTabs.find(tab => tab.id === activeTab), [activeTab]);
 
-    return (
-        <div className="w-full flex flex-row overflow-hidden">
-            {/* Left Panel - Hidden on small screens if panelsVisible is false */}
-            {/* FIX: Used `isLeftPanelVisible` to control the visibility of the left panel. */}
-            <div className={`absolute top-0 left-0 h-full lg:relative transition-transform duration-300 ease-in-out z-30 ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-                <LeftPanel activeTab={activeTab} setActiveTab={setActiveTab} />
-            </div>
+    const showBackdrop = isLeftPanelVisible || isRightPanelVisible;
 
-            <main className="flex-grow flex flex-col bg-black/20 relative">
+    return (
+        <div className="w-full h-full flex flex-row overflow-hidden relative bg-black/20">
+            {/* Backdrop for mobile overlays */}
+            {showBackdrop && (
+                <div
+                    className="fixed inset-0 bg-black/60 z-30 lg:hidden animate-fade-in"
+                    onClick={() => {
+                        setIsLeftPanelVisible(false);
+                        setIsRightPanelVisible(false);
+                    }}
+                    aria-hidden="true"
+                />
+            )}
+
+            {/* Left Panel */}
+            <aside className={`fixed lg:relative z-40 h-full w-80 flex-shrink-0 transition-transform duration-300 ease-in-out ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+                <LeftPanel activeTab={activeTab} setActiveTab={setActiveTab} />
+            </aside>
+
+            {/* Main Content */}
+            <main className="flex-grow flex flex-col relative">
                 <div className="flex-grow flex items-center justify-center p-4 relative overflow-hidden">
                     <ImageViewer />
                     <FloatingControls />
@@ -67,11 +86,10 @@ const EditorModalLayout: React.FC = () => {
                 {isGif && <GifTimeline />}
             </main>
 
-            {/* Right Panel - Hidden on small screens if panelsVisible is false */}
-            {/* FIX: Used `isRightPanelVisible` to control the visibility of the right panel. */}
-            <div className={`absolute top-0 right-0 h-full lg:relative transition-transform duration-300 ease-in-out z-20 ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
-                 <RightPanel activeTabConfig={activeTabConfig} />
-            </div>
+            {/* Right Panel */}
+            <aside className={`fixed lg:relative right-0 z-40 h-full w-full max-w-sm lg:w-96 flex-shrink-0 transition-transform duration-300 ease-in-out ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
+                <RightPanel activeTabConfig={activeTabConfig} editingPanelComponents={editingPanelComponents} />
+            </aside>
         </div>
     );
 };

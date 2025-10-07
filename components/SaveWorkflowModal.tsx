@@ -104,7 +104,7 @@ const SaveWorkflowModal: React.FC = () => {
 
                 </div>
                  <footer className="p-4 bg-gray-900/30 border-t border-gray-700/50 flex justify-end gap-3">
-                     <button onClick={() => setIsSaveWorkflowModalOpen(false)} className="bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-md transition-colors text-sm">
+                     <button onClick={() => setIsSaveWorkflowModalOpen(false)} className="bg-gray-700/60 hover:bg-gray-600/80 text-white font-semibold py-2 px-4 rounded-md transition-colors text-sm">
                         Cancelar
                     </button>
                     <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">

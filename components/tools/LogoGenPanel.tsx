@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
-import { useLoadingError } from '../../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import { generateLogo } from '../../services/geminiService';
 import ResultViewer from './common/ResultViewer';
 import { LogoIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 
 const LogoGenPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading } = useLoadingError();
+    const { isLoading, error, setError, setIsLoading, addPromptToHistory } = useEditor();
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
     const [negativePrompt, setNegativePrompt] = useState('');
@@ -23,6 +23,7 @@ const LogoGenPanel: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setResultImage(null);
+        addPromptToHistory(prompt);
         try {
             let fullPrompt = prompt;
             if (negativePrompt.trim()) {
@@ -53,6 +54,8 @@ const LogoGenPanel: React.FC = () => {
                   onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
                   isLoading={isLoading}
                   toolId="logoGen"
+                  promptHelperText="Seja específico sobre o assunto, estilo (ex: minimalista, emblema), e cores."
+                  negativePromptHelperText="Ex: texto, formas complexas, mais de 3 cores."
                 />
 
                 <button

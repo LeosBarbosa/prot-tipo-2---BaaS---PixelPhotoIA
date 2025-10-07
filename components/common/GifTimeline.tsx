@@ -2,9 +2,10 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { PlayIcon, PauseIcon } from '../icons';
+import { frameToDataURL } from '../../utils/imageUtils';
 
 const GifTimeline: React.FC = () => {
     const { gifFrames, currentFrameIndex, setCurrentFrameIndex } = useEditor();
@@ -41,7 +42,8 @@ const GifTimeline: React.FC = () => {
         return () => {
             if(animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
-    }, [isPlaying, gifFrames, currentFrameIndex, setCurrentFrameIndex]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isPlaying, gifFrames.length]);
 
     useEffect(() => {
         const currentFrameButton = frameRefs.current[currentFrameIndex];
@@ -81,11 +83,8 @@ const GifTimeline: React.FC = () => {
             </div>
             <div ref={timelineRef} className="flex-grow flex items-center gap-2 overflow-x-auto overflow-y-hidden h-20 scrollbar-thin">
                 {gifFrames.map((frame, index) => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = frame.imageData.width;
-                    canvas.height = frame.imageData.height;
-                    canvas.getContext('2d')?.putImageData(frame.imageData, 0, 0);
-                    const dataUrl = canvas.toDataURL('image/png');
+                    // Memoize a URL de dados para evitar recalcular a cada renderização
+                    const dataUrl = useMemo(() => frameToDataURL(frame.imageData), [frame.imageData]);
                     
                     return (
                         <button

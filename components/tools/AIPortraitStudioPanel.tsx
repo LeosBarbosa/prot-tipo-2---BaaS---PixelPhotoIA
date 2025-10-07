@@ -3,13 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useEffect } from 'react';
-import { useEditor, useLoadingError } from '../../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import * as geminiService from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import { CaricatureIcon, DownloadIcon, BrushIcon, PixarIcon, ToyIcon, MagicWandIcon, ClockIcon } from '../icons';
 import { dataURLtoFile } from '../../utils/imageUtils';
 import PromptEnhancer from './common/PromptEnhancer';
+import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
+import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
 
 type StyleId = 'caricature' | 'pixar' | '3d' | 'yearbook90s';
 
@@ -21,10 +23,10 @@ interface StyleConfig {
 }
 
 const styles: StyleConfig[] = [
-    { id: 'caricature', name: 'Caricatura', icon: <CaricatureIcon className="w-6 h-6" />, promptPlaceholder: "Adicione detalhes extras, ex: 'segurando uma guitarra'..." },
-    { id: 'pixar', name: 'Disney Pixar', icon: <PixarIcon className="w-6 h-6" />, promptPlaceholder: "Descreva a cena, ex: 'em um cenário de fantasia'..." },
-    { id: '3d', name: 'Miniatura 3D', icon: <ToyIcon className="w-6 h-6" />, promptPlaceholder: "Descreva a pose ou acessórios da miniatura..." },
-    { id: 'yearbook90s', name: 'Anuário 90s', icon: <ClockIcon className="w-6 h-6" />, promptPlaceholder: "Adicione detalhes de roupa ou fundo..." },
+    { id: 'caricature', name: 'Caricatura', icon: <CaricatureIcon className="w-6 h-6" />, promptPlaceholder: "Crie uma caricatura divertida em estilo de pintura digital. Exagere grosseiramente os olhos da pessoa e dê a ela um sorriso enorme e amigável. Coloque um chapéu de chef ridiculamente alto e inclinado em sua cabeça. O fundo deve ser uma cena de cozinha dinâmica e desfocada, com panelas e frigideiras voando no ar, em estilo de história em quadrinhos." },
+    { id: 'pixar', name: 'Disney Pixar', icon: <PixarIcon className="w-6 h-6" />, promptPlaceholder: "Transforme a pessoa em um personagem no estilo Pixar, colocando-a em um cenário de floresta encantada, interagindo com um pequeno animal falante." },
+    { id: '3d', name: 'Miniatura 3D', icon: <ToyIcon className="w-6 h-6" />, promptPlaceholder: "Crie uma miniatura 3D da pessoa como um aventureiro, com uma pose heroica, segurando um mapa antigo e com uma mochila nas costas." },
+    { id: 'yearbook90s', name: 'Anuário 90s', icon: <ClockIcon className="w-6 h-6" />, promptPlaceholder: "Transforme a pessoa em uma foto de anuário escolar dos anos 90. Dê a ela um penteado levemente repicado e um sorriso suave e sem graça. O fundo deve ser um clássico azul ou cinza manchado, com feixes de laser bregas se cruzando atrás dela. Adicione um brilho sutil de foco suave à imagem inteira." },
 ];
 
 interface CaricatureSubStyle {
@@ -52,28 +54,68 @@ const caricatureSubStyles: CaricatureSubStyle[] = [
         name: 'Engraçada',
         thumbnail: 'https://storage.googleapis.com/maker-studio-tools-us-east1/thumbnails/caricature_funny.webp',
         prompt: 'Crie uma caricatura com um estilo de desenho animado engraçado e cômico. Foque em exageros divertidos, como olhos grandes, expressões bobas ou um sorriso largo. O estilo deve ser vibrante e animado.'
+    },
+    {
+      id: 'watercolor',
+      name: 'Aquarela',
+      thumbnail: 'https://storage.googleapis.com/maker-studio-tools-us-east1/thumbnails/caricature_watercolor.webp',
+      prompt: 'Estilo de caricatura em aquarela, com cores suaves e fluidas, traços leves e um toque artístico e elegante.'
+    },
+    {
+      id: 'grotesque',
+      name: 'Grotesca',
+      thumbnail: 'https://storage.googleapis.com/maker-studio-tools-us-east1/thumbnails/caricature_grotesque.webp',
+      prompt: 'Estilo de caricatura grotesca, com grande distorção e exagero extremo para efeito cômico ou satírico, inspirado por artistas como Ralph Steadman.'
+    },
+    {
+      id: 'minimalist-line-art',
+      name: 'Linha Minimalista',
+      thumbnail: 'https://storage.googleapis.com/maker-studio-tools-us-east1/thumbnails/caricature_minimalist.webp',
+      prompt: 'Caricatura de arte de linha minimalista, usando apenas contornos pretos sobre um fundo branco para capturar a essência da pessoa com o mínimo de detalhes.'
+    },
+    {
+      id: 'pop-art',
+      name: 'Pop Art',
+      thumbnail: 'https://storage.googleapis.com/maker-studio-tools-us-east1/thumbnails/caricature_popart.webp',
+      prompt: 'Estilo de caricatura pop art inspirado em Andy Warhol, com cores vibrantes e contrastantes, e uso de padrões de pontos Ben-Day.'
+    },
+    {
+      id: 'artist-sketch',
+      name: 'Esboço do Artista',
+      thumbnail: 'https://storage.googleapis.com/maker-studio-tools-us-east1/thumbnails/caricature_artist_sketch.webp',
+      prompt: 'Crie um desenho de linha / esboço a tinta em estilo de foto de um rosto idêntico à imagem de referência enviada - mantenha todas as características faciais, proporções e expressões exatamente iguais. Use tons de tinta verde e branca com detalhes intrincados de linhas finas, desenhados em um fundo estilo página de caderno. Mostre uma mão direita segurando uma caneta perto do esboço, como se o artista ainda estivesse trabalhando no desenho. Estilo: desenho fotorrealista, textura de tinta detalhada, sombreamento suave, grão de papel suave, resolução 8K.'
     }
 ];
 
 const AIPortraitStudioPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading } = useLoadingError();
-    const { currentImage, setInitialImage, setActiveTool } = useEditor();
+    const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage, setActiveTool } = useEditor();
 
     const [personImages, setPersonImages] = useState<(File | null)[]>([null]);
     const [selectedStyle, setSelectedStyle] = useState<StyleId>('caricature');
     const [selectedCaricatureSubStyleId, setSelectedCaricatureSubStyleId] = useState<string>(caricatureSubStyles[0].id);
     const [prompt, setPrompt] = useState('');
     const [resultImage, setResultImage] = useState<string | null>(null);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const suggestions = usePromptSuggestions(prompt, 'aiPortraitStudio');
 
     const currentStyleConfig = styles.find(s => s.id === selectedStyle)!;
+    
+    useEffect(() => {
+        setShowSuggestions(suggestions.length > 0);
+    }, [suggestions]);
+
+    const handleSelectSuggestion = (suggestion: string) => {
+        setPrompt(suggestion);
+        setShowSuggestions(false);
+    };
 
     useEffect(() => {
-        if (currentImage && !personImages[0]) {
+        if (baseImageFile && !personImages[0]) {
             const newImages = [...personImages];
-            newImages[0] = currentImage;
+            newImages[0] = baseImageFile;
             setPersonImages(newImages);
         }
-    }, [currentImage, personImages]);
+    }, [baseImageFile, personImages]);
 
     const handleGenerate = async () => {
         const validImages = personImages.filter((img): img is File => img !== null);
@@ -85,6 +127,9 @@ const AIPortraitStudioPanel: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setResultImage(null);
+        if (prompt.trim()) {
+            addPromptToHistory(prompt);
+        }
         try {
             let result;
             let finalPrompt = prompt;
@@ -176,7 +221,7 @@ const AIPortraitStudioPanel: React.FC = () => {
                     <h4 className="text-sm font-semibold text-gray-300 mb-2">Estilo</h4>
                     <div className="flex w-full bg-gray-900/50 border border-gray-600 rounded-lg p-1">
                         {styles.map(style => (
-                            <button key={style.id} onClick={() => setSelectedStyle(style.id)} disabled={isLoading} className={`w-full text-center font-semibold py-2 rounded-md transition-all text-sm flex items-center justify-center gap-2 ${selectedStyle === style.id ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-white/10'}`}>
+                            <button key={style.id} onClick={() => setSelectedStyle(style.id)} disabled={isLoading} className={`w-full text-center font-semibold py-2 rounded-md transition-all text-sm flex items-center justify-center gap-2 ${selectedStyle === style.id ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700/50'}`}>
                                 {style.icon} {style.name}
                             </button>
                         ))}
@@ -200,8 +245,17 @@ const AIPortraitStudioPanel: React.FC = () => {
 
                 <div className="relative">
                      <label htmlFor="positive-prompt" className="text-sm font-semibold text-gray-300">Instruções Adicionais (Opcional)</label>
-                     <textarea id="positive-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={currentStyleConfig.promptPlaceholder} className="mt-1 w-full bg-gray-800/50 border border-gray-600 rounded-lg p-2 pr-12 text-base min-h-[80px] resize-none text-gray-300 placeholder-gray-500" disabled={isLoading} rows={3}/>
-                    <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="aiPortraitStudio" />
+                     <div className="relative mt-1">
+                        <textarea id="positive-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} onFocus={() => setShowSuggestions(suggestions.length > 0)} placeholder={currentStyleConfig.promptPlaceholder} className="w-full bg-gray-800/50 border border-gray-600 rounded-lg p-2 pr-12 text-base min-h-[80px] resize-none text-gray-300 placeholder-gray-500" disabled={isLoading} rows={3}/>
+                        <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="aiPortraitStudio" />
+                        {showSuggestions && (
+                            <PromptSuggestionsDropdown
+                                suggestions={suggestions}
+                                onSelect={handleSelectSuggestion}
+                                searchTerm={prompt}
+                            />
+                        )}
+                     </div>
                 </div>
                 
                 <button onClick={handleGenerate} disabled={isGenerateButtonDisabled} className="w-full mt-auto bg-gradient-to-br from-lime-600 to-green-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">

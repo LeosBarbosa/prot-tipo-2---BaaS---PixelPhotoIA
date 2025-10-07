@@ -17,7 +17,8 @@ const ImageViewer: React.FC = () => {
     const {
         activeTool,
         activeTab,
-        currentImage,
+        // FIX: Property 'currentImage' does not exist on type 'EditorContextType'. Replaced with 'baseImageFile'.
+        baseImageFile,
         currentImageUrl,
         originalImageUrl,
         imgRef,
@@ -66,7 +67,8 @@ const ImageViewer: React.FC = () => {
     useEffect(() => {
         setCompletedCrop(undefined);
         setCrop(undefined);
-    }, [currentImage, setCompletedCrop, setCrop]);
+    // FIX: Using 'baseImageFile' as dependency instead of the non-existent 'currentImage'.
+    }, [baseImageFile, setCompletedCrop, setCrop]);
 
     // Effect to draw bounding boxes
     useEffect(() => {
@@ -283,6 +285,7 @@ const ImageViewer: React.FC = () => {
                             style={{
                                 backgroundImage: `url(${texturePreview.url})`,
                                 backgroundSize: 'cover',
+                                // FIX: Removed invalid 'source-over' check. The blendMode type already ensures valid CSS values.
                                 mixBlendMode: texturePreview.blendMode,
                                 opacity: texturePreview.opacity,
                             }}

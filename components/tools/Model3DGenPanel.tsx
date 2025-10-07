@@ -52,6 +52,8 @@ const Model3DGenPanel: React.FC = () => {
                   onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
                   isLoading={isLoading}
                   toolId="model3DGen"
+                  promptHelperText="Descreva o objeto, materiais (ex: madeira, cromo), e iluminação (ex: estúdio)."
+                  negativePromptHelperText="Ex: fundo complexo, reflexos irreais."
                 />
                 <button
                     onClick={handleGenerate}

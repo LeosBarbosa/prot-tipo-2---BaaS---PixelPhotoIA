@@ -3,17 +3,25 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { PixelsIcon } from '../icons';
 import TipBox from '../common/TipBox';
 
 const PixelArtPanel: React.FC = () => {
     const { isLoading, handleApplyStyle } = useEditor();
+    const [pixelSize, setPixelSize] = useState(2); // 1: 8-bit, 2: 16-bit, 3: 32-bit
+    const [colorPalette, setColorPalette] = useState(16);
+
+    const pixelSizeMap: { [key: number]: string } = {
+        1: '8-bit (pixels grandes)',
+        2: '16-bit (pixels médios)',
+        3: '32-bit (pixels pequenos)',
+    };
 
     const handleApply = () => {
-        const prompt = 'Pixel art de 16 bits, paleta de cores limitada.';
-        // applyToAll should be true for consistency, even if it only affects GIFs
+        const sizeDescription = pixelSizeMap[pixelSize];
+        const prompt = `Estilo pixel art de ${sizeDescription}, com uma paleta de cores limitada a aproximadamente ${colorPalette} cores.`;
         handleApplyStyle(prompt, true); 
     };
 
@@ -25,10 +33,45 @@ const PixelArtPanel: React.FC = () => {
             </div>
             
             <div className="w-full border-t border-gray-700/50 my-2"></div>
+            
+            <div className="w-full space-y-4">
+                <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium text-gray-300 flex justify-between">
+                        <span>Tamanho do Pixel</span>
+                        <span className="text-white font-mono">{pixelSizeMap[pixelSize]}</span>
+                    </label>
+                    <input
+                        type="range"
+                        min="1"
+                        max="3"
+                        step="1"
+                        value={pixelSize}
+                        onChange={(e) => setPixelSize(Number(e.target.value))}
+                        disabled={isLoading}
+                        className="w-full"
+                    />
+                </div>
+                <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium text-gray-300 flex justify-between">
+                        <span>Paleta de Cores</span>
+                        <span className="text-white font-mono">{colorPalette} cores</span>
+                    </label>
+                    <input
+                        type="range"
+                        min="4"
+                        max="64"
+                        step="4"
+                        value={colorPalette}
+                        onChange={(e) => setColorPalette(Number(e.target.value))}
+                        disabled={isLoading}
+                        className="w-full"
+                    />
+                </div>
+            </div>
 
-            <p className="text-sm text-gray-300 text-center">
-                A IA irá reconstruir sua imagem usando um estilo de pixel art de 16 bits, criando uma estética de videogame clássico.
-            </p>
+            <TipBox>
+                Ajuste o tamanho do pixel e a paleta de cores para customizar o efeito. Menos cores e pixels maiores criam um visual mais retrô.
+            </TipBox>
 
             <button
                 onClick={handleApply}
@@ -38,9 +81,6 @@ const PixelArtPanel: React.FC = () => {
                 <PixelsIcon className="w-5 h-5" />
                 Aplicar Estilo Pixel Art
             </button>
-            <TipBox>
-                Crie uma estética de videogame retrô convertendo sua foto para o estilo clássico de pixel art de 16 bits.
-            </TipBox>
         </div>
     );
 };

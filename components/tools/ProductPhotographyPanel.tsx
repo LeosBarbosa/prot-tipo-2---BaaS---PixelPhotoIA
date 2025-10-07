@@ -4,27 +4,40 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor, useLoadingError } from '../../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import { generateProductPhoto } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import { SparkleIcon } from '../icons';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
 import PromptEnhancer from './common/PromptEnhancer';
+import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
+import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
 
 const ProductPhotographyPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading } = useLoadingError();
-    const { currentImage, setInitialImage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
     const [isPromptExpanded, setIsPromptExpanded] = useState(true);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const suggestions = usePromptSuggestions(prompt, 'productPhotography');
 
     useEffect(() => {
-        if (currentImage && !sourceImage) {
-            setSourceImage(currentImage);
+        setShowSuggestions(suggestions.length > 0);
+    }, [suggestions]);
+
+    const handleSelectSuggestion = (suggestion: string) => {
+        setPrompt(suggestion);
+        setShowSuggestions(false);
+    };
+
+
+    useEffect(() => {
+        if (baseImageFile && !sourceImage) {
+            setSourceImage(baseImageFile);
         }
-    }, [currentImage, sourceImage]);
+    }, [baseImageFile, sourceImage]);
 
     const handleFileSelect = (file: File | null) => {
         setSourceImage(file);
@@ -46,6 +59,7 @@ const ProductPhotographyPanel: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setResultImage(null);
+        addPromptToHistory(prompt);
         try {
             const result = await generateProductPhoto(sourceImage, prompt);
             setResultImage(result);
@@ -79,12 +93,22 @@ const ProductPhotographyPanel: React.FC = () => {
                         <textarea
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
+                            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                            onFocus={() => setShowSuggestions(suggestions.length > 0)}
                             placeholder="Ex: em uma mesa de mármore com uma planta desfocada ao fundo, em uma praia com a luz do pôr do sol..."
                             className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
                             disabled={isLoading}
                             rows={5}
                         />
                         <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="productPhotography" />
+                         {showSuggestions && (
+                            <PromptSuggestionsDropdown
+                                suggestions={suggestions}
+                                onSelect={handleSelectSuggestion}
+                                searchTerm={prompt}
+                            />
+                        )}
+                        <p className="mt-1 text-xs text-gray-500 px-1">Exemplo: "em uma mesa de mármore com uma planta desfocada ao fundo". Seja descritivo sobre o ambiente, superfície, iluminação e fundo.</p>
                     </div>
                 </CollapsibleToolPanel>
                 

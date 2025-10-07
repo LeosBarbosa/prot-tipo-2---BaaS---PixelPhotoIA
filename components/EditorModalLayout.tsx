@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useEditor } from '../context/EditorContext';
 import ImageViewer from './ImageViewer';
 import FloatingControls from './FloatingControls';
@@ -37,29 +37,121 @@ const toolToTabMap: Partial<Record<ToolId, TabId>> = {
     lowPoly: 'lowPoly',
     pixelArt: 'pixelArt',
     denoise: 'photoRestoration',
+    faceSwap: 'faceSwap',
+    localAdjust: 'localAdjust',
 };
 
-const EditorModalLayout: React.FC = () => {
-    const { activeTool, isGif, isLeftPanelVisible, isRightPanelVisible, activeTab, setActiveTab } = useEditor();
+interface EditorModalLayoutProps {
+    editingPanelComponents: Partial<Record<TabId, React.LazyExoticComponent<React.FC<{}>>>>;
+}
+
+
+const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelComponents }) => {
+    const { activeTool, isGif, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, activeTab, setActiveTab, setToast } = useEditor();
     
-    // When the initial tool from the home page changes, update the active tab
+    // Estado para o gesto de deslizar
+    const [touchStartX, setTouchStartX] = useState<number | null>(null);
+    const [touchStartY, setTouchStartY] = useState<number | null>(null);
+
+    // Quando a ferramenta inicial da página inicial muda, atualize a aba ativa
     useEffect(() => {
         if (activeTool) {
-            const initialTab = toolToTabMap[activeTool] ?? 'adjust'; // Default to 'adjust' if not mapped
+            const initialTab = toolToTabMap[activeTool] ?? 'adjust'; // Padrão para 'adjust' se não mapeado
             setActiveTab(initialTab);
         }
-    }, [activeTool, setActiveTab]);
+        
+        // Exibe uma dica na primeira vez que um usuário mobile abre o editor
+        const firstTimeMobile = localStorage.getItem('hasSeenSwipeHint') !== 'true';
+        if (window.innerWidth < 1024 && firstTimeMobile) {
+            setToast({ message: 'Arraste da borda esquerda para ver as ferramentas!', type: 'info' });
+            localStorage.setItem('hasSeenSwipeHint', 'true');
+        }
+    }, [activeTool, setActiveTab, setToast]);
 
     const activeTabConfig = useMemo(() => editingTabs.find(tab => tab.id === activeTab), [activeTab]);
 
-    return (
-        <div className="w-full h-full flex flex-row">
-            {/* Left Panel - Hidden on small screens if panelsVisible is false */}
-            <div className={`absolute top-0 left-0 h-full lg:relative transition-transform duration-300 ease-in-out z-30 ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-                <LeftPanel activeTab={activeTab} setActiveTab={setActiveTab} />
-            </div>
+    const showBackdrop = isLeftPanelVisible || isRightPanelVisible;
 
-            <main className="flex-grow flex flex-col bg-black/20 relative">
+    const handleTouchStart = (e: React.TouchEvent) => {
+        // Acompanha apenas deslizes de um dedo para navegação do painel
+        if (e.touches.length === 1) {
+            setTouchStartX(e.touches[0].clientX);
+            setTouchStartY(e.touches[0].clientY);
+        } else {
+            setTouchStartX(null);
+            setTouchStartY(null);
+        }
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        // Gestos apenas para viewports de celular
+        if (window.innerWidth >= 1024 || !touchStartX || !touchStartY) {
+            return;
+        }
+
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+        
+        const minSwipeDistance = 50;
+        
+        // Garante que é um deslize horizontal, não uma tentativa de rolagem vertical
+        if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaX) > Math.abs(deltaY)) {
+            // DESLIZE PARA A DIREITA
+            if (deltaX > 0) { 
+                if (isRightPanelVisible) {
+                    // Fecha o painel direito ao deslizar para a direita
+                    setIsRightPanelVisible(false);
+                } else if (!isLeftPanelVisible && touchStartX < 50) {
+                    // Abre o painel esquerdo se estiver fechado e o deslize começar na borda da tela
+                    setIsLeftPanelVisible(true);
+                    setIsRightPanelVisible(false); // Garante que o painel direito está fechado
+                }
+            } 
+            // DESLIZE PARA A ESQUERDA
+            else { 
+                if (isLeftPanelVisible) {
+                    // Fecha o painel esquerdo ao deslizar para a esquerda
+                    setIsLeftPanelVisible(false);
+                }
+            }
+        }
+        
+        // Reseta após cada toque finalizado
+        setTouchStartX(null);
+        setTouchStartY(null);
+    };
+
+
+    return (
+        <div 
+            className="w-full h-full flex flex-row overflow-hidden relative bg-black/20 animate-fade-in"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+        >
+            {/* Backdrop for mobile overlays */}
+            {showBackdrop && (
+                <div
+                    className="fixed inset-0 bg-black/60 z-30 lg:hidden animate-fade-in"
+                    onClick={() => {
+                        setIsLeftPanelVisible(false);
+                        setIsRightPanelVisible(false);
+                    }}
+                    aria-hidden="true"
+                />
+            )}
+
+            {/* Left Panel */}
+            <aside className={`fixed lg:relative z-40 h-full w-80 flex-shrink-0 transition-transform duration-300 ease-in-out ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+                <LeftPanel activeTab={activeTab} setActiveTab={setActiveTab} />
+            </aside>
+
+            {/* Main Content */}
+            <main 
+                className="flex-grow flex flex-col relative"
+            >
                 <div className="flex-grow flex items-center justify-center p-4 relative overflow-hidden">
                     <ImageViewer />
                     <FloatingControls />
@@ -67,10 +159,10 @@ const EditorModalLayout: React.FC = () => {
                 {isGif && <GifTimeline />}
             </main>
 
-            {/* Right Panel - Hidden on small screens if panelsVisible is false */}
-            <div className={`absolute top-0 right-0 h-full lg:relative transition-transform duration-300 ease-in-out z-20 ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
-                 <RightPanel activeTabConfig={activeTabConfig} />
-            </div>
+            {/* Right Panel */}
+            <aside className={`fixed lg:relative right-0 z-40 h-full w-11/12 max-w-sm lg:w-96 flex-shrink-0 transition-transform duration-300 ease-in-out ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
+                <RightPanel activeTabConfig={activeTabConfig} editingPanelComponents={editingPanelComponents} />
+            </aside>
         </div>
     );
 };

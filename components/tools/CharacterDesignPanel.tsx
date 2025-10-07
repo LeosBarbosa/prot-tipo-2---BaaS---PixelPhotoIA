@@ -3,21 +3,34 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState } from 'react';
-import { useLoadingError } from '../../context/EditorContext';
+import React, { useState, useEffect } from 'react';
+import { useEditor } from '../../context/EditorContext';
 import { generateCharacter } from '../../services/geminiService';
 import ResultViewer from './common/ResultViewer';
 import { SparkleIcon, FaceSmileIcon } from '../icons';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
 import PromptEnhancer from './common/PromptEnhancer';
+import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
+import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
 
 const CharacterDesignPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading } = useLoadingError();
+    const { isLoading, error, setError, setIsLoading, addPromptToHistory } = useEditor();
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [style, setStyle] = useState('Fantasia Realista');
     const [charClass, setCharClass] = useState('Guerreiro');
     const [details, setDetails] = useState('');
     const [isDetailsExpanded, setIsDetailsExpanded] = useState(true);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const suggestions = usePromptSuggestions(details, 'characterDesign');
+
+    useEffect(() => {
+        setShowSuggestions(suggestions.length > 0);
+    }, [suggestions]);
+
+    const handleSelectSuggestion = (suggestion: string) => {
+        setDetails(suggestion);
+        setShowSuggestions(false);
+    };
 
     const handleGenerate = async () => {
         if (!details.trim()) {
@@ -27,6 +40,7 @@ const CharacterDesignPanel: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setResultImage(null);
+        addPromptToHistory(details);
         try {
             const fullPrompt = `Estilo: ${style}. Classe: ${charClass}. Detalhes: ${details}`;
             const result = await generateCharacter(fullPrompt);
@@ -67,15 +81,27 @@ const CharacterDesignPanel: React.FC = () => {
                         </div>
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-300 mb-1">Detalhes e Aparência</label>
-                            <textarea
-                                value={details}
-                                onChange={(e) => setDetails(e.target.value)}
-                                placeholder="Ex: mulher com cabelo prateado, armadura ornamentada com detalhes em ouro, segurando uma espada de cristal..."
-                                className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
-                                disabled={isLoading}
-                                rows={5}
-                            />
-                             <PromptEnhancer prompt={details} setPrompt={setDetails} toolId="characterDesign" />
+                            <div className="relative">
+                                <textarea
+                                    value={details}
+                                    onChange={(e) => setDetails(e.target.value)}
+                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                                    onFocus={() => setShowSuggestions(suggestions.length > 0)}
+                                    placeholder="Ex: mulher com cabelo prateado, armadura ornamentada com detalhes em ouro, segurando uma espada de cristal..."
+                                    className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
+                                    disabled={isLoading}
+                                    rows={5}
+                                />
+                                 <PromptEnhancer prompt={details} setPrompt={setDetails} toolId="characterDesign" />
+                            </div>
+                            {showSuggestions && (
+                                <PromptSuggestionsDropdown
+                                    suggestions={suggestions}
+                                    onSelect={handleSelectSuggestion}
+                                    searchTerm={details}
+                                />
+                            )}
+                            <p className="mt-1 text-xs text-gray-500 px-1">Exemplo: "mulher com cabelo prateado, armadura ornamentada com detalhes em ouro, segurando uma espada de cristal". Inclua detalhes sobre cabelo, roupas, acessórios e expressão.</p>
                         </div>
                     </div>
                 </CollapsibleToolPanel>

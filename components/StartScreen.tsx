@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { UploadIcon } from './icons';
 
 interface StartScreenProps {
@@ -35,18 +35,22 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFileSelect, onCancel }) => 
     <div className="w-full max-w-3xl mx-auto text-center flex flex-col items-center justify-center p-4">
       <label
         htmlFor="file-upload"
-        className={`w-full p-10 md:p-16 border-2 border-dashed rounded-2xl cursor-pointer transition-all duration-300 ease-in-out ${
-          isDraggingOver ? 'border-blue-400 bg-blue-500/10' : 'border-gray-600 hover:border-blue-500'
-        }`}
+        className={`relative block w-full p-10 md:p-16 border border-gray-700/80 rounded-3xl cursor-pointer transition-all duration-300 ease-in-out overflow-hidden bg-gray-900/40 hover:border-blue-500/60 group ${ isDraggingOver ? 'border-blue-500 ring-4 ring-blue-500/20' : '' }`}
         onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingOver(true); }}
         onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingOver(true); }}
         onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingOver(false); }}
         onDrop={handleDrop}
       >
-        <div className="flex flex-col items-center gap-4 text-gray-400 pointer-events-none">
-          <UploadIcon className="w-16 h-16 text-gray-500" />
-          <h2 className="text-2xl font-bold text-white">Carregue sua Imagem</h2>
-          <p>Arraste e solte um arquivo aqui, ou clique para selecionar.</p>
+        <div className={`absolute inset-0 transition-opacity duration-300 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 opacity-0 ${isDraggingOver ? 'opacity-100' : 'group-hover:opacity-50'}`}></div>
+    
+        <div className={`relative flex flex-col items-center gap-4 text-gray-400 pointer-events-none transition-transform duration-300 ${isDraggingOver ? 'scale-105' : 'group-hover:scale-105'}`}>
+            <div className="relative w-20 h-20 flex items-center justify-center bg-gray-800/50 rounded-2xl border border-gray-700">
+                <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent rounded-2xl"></div>
+                <UploadIcon className="w-10 h-10 text-gray-400 transition-colors duration-300 group-hover:text-blue-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-white">Arraste sua imagem aqui</h2>
+            <p>Ou <span className="text-blue-400 font-semibold">procure em seus arquivos</span></p>
+            <p className="text-xs text-gray-500 mt-2">Suporta JPG, PNG, WEBP. Tamanho máximo 25MB.</p>
         </div>
       </label>
       <input
@@ -59,7 +63,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFileSelect, onCancel }) => 
       {onCancel && (
         <button
           onClick={onCancel}
-          className="mt-4 text-gray-400 hover:text-white transition-colors"
+          className="mt-6 text-gray-500 hover:text-white transition-colors text-sm font-semibold"
         >
           Cancelar
         </button>

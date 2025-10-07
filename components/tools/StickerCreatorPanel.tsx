@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useEffect } from 'react';
-import { useEditor, useLoadingError } from '../../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import { generateSticker } from '../../services/geminiService';
 import ResultViewer from './common/ResultViewer';
 import { StickersIcon } from '../icons';
@@ -11,18 +11,17 @@ import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import ImageDropzone from './common/ImageDropzone';
 
 const StickerCreatorPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading } = useLoadingError();
-    const { currentImage, setInitialImage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, baseImageFile, setInitialImage } = useEditor();
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
     const [negativePrompt, setNegativePrompt] = useState('');
     const [sourceImage, setSourceImage] = useState<File | null>(null);
 
     useEffect(() => {
-        if (currentImage && !sourceImage) {
-            setSourceImage(currentImage);
+        if (baseImageFile && !sourceImage) {
+            setSourceImage(baseImageFile);
         }
-    }, [currentImage, sourceImage]);
+    }, [baseImageFile, sourceImage]);
 
     const handleFileSelect = (file: File | null) => {
         setSourceImage(file);
@@ -74,6 +73,8 @@ const StickerCreatorPanel: React.FC = () => {
                   onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
                   isLoading={isLoading}
                   toolId="stickerCreator"
+                  promptHelperText="Descreva seu adesivo. Estilos sugeridos: fofo, vintage, neon. A IA adicionará automaticamente uma borda branca espessa."
+                  negativePromptHelperText="Ex: fundo, sombras complexas, texto indesejado."
                 />
                 <button
                     onClick={handleGenerate}

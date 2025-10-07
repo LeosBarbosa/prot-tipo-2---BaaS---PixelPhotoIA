@@ -4,7 +4,7 @@
 */
 
 import { type PixelCrop } from 'react-image-crop';
-import { type UploadProgressStatus } from '../types';
+import { type UploadProgressStatus, type GifFrame } from '../types';
 
 /**
  * Converts a data URL string into a File object.
@@ -42,18 +42,19 @@ export const fileToDataURL = (file: File): Promise<string> => {
     });
 };
 
-export const frameToDataURL = (imageData: ImageData): string => {
+export const frameToDataURL = (frameData: GifFrame['imageData']): string => {
     const canvas = document.createElement('canvas');
-    canvas.width = imageData.width;
-    canvas.height = imageData.height;
+    canvas.width = frameData.width;
+    canvas.height = frameData.height;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error("Could not create canvas context");
+    const imageData = new ImageData(frameData.data, frameData.width, frameData.height);
     ctx.putImageData(imageData, 0, 0);
     return canvas.toDataURL('image/png');
 };
 
-export const frameToFile = (imageData: ImageData, filename: string): File => {
-    const dataUrl = frameToDataURL(imageData);
+export const frameToFile = (frameData: GifFrame['imageData'], filename: string): File => {
+    const dataUrl = frameToDataURL(frameData);
     return dataURLtoFile(dataUrl, filename);
 };
 
@@ -188,4 +189,35 @@ export const optimizeImage = (
             reject(error);
         };
     });
+};
+
+/**
+ * Creates a mask image data URL from a normalized bounding box.
+ * @param box The normalized bounding box object.
+ * @param imageWidth The natural width of the original image.
+ * @param imageHeight The natural height of the original image.
+ * @returns A data URL string of the mask image.
+ */
+export const createMaskFromBoundingBox = (
+  box: { x_min: number; y_min: number; x_max: number; y_max: number },
+  imageWidth: number,
+  imageHeight: number
+): string => {
+  const canvas = document.createElement('canvas');
+  canvas.width = imageWidth;
+  canvas.height = imageHeight;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+  
+  const x = box.x_min * imageWidth;
+  const y = box.y_min * imageHeight;
+  const width = (box.x_max - box.x_min) * imageWidth;
+  const height = (box.y_max - box.y_min) * imageHeight;
+
+  // Fill the selected area with white on a black background.
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, imageWidth, imageHeight);
+  ctx.fillStyle = 'white';
+  ctx.fillRect(x, y, width, height);
+  return canvas.toDataURL('image/png');
 };

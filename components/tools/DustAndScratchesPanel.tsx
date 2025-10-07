@@ -9,7 +9,9 @@ import { FilmGrainIcon } from '../icons';
 import TipBox from '../common/TipBox';
 
 const DustAndScratchesPanel: React.FC = () => {
-    const { isLoading, handleApplyDustAndScratch } = useEditor();
+    const { isLoading, handleApplyDustAndScratch, layers, activeLayerId } = useEditor();
+    const activeLayer = layers.find(l => l.id === activeLayerId);
+    const isDisabled = isLoading || !activeLayer || activeLayer.type !== 'image';
 
     return (
         <div className="w-full bg-gray-800/50 rounded-lg p-6 flex flex-col items-center gap-6 animate-fade-in backdrop-blur-sm">
@@ -26,14 +28,14 @@ const DustAndScratchesPanel: React.FC = () => {
 
             <button
                 onClick={handleApplyDustAndScratch}
-                disabled={isLoading}
+                disabled={isDisabled}
                 className="w-full mt-4 bg-gradient-to-br from-stone-600 to-stone-500 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-stone-500/20 hover:shadow-xl hover:shadow-stone-500/40 hover:-translate-y-px active:scale-95 text-base disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
                 <FilmGrainIcon className="w-5 h-5" />
-                Aplicar Efeito Vintage
+                Aplicar Efeito
             </button>
             <TipBox>
-                Esta ferramenta é perfeita para dar um toque nostálgico e de filme antigo às suas fotografias digitais.
+                Este efeito é perfeito para dar um toque nostálgico e analógico às suas fotos digitais.
             </TipBox>
         </div>
     );

@@ -45,10 +45,10 @@ const LocalAdjustmentPanel: React.FC = () => {
         highlightedObject,
         setHighlightedObject,
         handleSelectObject,
-        localAdjustmentFilters,
-        setLocalAdjustmentFilters,
+        localFilters,
+        setLocalFilters,
         handleApplyLocalAdjustments,
-        resetLocalAdjustmentFilters,
+        resetLocalFilters,
         hasLocalAdjustments,
     } = useEditor();
 
@@ -63,8 +63,8 @@ const LocalAdjustmentPanel: React.FC = () => {
         }
     };
     
-    const handleFilterChange = (filter: keyof typeof localAdjustmentFilters, value: number) => {
-        setLocalAdjustmentFilters(prev => ({ ...prev, [filter]: value }));
+    const handleFilterChange = (filter: keyof typeof localFilters, value: number) => {
+        setLocalFilters(prev => ({ ...prev, [filter]: value }));
     };
 
     return (
@@ -78,10 +78,10 @@ const LocalAdjustmentPanel: React.FC = () => {
 
             {/* Seletor de Modo */}
             <div className="flex w-full bg-gray-900/50 border border-gray-600 rounded-lg p-1">
-                <button type="button" onClick={() => switchMode('brush')} className={`w-full text-center font-semibold py-2.5 rounded-md transition-all text-sm flex items-center justify-center gap-2 ${selectionMode === 'brush' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-white/10'}`}>
+                <button type="button" onClick={() => switchMode('brush')} className={`w-full text-center font-semibold py-2.5 rounded-md transition-all text-sm flex items-center justify-center gap-2 ${selectionMode === 'brush' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700/50'}`}>
                     <BrushIcon className="w-5 h-5" /> Pincel
                 </button>
-                <button type="button" onClick={() => switchMode('magic')} className={`w-full text-center font-semibold py-2.5 rounded-md transition-all text-sm flex items-center justify-center gap-2 ${selectionMode === 'magic' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-white/10'}`}>
+                <button type="button" onClick={() => switchMode('magic')} className={`w-full text-center font-semibold py-2.5 rounded-md transition-all text-sm flex items-center justify-center gap-2 ${selectionMode === 'magic' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700/50'}`}>
                     <SparkleIcon className="w-5 h-5" /> Mágica
                 </button>
             </div>
@@ -100,7 +100,7 @@ const LocalAdjustmentPanel: React.FC = () => {
             {selectionMode === 'magic' && (
                  <div className="animate-fade-in flex flex-col gap-3">
                     {!detectedObjects ? (
-                        <button type="button" onClick={handleDetectObjects} disabled={isLoading} className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <button type="button" onClick={() => handleDetectObjects()} disabled={isLoading} className="w-full bg-gray-800/50 hover:bg-gray-700/50 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
                             <SparkleIcon className="w-5 h-5" />
                             Detetar Objetos
                         </button>
@@ -130,7 +130,7 @@ const LocalAdjustmentPanel: React.FC = () => {
                 type="button"
                 onClick={clearMask}
                 disabled={isLoading || !maskDataUrl}
-                className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-3 rounded-lg transition-colors text-sm disabled:opacity-50"
+                className="w-full bg-gray-800/50 hover:bg-gray-700/50 text-white font-semibold py-2 px-3 rounded-lg transition-colors text-sm disabled:opacity-50"
             >
                 Limpar Seleção
             </button>
@@ -139,9 +139,9 @@ const LocalAdjustmentPanel: React.FC = () => {
 
             {/* Sliders de Ajuste */}
             <div className={`space-y-3 transition-opacity ${!maskDataUrl ? 'opacity-50' : ''}`}>
-                <Slider label="Brilho" value={localAdjustmentFilters.brightness} min={0} max={200} onChange={e => handleFilterChange('brightness', Number(e.target.value))} disabled={isLoading || !maskDataUrl} />
-                <Slider label="Contraste" value={localAdjustmentFilters.contrast} min={0} max={200} onChange={e => handleFilterChange('contrast', Number(e.target.value))} disabled={isLoading || !maskDataUrl} />
-                <Slider label="Saturação" value={localAdjustmentFilters.saturate} min={0} max={200} onChange={e => handleFilterChange('saturate', Number(e.target.value))} disabled={isLoading || !maskDataUrl} />
+                <Slider label="Brilho" value={localFilters.brightness} min={0} max={200} onChange={e => handleFilterChange('brightness', Number(e.target.value))} disabled={isLoading || !maskDataUrl} />
+                <Slider label="Contraste" value={localFilters.contrast} min={0} max={200} onChange={e => handleFilterChange('contrast', Number(e.target.value))} disabled={isLoading || !maskDataUrl} />
+                <Slider label="Saturação" value={localFilters.saturate} min={0} max={200} onChange={e => handleFilterChange('saturate', Number(e.target.value))} disabled={isLoading || !maskDataUrl} />
             </div>
             
             <TipBox>
@@ -151,15 +151,16 @@ const LocalAdjustmentPanel: React.FC = () => {
             {/* Botões de Ação */}
             <div className="flex gap-2 mt-2">
                 <button
-                    onClick={resetLocalAdjustmentFilters}
+                    onClick={resetLocalFilters}
                     disabled={isLoading || !hasLocalAdjustments}
-                    className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-gray-800/50 hover:bg-gray-700/50 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Resetar
                 </button>
                 <button
-                    onClick={handleApplyLocalAdjustments}
-                    disabled={isLoading || !maskDataUrl}
+                    // FIX: Wrapped handler in an arrow function to correctly pass the `applyToAll` state, matching the onClick event signature.
+                    onClick={() => handleApplyLocalAdjustments(true)}
+                    disabled={isLoading || !maskDataUrl || !hasLocalAdjustments}
                     className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg shadow-green-500/20 hover:shadow-xl disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
                 >
                     Aplicar

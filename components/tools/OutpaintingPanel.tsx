@@ -4,22 +4,25 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor, useLoadingError } from '../../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import { outpaintImage } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import { PhotoIcon, ExpandIcon } from '../icons';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
 import PromptEnhancer from './common/PromptEnhancer';
+import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
+import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
 
 const OutpaintingPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading } = useLoadingError();
-    const { currentImage, setInitialImage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
     const [aspectRatio, setAspectRatio] = useState('16:9');
     const [isOptionsExpanded, setIsOptionsExpanded] = useState(true);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const suggestions = usePromptSuggestions(prompt, 'outpainting');
 
      const aspectRatios: { id: string, name: string }[] = [
         { id: '16:9', name: 'Paisagem' },
@@ -30,10 +33,19 @@ const OutpaintingPanel: React.FC = () => {
     ];
 
     useEffect(() => {
-        if (currentImage && !sourceImage) {
-            setSourceImage(currentImage);
+        setShowSuggestions(suggestions.length > 0);
+    }, [suggestions]);
+
+    const handleSelectSuggestion = (suggestion: string) => {
+        setPrompt(suggestion);
+        setShowSuggestions(false);
+    };
+
+    useEffect(() => {
+        if (baseImageFile && !sourceImage) {
+            setSourceImage(baseImageFile);
         }
-    }, [currentImage, sourceImage]);
+    }, [baseImageFile, sourceImage]);
 
     const handleFileSelect = (file: File | null) => {
         setSourceImage(file);
@@ -51,6 +63,7 @@ const OutpaintingPanel: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setResultImage(null);
+        addPromptToHistory(prompt);
         try {
             const result = await outpaintImage(sourceImage, prompt, aspectRatio);
             setResultImage(result);
@@ -89,15 +102,27 @@ const OutpaintingPanel: React.FC = () => {
                         </div>
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-300 mb-1">Prompt (Opcional)</label>
-                            <textarea
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                placeholder="Descreva o que adicionar no espaço expandido..."
-                                className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]"
-                                disabled={isLoading}
-                                rows={4}
-                            />
-                            <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="outpainting" />
+                            <div className="relative">
+                                <textarea
+                                    value={prompt}
+                                    onChange={(e) => setPrompt(e.target.value)}
+                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                                    onFocus={() => setShowSuggestions(suggestions.length > 0)}
+                                    placeholder="Descreva o que adicionar no espaço expandido..."
+                                    className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]"
+                                    disabled={isLoading}
+                                    rows={4}
+                                />
+                                <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="outpainting" />
+                            </div>
+                            {showSuggestions && (
+                                <PromptSuggestionsDropdown
+                                    suggestions={suggestions}
+                                    onSelect={handleSelectSuggestion}
+                                    searchTerm={prompt}
+                                />
+                            )}
+                            <p className="mt-1 text-xs text-gray-500 px-1">Ex: "um céu estrelado com uma lua cheia", "continue a praia com areia e ondas".</p>
                         </div>
                     </div>
                 </CollapsibleToolPanel>

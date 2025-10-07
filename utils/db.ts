@@ -4,7 +4,7 @@
 */
 
 import { openDB, IDBPDatabase } from 'idb';
-import { ToolId, type Workflow } from '../types';
+import { ToolId, type Workflow, type LayerStateSnapshot } from '../types';
 
 const DB_NAME = 'PixelPhotoIADB';
 const HISTORY_STORE = 'historyStore';
@@ -16,7 +16,7 @@ const DB_VERSION = 4;
 
 interface HistoryState {
   id: 'currentUserHistory';
-  history: File[];
+  history: LayerStateSnapshot[];
   historyIndex: number;
   toolHistory: ToolId[];
 }
@@ -67,7 +67,7 @@ const initDB = (): Promise<IDBPDatabase> => {
 };
 
 
-export const saveHistory = async (history: File[], historyIndex: number, toolHistory: ToolId[]): Promise<void> => {
+export const saveHistory = async (history: LayerStateSnapshot[], historyIndex: number, toolHistory: ToolId[]): Promise<void> => {
   const db = await initDB();
   await db.put(HISTORY_STORE, { id: 'currentUserHistory', history, historyIndex, toolHistory });
 };
@@ -106,4 +106,15 @@ export const addWorkflow = async (workflow: Workflow): Promise<void> => {
 export const deleteWorkflow = async (id: string): Promise<void> => {
     const db = await initDB();
     await db.delete(SAVED_WORKFLOWS_STORE, id);
+};
+
+export const savePromptHistory = async (prompts: string[]): Promise<void> => {
+    const db = await initDB();
+    await db.put(PROMPT_HISTORY_STORE, { id: 'userPrompts', prompts });
+};
+
+export const loadPromptHistory = async (): Promise<string[] | undefined> => {
+    const db = await initDB();
+    const result = await db.get(PROMPT_HISTORY_STORE, 'userPrompts');
+    return result?.prompts;
 };

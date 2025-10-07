@@ -10,6 +10,7 @@ import { generateInteriorDesign } from '../../services/geminiService';
 import { dataURLtoFile } from '../../utils/imageUtils';
 import { UploadIcon, SparkleIcon, BrushIcon } from '../icons';
 import PromptEnhancer from './common/PromptEnhancer';
+import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
 
 const ArchitecturalVizPanel: React.FC = () => {
     const [uploadedImage, setUploadedImage] = useState<File | null>(null);
@@ -18,24 +19,46 @@ const ArchitecturalVizPanel: React.FC = () => {
     const [roomStyle, setRoomStyle] = useState<string>('Moderno');
     const [prompt, setPrompt] = useState<string>('');
     const [brushSize, setBrushSize] = useState(40);
+    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
 
-    const { isLoading, error, setError, setIsLoading, setLoadingMessage, currentImage, setInitialImage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, setLoadingMessage, baseImageFile, setInitialImage, addPromptToHistory, promptHistory } = useEditor();
 
     const imageRef = useRef<HTMLImageElement>(null);
     const maskCanvasRef = useRef<HTMLCanvasElement>(null);
 
     const { maskDataUrl, startDrawing, stopDrawing, draw, clearMask } = useMaskCanvas(maskCanvasRef, brushSize);
     
+    useEffect(() => {
+        if (prompt && prompt.trim().length > 1) {
+            const lowerCasePrompt = prompt.toLowerCase();
+            const filtered = promptHistory.filter(p => 
+                p.toLowerCase().includes(lowerCasePrompt) && 
+                p.toLowerCase() !== lowerCasePrompt
+            );
+            setSuggestions(filtered.slice(0, 5));
+            setShowSuggestions(filtered.length > 0);
+        } else {
+            setSuggestions([]);
+            setShowSuggestions(false);
+        }
+    }, [prompt, promptHistory]);
+
+    const handleSelectSuggestion = (suggestion: string) => {
+        setPrompt(suggestion);
+        setShowSuggestions(false);
+    };
+
     const imageUrl = useMemo(() => {
         if (generatedDesign) return generatedDesign;
         return uploadedImage ? URL.createObjectURL(uploadedImage) : null;
     }, [uploadedImage, generatedDesign]);
 
     useEffect(() => {
-        if (currentImage && !uploadedImage) {
-            setUploadedImage(currentImage);
+        if (baseImageFile && !uploadedImage) {
+            setUploadedImage(baseImageFile);
         }
-    }, [currentImage, uploadedImage]);
+    }, [baseImageFile, uploadedImage]);
 
 
     const handleGenerate = async () => {
@@ -46,6 +69,7 @@ const ArchitecturalVizPanel: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setLoadingMessage("Gerando novo design...");
+        addPromptToHistory(prompt);
         try {
             const maskFile = dataURLtoFile(maskDataUrl, 'mask.png');
             const resultDataUrl = await generateInteriorDesign(uploadedImage, maskFile, roomType, roomStyle, prompt);
@@ -89,8 +113,18 @@ const ArchitecturalVizPanel: React.FC = () => {
 
                     <div className="relative">
                         <label className="block text-sm font-medium text-gray-300 mb-1">Instruções Adicionais</label>
-                        <textarea value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="Ex: adicione uma janela grande..." className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]" disabled={isLoading}/>
-                        <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="architecturalViz" />
+                        <div className="relative">
+                            <textarea value={prompt} onChange={e => setPrompt(e.target.value)} onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} onFocus={() => setShowSuggestions(suggestions.length > 0)} placeholder="Ex: adicione uma janela grande..." className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]" disabled={isLoading}/>
+                            <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="architecturalViz" />
+                        </div>
+                        {showSuggestions && (
+                            <PromptSuggestionsDropdown
+                                suggestions={suggestions}
+                                onSelect={handleSelectSuggestion}
+                                searchTerm={prompt}
+                            />
+                        )}
+                        <p className="mt-1 text-xs text-gray-500 px-1">Exemplos: "adicione uma grande janela com vista para o oceano", "troque o piso por madeira de carvalho claro".</p>
                     </div>
                     
                     <div className="flex flex-col gap-1">

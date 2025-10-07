@@ -8,7 +8,7 @@ import React from 'react';
 // Este ficheiro é agora a única fonte de verdade para todas as definições de tipos na aplicação.
 
 // Tipos de todo o editor
-export type TabId = 'extractArt' | 'removeBg' | 'style' | 'portraits' | 'styleGen' | 'adjust' | 'relight' | 'neuralFilters' | 'generativeEdit' | 'crop' | 'upscale' | 'unblur' | 'trends' | 'localAdjust' | 'dustAndScratches' | 'history' | 'objectRemover' | 'texture' | 'magicMontage' | 'photoRestoration' | 'text' | 'lowPoly' | 'pixelArt';
+export type TabId = 'layers' | 'extractArt' | 'removeBg' | 'style' | 'portraits' | 'styleGen' | 'adjust' | 'relight' | 'neuralFilters' | 'generativeEdit' | 'crop' | 'upscale' | 'unblur' | 'trends' | 'localAdjust' | 'dustAndScratches' | 'history' | 'objectRemover' | 'texture' | 'magicMontage' | 'photoRestoration' | 'text' | 'lowPoly' | 'pixelArt' | 'faceSwap';
 export type ToastType = 'success' | 'error' | 'info';
 
 // Tipos do Painel de Transformação
@@ -25,8 +25,8 @@ export type VideoAspectRatio = '16:9' | '1:1' | '9:16';
 
 export type ToolId =
   // Ferramentas de Geração
-  | 'sketchRender'
   | 'imageGen'
+  | 'sketchRender'
   | 'creativeFusion'
   | 'outpainting'
   | 'imageVariation'
@@ -34,7 +34,6 @@ export type ToolId =
   | 'characterDesign'
   | 'architecturalViz'
   | 'interiorDesign'
-  | 'faceSwap'
   | 'videoGen'
   | 'patternGen'
   | 'textEffects'
@@ -69,9 +68,13 @@ export type ToolId =
   | 'magicMontage'
   | 'faceRecovery'
   | 'denoise'
+  | 'faceSwap'
+  | 'localAdjust'
   // Ferramentas de Fluxo de Trabalho
   | 'bananimate'
-  | 'polaroid';
+  | 'polaroid'
+  | 'funkoPopStudio'
+  | 'tryOn';
 
 // Novo: Tipo para a funcionalidade de Deteção de Objetos
 export interface DetectedObject {
@@ -128,4 +131,81 @@ export interface PredefinedSearch {
     type: 'tool' | 'workflow';
     payload: ToolId | ToolId[];
   };
+}
+
+// New Layer types
+export type LayerType = 'image' | 'adjustment';
+
+export type BlendMode =
+  | 'normal'
+  | 'multiply'
+  | 'screen'
+  | 'overlay'
+  | 'darken'
+  | 'lighten'
+  | 'color-dodge'
+  | 'color-burn'
+  | 'hard-light'
+  | 'soft-light'
+  | 'difference'
+  | 'exclusion'
+  | 'hue'
+  | 'saturation'
+  | 'color'
+  | 'luminosity';
+
+export interface BaseLayer {
+  id: string;
+  name: string;
+  isVisible: boolean;
+  opacity: number; // 0-100
+  blendMode: BlendMode;
+}
+
+export interface ImageLayer extends BaseLayer {
+  type: 'image';
+  file: File;
+  isGif?: boolean;
+}
+
+// Reusing the existing filter type from EditorContext
+export type FilterState = {
+  brightness: number;
+  contrast: number;
+  saturate: number;
+  sepia: number;
+  invert: number;
+  grayscale: number;
+  hueRotate: number;
+  blur: number;
+  curve?: number[];
+};
+
+export interface AdjustmentLayer extends BaseLayer {
+  type: 'adjustment';
+  filters: Partial<FilterState>;
+}
+
+export type Layer = ImageLayer | AdjustmentLayer;
+
+// Adicionado para suportar frames de GIF no histórico e estado
+export interface GifFrame {
+  // O armazenamento de dados brutos como ImageData não é serializável para o IndexedDB
+  imageData: {
+      data: Uint8ClampedArray;
+      width: number;
+      height: number;
+  };
+  delay: number;
+}
+
+// History will now store snapshots of the entire layer state
+export interface LayerStateSnapshot {
+    layers: Layer[];
+    activeLayerId: string | null;
+    gifFrames?: GifFrame[];
+}
+
+export interface EditorContextType {
+    initialPromptFromMetadata: string | null;
 }

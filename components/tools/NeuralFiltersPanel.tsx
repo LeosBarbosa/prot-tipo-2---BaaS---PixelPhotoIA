@@ -27,8 +27,8 @@ const NeuralFiltersPanel: React.FC = () => {
     const { isLoading, isGif, generateAIPreview, isPreviewLoading, previewState } = useEditor();
     const [applyToAll, setApplyToAll] = useState(true);
 
-    const handleFilterClick = (prompt: string) => {
-        generateAIPreview(prompt, applyToAll);
+    const handleFilterClick = (filter: { name: string; prompt: string; bg: string; }) => {
+        generateAIPreview(filter, applyToAll);
     };
 
     return (
@@ -45,7 +45,7 @@ const NeuralFiltersPanel: React.FC = () => {
                     {filters.map(filter => (
                         <button
                             key={filter.name}
-                            onClick={() => handleFilterClick(filter.prompt)}
+                            onClick={() => handleFilterClick(filter)}
                             disabled={isLoading || isPreviewLoading}
                             className="aspect-video bg-gray-800 rounded-lg text-center font-semibold text-white hover:scale-105 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex flex-col items-center justify-center p-2 relative overflow-hidden group"
                         >

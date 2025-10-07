@@ -5,7 +5,20 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PixelPhoto IA</title>
+    <script>
+      // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+      if (localStorage.getItem('theme') === 'light') {
+        document.documentElement.classList.remove('dark')
+      } else {
+        document.documentElement.classList.add('dark')
+      }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
   <script type="importmap">
 {
   "imports": {
@@ -38,6 +51,9 @@ body {
     background-size: 250% 250%;
     min-height: 100vh;
     animation: move-nebula 200s ease-in-out infinite alternate;
+    width: 100%;
+    overflow-x: hidden;
+    overscroll-behavior: none;
 }
 
 @keyframes move-nebula {
@@ -75,7 +91,7 @@ body {
   to { opacity: 1; }
 }
 .animate-fade-in {
-  animation: fade-in 0.2s ease-out forwards;
+  animation: fade-in 0.3s ease-out forwards;
 }
 @keyframes zoom-rise {
   from {
@@ -96,9 +112,21 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in-text {
-  animation: fade-in-text 0.4s ease-out forwards;
+  animation: fade-in-text 0.5s ease-out forwards;
+  opacity: 0; /* Começa invisível para a animação funcionar */
+  animation-fill-mode: forwards;
 }
 
+@keyframes text-gradient-pan {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.animate-text-gradient-pan {
+    background-size: 200% 200%;
+    animation: text-gradient-pan 10s ease-in-out infinite;
+}
 
 #star-bg {
     position: fixed;
@@ -200,6 +228,9 @@ body {
 /* Scrollbar styles */
 .scrollbar-thin {
     scrollbar-width: thin;
+    scrollbar-color: #A0AEC0 #E2E8F0;
+}
+.dark .scrollbar-thin {
     scrollbar-color: #4A5568 #2D3748;
 }
 
@@ -209,17 +240,29 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
-    background: #2D3748;
+    background: #E2E8F0;
     border-radius: 4px;
 }
+.dark .scrollbar-thin::-webkit-scrollbar-track {
+    background: #2D3748;
+}
+
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #A0AEC0;
+    border-radius: 4px;
+    border: 2px solid #E2E8F0;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: #4A5568;
     border-radius: 4px;
     border: 2px solid #2D3748;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: #718096;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background-color: #718096;
 }
 

@@ -29,7 +29,7 @@ const PolaroidPanel: React.FC = () => {
         error, 
         setError, 
         setIsLoading, 
-        currentImage,
+        baseImageFile,
         setInitialImage, 
         setActiveTool 
     } = useEditor();
@@ -40,10 +40,10 @@ const PolaroidPanel: React.FC = () => {
     const [resultImage, setResultImage] = useState<string | null>(null);
 
     useEffect(() => {
-        if (currentImage && !personImage) {
-            setPersonImage(currentImage);
+        if (baseImageFile && !personImage) {
+            setPersonImage(baseImageFile);
         }
-    }, [currentImage, personImage]);
+    }, [baseImageFile, personImage]);
 
     const handlePersonFileSelect = (file: File | null) => {
         setPersonImage(file);
@@ -132,6 +132,7 @@ const PolaroidPanel: React.FC = () => {
                 <div>
                     <label htmlFor="negative-prompt" className="text-sm font-semibold text-gray-300">O que evitar (Opcional)</label>
                     <textarea id="negative-prompt" value={negativePrompt} onChange={(e) => setNegativePrompt(e.target.value)} placeholder="Ex: 'mãos extras', 'rosto deformado'..." className="mt-1 w-full bg-gray-800/50 border border-gray-600 rounded-lg p-2 text-base min-h-[60px] resize-none text-gray-300 placeholder-gray-500" disabled={isLoading} rows={2}/>
+                    <p className="mt-1 text-xs text-gray-500 px-1">Liste o que evitar para melhorar o resultado. Ex: 'mãos extras', 'rosto duplicado'.</p>
                 </div>
                 
                 <div className="mt-auto flex flex-col gap-3">

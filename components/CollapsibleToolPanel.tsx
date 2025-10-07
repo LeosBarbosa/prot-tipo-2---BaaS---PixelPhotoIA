@@ -22,9 +22,9 @@ const CollapsibleToolPanel: React.FC<CollapsibleToolPanelProps> = ({
   onExpandToggle,
 }) => {
   return (
-    <div className="bg-gray-900/50 border border-gray-700 rounded-lg overflow-hidden transition-all duration-300">
+    <div className="bg-gray-800/80 border border-gray-700 rounded-lg overflow-hidden transition-all duration-300">
       <header
-        className="flex items-center p-3 cursor-pointer select-none hover:bg-white/5"
+        className="flex items-center p-3 cursor-pointer select-none hover:bg-gray-700/60"
         onClick={onExpandToggle}
         aria-expanded={isExpanded}
       >

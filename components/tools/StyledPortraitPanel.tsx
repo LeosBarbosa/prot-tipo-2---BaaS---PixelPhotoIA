@@ -4,7 +4,7 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor, useLoadingError } from '../../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import { generateStyledPortrait } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
@@ -12,8 +12,7 @@ import { ShirtIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 
 const StyledPortraitPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading } = useLoadingError();
-    const { currentImage, setInitialImage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage } = useEditor();
     const [personImage, setPersonImage] = useState<File | null>(null);
     const [styleImage, setStyleImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
@@ -21,10 +20,10 @@ const StyledPortraitPanel: React.FC = () => {
     const [negativePrompt, setNegativePrompt] = useState('');
 
     useEffect(() => {
-        if (currentImage && !personImage) {
-            setPersonImage(currentImage);
+        if (baseImageFile && !personImage) {
+            setPersonImage(baseImageFile);
         }
-    }, [currentImage, personImage]);
+    }, [baseImageFile, personImage]);
 
     const handlePersonFileSelect = (file: File | null) => {
         setPersonImage(file);
@@ -42,6 +41,7 @@ const StyledPortraitPanel: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setResultImage(null);
+        addPromptToHistory(prompt);
         try {
             const result = await generateStyledPortrait(personImage, styleImage, prompt, negativePrompt);
             setResultImage(result);
@@ -80,6 +80,9 @@ const StyledPortraitPanel: React.FC = () => {
                   onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
                   isLoading={isLoading}
                   toolId="styledPortrait"
+                  promptPlaceholder="Ex: mantenha o cabelo curto, adicione um colar..."
+                  promptHelperText="Dê instruções para refinar a combinação de estilos. O rosto será preservado."
+                  negativePromptHelperText="Ex: óculos, chapéu, cores específicas."
                 />
 
                 <p className="text-xs text-gray-500 text-center">A IA usará a roupa, o cenário e a luz da "Foto de Estilo" e aplicará à "Sua Foto", sem alterar seu rosto.</p>

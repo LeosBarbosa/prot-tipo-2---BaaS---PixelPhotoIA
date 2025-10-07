@@ -27,7 +27,8 @@ const enhancementInstructions: Partial<Record<ToolId, string>> = {
     relight: 'Enhance this prompt for relighting a photo. Add details about the light source (e.g., neon, candlelight, sun), color, direction, and intensity to create a specific mood.',
     generativeEdit: 'Enhance this prompt for a generative edit task. Be more descriptive and specific about the object to add, remove, or modify. Describe the desired style, texture, and how it should blend with the rest of the image.',
     bananimate: 'Enhance this prompt for animating a still image. Be more descriptive about the desired motion. Specify which parts of the image should move and how (e.g., "make the clouds drift slowly from left to right", "make the person\'s eyes blink naturally").',
-    aiPortraitStudio: 'Enhance this prompt for a stylized AI portrait. Depending on the chosen style (e.g., caricature, Pixar), add relevant details about expression, accessories, or background to complement the transformation.'
+    aiPortraitStudio: 'Enhance this prompt for a stylized AI portrait. Depending on the chosen style (e.g., caricature, Pixar), add relevant details about expression, accessories, or background to complement the transformation.',
+    vectorConverter: 'Enhance this prompt for converting a bitmap to a vector style. Add details about line weight, color palette (e.g., flat, gradient), level of abstraction, and specific vector art styles (e.g., flat illustration, geometric, cartoon).',
 };
 
 export const enhancePrompt = async (prompt: string, toolId: ToolId): Promise<string> => {
@@ -37,11 +38,11 @@ export const enhancePrompt = async (prompt: string, toolId: ToolId): Promise<str
     }
 
     try {
-        const fullPrompt = `Based on the following instruction, rewrite and enrich the user's prompt to make it much more detailed and effective for an AI image generator. ONLY return the new, rewritten prompt. Do not add any preamble, explanation, or quotation marks.
+        const fullPrompt = `Com base na seguinte instrução, reescreva e enriqueça o prompt do usuário para torná-lo muito mais detalhado e eficaz para um gerador de imagens de IA. RESPONDA EM PORTUGUÊS (BRASIL). Retorne APENAS o novo prompt reescrito. Não adicione nenhum preâmbulo, explicação ou aspas.
 
-Instruction: ${instruction}
+Instrução: ${instruction}
 
-User's prompt: "${prompt}"`;
+Prompt do usuário: "${prompt}"`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
