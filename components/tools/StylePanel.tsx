@@ -6,10 +6,10 @@
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
-import StylePreview from '../common/StylePreview';
 import TipBox from '../common/TipBox';
 
 const styles = [
+    { name: 'Desenho Animado', prompt: 'Transforme a imagem em um estilo de desenho animado vibrante. Aplique contornos pretos grossos e definidos para delinear as formas. Use uma paleta de cores primárias saturadas e vibrantes. Exagere levemente as características principais para um efeito expressivo e divertido, semelhante a um desenho animado moderno.', bg: 'bg-gradient-to-br from-yellow-400 to-orange-500' },
     { name: 'Anime', prompt: 'Estilo de anime dos anos 90, cores vibrantes, linhas nítidas, iluminação de cena dramática.', bg: 'bg-gradient-to-br from-pink-400 to-purple-500' },
     { name: 'Van Gogh', prompt: 'Pintura a óleo no estilo de Vincent Van Gogh, com pinceladas espessas e expressivas, luz do final da tarde, composição dinâmica.', bg: 'bg-gradient-to-br from-yellow-400 to-blue-600' },
     { name: 'Cyberpunk', prompt: 'Estilo cyberpunk, com luzes de neon, atmosfera sombria e chuvosa, detalhes de alta tecnologia.', bg: 'bg-gradient-to-br from-cyan-400 to-indigo-600' },
@@ -36,15 +36,16 @@ const StylePanel: React.FC = () => {
                 <p className="text-sm text-gray-400 -mt-1">Transforme sua foto com um clique.</p>
             </div>
             
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {styles.map(style => (
                     <button
                         key={style.name}
                         onClick={() => handleApplyStyle(style.prompt, applyToAll)}
                         disabled={isLoading}
-                        className="aspect-square bg-gray-800 rounded-lg text-center font-semibold text-white hover:scale-105 transition-transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex flex-col items-center justify-center p-2 relative overflow-hidden group"
+                        className="group relative aspect-square rounded-lg text-center font-semibold text-white transition-transform duration-200 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:transform-none flex flex-col items-center justify-center p-2 overflow-hidden shadow-lg"
                     >
-                        <div className={`absolute inset-0 ${style.bg} opacity-70 group-hover:opacity-90 transition-opacity`}></div>
+                        <div className={`absolute inset-0 ${style.bg} transition-transform duration-300 group-hover:scale-110`}></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent group-hover:from-black/50 transition-colors"></div>
                         <span className="relative z-10 drop-shadow-md text-sm">{style.name}</span>
                     </button>
                 ))}

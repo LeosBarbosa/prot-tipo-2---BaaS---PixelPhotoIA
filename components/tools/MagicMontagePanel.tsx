@@ -8,7 +8,7 @@ import { useEditor } from '../../context/EditorContext';
 import { generateMagicMontage, validatePromptSpecificity } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { MagicWandIcon, DownloadIcon, BrushIcon, LayersIcon, FireIcon, GtaIcon, UserIcon, LineArtIcon, SunIcon, TextToolIcon } from '../icons';
+import { MagicWandIcon, DownloadIcon, BrushIcon, LayersIcon, FireIcon, GtaIcon, UserIcon, LineArtIcon, SunIcon, TextToolIcon, ClockIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import { dataURLtoFile } from '../../utils/imageUtils';
 import TipBox from '../common/TipBox';
@@ -67,6 +67,18 @@ const presets = [
         prompt: "Crie um retrato hiperdetalhado em preto e branco, com o rosto formado inteiramente por palavras motivacionais e positivas, em tipografia em negrito. As palavras devem seguir os contornos, sombras e realces do rosto de referência enviado, tornando as características faciais 99,99% idênticas às da foto de referência. Mostre apenas o rosto, sem necessidade de roupas. Use um fundo escuro para que o rosto se destaque, com palavras como \"GRATO\", \"MANTENHA-SE FORTE\", \"PENSE POSITIVO\", \"SAUDÁVEL\", \"TRABALHO DURO\", \"RELAXE\" e outras palavras positivas em inglês claramente visíveis e integradas à estrutura do rosto. Estilo tipográfico de retrato artístico, poderoso, inspirador e realista.",
         negativePrompt: "desfocado, distorcido, baixa qualidade, irrealista, feio, rosto deformado, cores.",
         icon: <TextToolIcon className="w-5 h-5" />
+    },
+    {
+        name: "Escultor de Si Mesmo",
+        prompt: "Obra de arte 3D hiper-realista de uma pessoa da imagem enviada, vestindo uma roupa de trabalho (suja) em pé ao lado de um grande bloco de pedra, ligeiramente virada para o espectador para que seu rosto seja claramente visível, esculpindo um busto de pedra gigante de si mesmo. Preserve as características faciais exatas, tom de pele e expressão. O busto é esculpido em rocha bruta texturizada com marcas de cinzel visíveis, poeira e superfícies irregulares. Ele segura um martelo em meio à ação, cinzelando a semelhança semi-emergida. Pequenos fragmentos de rocha no chão.",
+        negativePrompt: "desfocado, anatomia distorcida, estilo de desenho animado, baixa resolução, supersaturação, rostos duplicados, membros extras, irrealista.",
+        icon: <LineArtIcon className="w-5 h-5" />
+    },
+    {
+        name: "Dispersão Urbana",
+        prompt: "Edite esta imagem para mostrar uma pessoa andando para a frente em uma rua urbana molhada de chuva, posicionada no terço inferior central do quadro, capturada em uma dramática visão de três quartos. A pessoa está vestindo um sofisticado sobretudo cinza-carvão sobre uma gola alta preta e calças escuras justas, com botas de couro preto polido. Sua mão está levantada perto do peito em um gesto contemplativo, verificando o relógio. O lado esquerdo de seu corpo está se desintegrando dramaticamente em um efeito de dispersão explosiva — gavinhas de fumaça rodopiantes, engrenagens de relógio ornamentadas, fragmentos quebrados, papéis espalhados e partículas metálicas irrompendo para fora em tons de prata, cinza e azul-ardósia. O fundo apresenta um desfiladeiro urbano enevoado com prédios imponentes desaparecendo em um céu nublado e melancólico. Profundidade de campo cinematográfica com luzes bokeh à distância. Gradação de cores azul-acinzentado melancólico com alto contraste. Estilo de arte digital fotorrealista com efeitos de desintegração surreais. Qualidade 8K, iluminação dramática de cima criando destaques sutis no sobretudo.",
+        negativePrompt: "desfocado, anatomia distorcida, estilo de desenho animado, baixa resolução, supersaturação, cores berrantes, efeito de dispersão pouco realista.",
+        icon: <ClockIcon className="w-5 h-5" />
     },
 ];
 
@@ -137,9 +149,6 @@ const MagicMontagePanel: React.FC = () => {
             setLoadingMessage('Realizando a mágica...');
 
             let fullPrompt = prompt;
-            if (secondImage) {
-                fullPrompt = `Usando a primeira imagem (principal) como base e a segunda imagem (opcional) como um elemento a ser adicionado/combinado, siga estas instruções: ${prompt}`;
-            }
             if (negativePrompt.trim()) {
                 fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
             }

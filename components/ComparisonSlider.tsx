@@ -4,6 +4,7 @@
 */
 
 import React, { useState, useRef, useCallback } from 'react';
+import { CompareArrowsIcon } from './icons';
 
 interface ComparisonSliderProps {
   originalSrc: string;
@@ -23,36 +24,70 @@ const ComparisonSlider: React.FC<ComparisonSliderProps> = ({ originalSrc, modifi
     const percent = (x / rect.width) * 100;
     setSliderPosition(percent);
   }, []);
-  
-  const handleMouseDown = (e: React.MouseEvent) => {
-    isDragging.current = true;
-    handleMove(e.clientX);
-  };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging.current) {
-      handleMove(e.clientX);
-    }
-  };
+  const handleInteractionMove = useCallback((e: MouseEvent | TouchEvent) => {
+      if (!isDragging.current) return;
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      handleMove(clientX);
+  }, [handleMove]);
 
-  const handleMouseUp = () => {
+  const handleInteractionEnd = useCallback(() => {
+    if (!isDragging.current) return;
     isDragging.current = false;
-  };
+    document.body.style.cursor = '';
+    window.removeEventListener('mousemove', handleInteractionMove);
+    window.removeEventListener('mouseup', handleInteractionEnd);
+    window.removeEventListener('touchmove', handleInteractionMove);
+    window.removeEventListener('touchend', handleInteractionEnd);
+  }, [handleInteractionMove]);
+
+  const handleInteractionStart = useCallback((clientX: number) => {
+    isDragging.current = true;
+    document.body.style.cursor = 'ew-resize';
+    handleMove(clientX);
+    window.addEventListener('mousemove', handleInteractionMove);
+    window.addEventListener('mouseup', handleInteractionEnd);
+    window.addEventListener('touchmove', handleInteractionMove);
+    window.addEventListener('touchend', handleInteractionEnd);
+  }, [handleMove, handleInteractionMove, handleInteractionEnd]);
+
+  // Mouse event for starting drag
+  const onMouseDown = (e: React.MouseEvent) => {
+      e.preventDefault();
+      handleInteractionStart(e.clientX);
+  }
+  
+  // Touch event for starting drag
+  const onTouchStart = (e: React.TouchEvent) => {
+      e.preventDefault();
+      handleInteractionStart(e.touches[0].clientX);
+  }
+
+  // Clean up listeners on unmount
+  React.useEffect(() => {
+      return () => {
+          handleInteractionEnd();
+      }
+  }, [handleInteractionEnd]);
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full max-w-full max-h-full aspect-auto select-none overflow-hidden"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      className="relative w-full max-w-full max-h-full aspect-auto select-none overflow-hidden rounded-lg cursor-ew-resize"
+      onMouseDown={onMouseDown}
+      onTouchStart={onTouchStart}
     >
+      {/* Modified Image (After) */}
       <img
         src={modifiedSrc}
-        alt="Modified"
+        alt="Modificado"
+        draggable={false}
         className="block w-full h-auto max-h-full object-contain"
         style={{ filter: filterStyle, transition: 'filter 0.15s linear' }}
       />
+      <div className="absolute top-2 right-2 bg-black/50 text-white text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-md pointer-events-none z-10">Depois</div>
+
+      {/* Original Image (Before) */}
       <div
         className="absolute top-0 left-0 h-full w-full overflow-hidden"
         style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
@@ -60,18 +95,20 @@ const ComparisonSlider: React.FC<ComparisonSliderProps> = ({ originalSrc, modifi
         <img
           src={originalSrc}
           alt="Original"
+          draggable={false}
           className="block w-full h-auto max-h-full object-contain"
         />
+        <div className="absolute top-2 left-2 bg-black/50 text-white text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-md pointer-events-none z-10">Antes</div>
       </div>
+      
+      {/* Slider Handle */}
       <div
-        className="absolute top-0 h-full w-1 bg-white/50 cursor-ew-resize"
-        style={{ left: `calc(${sliderPosition}% - 2px)` }}
-        onMouseDown={handleMouseDown}
+        className="absolute top-0 h-full w-1 bg-white/70 pointer-events-none group"
+        style={{ left: `calc(${sliderPosition}% - 0.5px)` }}
+        aria-hidden="true"
       >
-        <div className="absolute top-1/2 -translate-y-1/2 -left-3 bg-white rounded-full p-1 shadow-lg">
-          <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-          </svg>
+        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white rounded-full p-1.5 shadow-lg border-2 border-gray-800 transition-transform group-hover:scale-110">
+          <CompareArrowsIcon className="w-5 h-5 text-gray-800" />
         </div>
       </div>
     </div>

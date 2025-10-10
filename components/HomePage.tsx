@@ -1,12 +1,14 @@
+
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useEditor } from '../context/EditorContext';
-import { tools } from '../config/tools';
-import { type ToolConfig, type ToolCategory, type PredefinedSearch, type ToolId } from '../types';
+import { tools, toolToTabMap } from '../config/tools';
+import { type ToolConfig, type ToolCategory, type PredefinedSearch, type ToolId, TabId } from '../types';
 import SearchModule from './SearchModule';
 import RecentTools from './RecentTools';
 import SavedWorkflows from './SavedWorkflows';
@@ -15,11 +17,9 @@ import Spinner from './Spinner';
 import { GenerationIcon, WorkflowIcon, EditingIcon } from './icons';
 import { predefinedSearches } from '../config/predefinedSearches';
 import PredefinedSearchCard from './PredefinedSearchCard';
-import RestoredSessionCard from './RestoredSessionCard';
 import PromptSuggestions from './PromptSuggestions';
 import StartScreen from './StartScreen';
 
-// FIX: Changed icon type to React.ReactElement<{ className?: string }> to be compatible with React.cloneElement and provide specific prop types.
 const categoryConfig: Record<ToolCategory, { title: string; description: string; icon: React.ReactElement<{ className?: string }> }> = {
     generation: { 
         title: "Geração", 
@@ -39,10 +39,30 @@ const categoryConfig: Record<ToolCategory, { title: string; description: string;
 };
 
 const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
-    const { setActiveTool } = useEditor()!;
+    const { setActiveTool, baseImageFile, setToast, setActiveTab } = useEditor()!;
+    
+    const handleClick = () => {
+        if (tool.category === 'editing') {
+            if (baseImageFile) {
+                // Image exists, switch to editing view and the correct tab
+                setActiveTool(null);
+                const tabId = toolToTabMap[tool.id];
+                if (tabId) {
+                    setActiveTab(tabId);
+                }
+            } else {
+                // No image, prompt user to upload one. The uploader is already visible.
+                setToast({ message: `Primeiro, carregue uma imagem para usar a ferramenta '${tool.name}'.`, type: 'info' });
+            }
+        } else {
+            // It's a generation or workflow tool, open it in a modal
+            setActiveTool(tool.id);
+        }
+    };
+
     return (
         <button
-            onClick={() => setActiveTool(tool.id)}
+            onClick={handleClick}
             className="group relative bg-gray-800/70 border border-gray-700 rounded-xl p-4 sm:p-6 text-center hover:bg-gray-700/70 hover:border-blue-500/50 transition-all duration-300 transform hover:-translate-y-1 active:scale-95 shadow-lg hover:shadow-blue-500/10"
         >
             <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 flex items-center justify-center bg-gray-900/50 rounded-lg transition-all duration-300 group-hover:scale-110 group-hover:bg-blue-500/20">
@@ -56,13 +76,20 @@ const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
     );
 };
 
+const PAGE_SIZE = 9; // Carregar 9 ferramentas de cada vez
+
 const HomePage: React.FC = () => {
-    const { handleSmartSearch, isSmartSearching, smartSearchResult, setSmartSearchResult, setActiveTool, hasRestoredSession, handleFileSelect } = useEditor()!;
+    const { handleSmartSearch, isSmartSearching, smartSearchResult, setSmartSearchResult, setActiveTool, handleFileSelect } = useEditor()!;
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<ToolCategory>('generation');
     const [predefinedResult, setPredefinedResult] = useState<PredefinedSearch | null>(null);
     const [suggestions, setSuggestions] = useState<ToolConfig[]>([]);
     const searchContainerRef = useRef<HTMLDivElement>(null);
+    
+    // Estado para paginação
+    const [displayedTools, setDisplayedTools] = useState<ToolConfig[]>([]);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const observer = useRef<IntersectionObserver | null>(null);
 
     const categoryKeys = Object.keys(categoryConfig) as ToolCategory[];
 
@@ -136,34 +163,53 @@ const HomePage: React.FC = () => {
         return tools.filter(tool => tool.category === activeCategory);
     }, [isSearching, searchTerm, activeCategory, smartSearchResult]);
     
+    // Efeito para resetar as ferramentas exibidas quando a filtragem muda
+    useEffect(() => {
+        setDisplayedTools(filteredTools.slice(0, PAGE_SIZE));
+    }, [filteredTools]);
+
+    // Função para carregar mais ferramentas
+    const loadMoreTools = useCallback(() => {
+        setIsLoadingMore(true);
+        // Simular um atraso de rede para melhor UX
+        setTimeout(() => {
+            const currentLength = displayedTools.length;
+            const nextTools = filteredTools.slice(currentLength, currentLength + PAGE_SIZE);
+            setDisplayedTools(prevTools => [...prevTools, ...nextTools]);
+            setIsLoadingMore(false);
+        }, 500);
+    }, [displayedTools.length, filteredTools]);
+
+    // Callback ref do Intersection Observer para o último elemento
+    const lastToolElementRef = useCallback(node => {
+        if (isLoadingMore) return;
+        if (observer.current) observer.current.disconnect();
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && displayedTools.length < filteredTools.length) {
+                loadMoreTools();
+            }
+        });
+        if (node) observer.current.observe(node);
+    }, [isLoadingMore, loadMoreTools, displayedTools.length, filteredTools.length]);
+
     const showMainContent = !isSmartSearching && !smartSearchResult;
 
 
     return (
         <div className="container mx-auto px-4 py-8 sm:py-12 animate-fade-in">
-             {hasRestoredSession ? (
-                <>
-                    <RestoredSessionCard />
-                     <div className="text-center my-12 relative">
-                        <hr className="border-t border-gray-700" />
-                        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-4 text-gray-500 font-bold uppercase">OU</span>
-                    </div>
-                </>
-            ) : (
-                <div className="mb-12">
-                     <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-center bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 text-transparent bg-clip-text animate-text-gradient-pan">
-                        Dê Vida às Suas Imagens
-                    </h1>
-                    <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-400 text-center mb-8 animate-fade-in-text" style={{ animationDelay: '200ms' }}>
-                       Faça upload de uma foto para começar a editar ou use nossas ferramentas de IA para criar algo novo do zero.
-                    </p>
-                    <StartScreen onFileSelect={handleFileSelect} />
-                     <div className="text-center my-12 relative">
-                        <hr className="border-t border-gray-700" />
-                        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-4 text-gray-500 font-bold uppercase">OU</span>
-                    </div>
+            <div className="mb-12">
+                 <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-center bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 text-transparent bg-clip-text animate-text-gradient-pan">
+                    Dê Vida às Suas Imagens
+                </h1>
+                <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-400 text-center mb-8 animate-fade-in-text" style={{ animationDelay: '200ms' }}>
+                   Faça upload de uma foto para começar a editar ou use nossas ferramentas de IA para criar algo novo do zero.
+                </p>
+                <StartScreen onFileSelect={handleFileSelect} />
+                 <div className="text-center my-12 relative">
+                    <hr className="border-t border-gray-700" />
+                    <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-4 text-gray-500 font-bold uppercase">OU</span>
                 </div>
-            )}
+            </div>
             
             <div className="text-center mb-10">
                 <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 text-transparent bg-clip-text animate-text-gradient-pan" style={{ animationDelay: '5s' }}>
@@ -240,18 +286,29 @@ const HomePage: React.FC = () => {
                  {smartSearchResult && (
                     <SmartSearchResultCard result={smartSearchResult} />
                  )}
-                 {showMainContent && filteredTools.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-                        {filteredTools.map(tool => (
-                            <ToolCard key={tool.id} tool={tool} />
-                        ))}
-                    </div>
-                )}
-                 {showMainContent && isSearching && filteredTools.length === 0 && (
-                    <div className="text-center py-16">
-                        <p className="text-gray-400 text-lg">Nenhuma ferramenta encontrada para "{searchTerm}".</p>
-                    </div>
-                )}
+                 {showMainContent && (
+                    <>
+                        {displayedTools.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                                {displayedTools.map((tool, index) => (
+                                     <div key={tool.id} ref={index === displayedTools.length - 1 ? lastToolElementRef : null}>
+                                        <ToolCard tool={tool} />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            isSearching && !isLoadingMore && (
+                                <div className="text-center py-16">
+                                    <p className="text-gray-400 text-lg">Nenhuma ferramenta encontrada para "{searchTerm}".</p>
+                                </div>
+                            )
+                        )}
+                        
+                        <div className="h-20 flex justify-center items-center">
+                            {isLoadingMore && <Spinner />}
+                        </div>
+                    </>
+                 )}
             </section>
         </div>
     );

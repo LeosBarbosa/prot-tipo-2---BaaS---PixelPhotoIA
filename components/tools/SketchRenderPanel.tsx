@@ -9,28 +9,14 @@ import { renderSketch } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import { BrushIcon } from '../icons';
-import CollapsibleToolPanel from '../CollapsibleToolPanel';
-import PromptEnhancer from './common/PromptEnhancer';
-import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
-import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 
 const SketchRenderPanel: React.FC = () => {
     const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage } = useEditor();
     const [sketchImage, setSketchImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
-    const [isPromptExpanded, setIsPromptExpanded] = useState(true);
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const suggestions = usePromptSuggestions(prompt, 'sketchRender');
-
-    useEffect(() => {
-        setShowSuggestions(suggestions.length > 0);
-    }, [suggestions]);
-
-    const handleSelectSuggestion = (suggestion: string) => {
-        setPrompt(suggestion);
-        setShowSuggestions(false);
-    };
+    const [negativePrompt, setNegativePrompt] = useState('');
 
     useEffect(() => {
         if (baseImageFile && !sketchImage) {
@@ -60,7 +46,11 @@ const SketchRenderPanel: React.FC = () => {
         setResultImage(null);
         addPromptToHistory(prompt);
         try {
-            const result = await renderSketch(sketchImage, prompt);
+            let fullPrompt = prompt;
+            if (negativePrompt.trim()) {
+                fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
+            }
+            const result = await renderSketch(sketchImage, fullPrompt);
             setResultImage(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -82,34 +72,18 @@ const SketchRenderPanel: React.FC = () => {
                     label="Seu Esboço"
                 />
                 
-                <CollapsibleToolPanel
+                <CollapsiblePromptPanel
                     title="Descrição do Render"
-                    icon={<BrushIcon className="w-5 h-5" />}
-                    isExpanded={isPromptExpanded}
-                    onExpandToggle={() => setIsPromptExpanded(!isPromptExpanded)}
-                >
-                    <div className="relative">
-                        <textarea
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                            onFocus={() => setShowSuggestions(suggestions.length > 0)}
-                            placeholder="Ex: render 3D de um tênis esportivo, com materiais realistas, em um fundo de estúdio..."
-                            className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
-                            disabled={isLoading}
-                            rows={5}
-                        />
-                         <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="sketchRender" />
-                         {showSuggestions && (
-                            <PromptSuggestionsDropdown
-                                suggestions={suggestions}
-                                onSelect={handleSelectSuggestion}
-                                searchTerm={prompt}
-                            />
-                        )}
-                        <p className="mt-1 text-xs text-gray-500 px-1">Especifique materiais (ex: metal escovado), texturas e ambiente para um resultado fotorrealista.</p>
-                    </div>
-                </CollapsibleToolPanel>
+                    prompt={prompt}
+                    setPrompt={setPrompt}
+                    negativePrompt={negativePrompt}
+                    onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
+                    isLoading={isLoading}
+                    toolId="sketchRender"
+                    promptPlaceholder="Ex: render 3D de um tênis esportivo..."
+                    promptHelperText="Especifique materiais (ex: metal escovado), texturas e ambiente para um resultado fotorrealista."
+                    negativePromptHelperText="Ex: distorcido, cores erradas, desfocado."
+                />
                 
                 <button
                     onClick={handleGenerate}

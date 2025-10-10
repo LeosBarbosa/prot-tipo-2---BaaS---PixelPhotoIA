@@ -4,7 +4,7 @@
 */
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { SparkleIcon, PixarIcon, ToyIcon, ClockIcon, GtaIcon, LegoIcon, PixelsIcon } from '../icons';
+import { SparkleIcon, PixarIcon, ToyIcon, ClockIcon, GtaIcon, LegoIcon, PixelsIcon, BrushIcon, CameraIcon } from '../icons';
 import StylePreview from '../common/StylePreview';
 import TipBox from '../common/TipBox';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
@@ -73,12 +73,43 @@ const trends: Trend[] = [
         bg: 'bg-gradient-to-br from-teal-400 to-blue-500',
         icon: <ClockIcon className="w-6 h-6 text-white/80" />
     },
-    // FIX: A malformed object containing multiple file contents was replaced with the correct 'Estilo GTA' trend object.
     {
         name: 'Estilo GTA',
         prompt: `Crie uma arte de pôster de capa do Grand Theft Auto com base na pessoa na foto. O estilo deve ser ilustrativo, com contornos ousados e cores vibrantes, semelhante às capas de jogos do GTA. O fundo deve ser uma cena urbana estilizada que complementa a pose.`,
         bg: 'bg-gradient-to-br from-orange-400 to-fuchsia-600',
         icon: <GtaIcon className="w-6 h-6 text-white/80" />
+    },
+    {
+        name: "Colagem Aquarela Vintage",
+        prompt: "edit this image to create a vintage watercolor collage of an elegant woman, blending nostalgic artistic elements with expressive paint splashes and delicate textures. The portrait should feature soft, flowing watercolor techniques with intentional drips, bleeds, and layered translucent washes that create romantic depth and emotional storytelling. Focus on warm amber and rich sepia tones as the dominant color palette, with accents of dusty rose, cream, honey gold, and faded mauve to evoke a timeless, vintage photograph aesthetic. Incorporate collage elements such as vintage lace patterns, antique floral illustrations, old love letters, pressed flowers, weathered journal pages, or Victorian-era ephemera subtly woven into the composition. The woman should be dressed in classic, romantic attire—perhaps a vintage lace dress, flowing blouse, or period-appropriate accessories like pearl earrings or a delicate necklace—with her features rendered in graceful, impressionistic watercolor strokes",
+        bg: 'bg-gradient-to-br from-amber-200 to-rose-300',
+        icon: <BrushIcon className="w-6 h-6 text-white/80" />,
+    },
+    {
+        name: "Retrato no Carro Vintage",
+        prompt: "Create a hyper-realistic portrait of [ASSUNTO] sitting in the driver's seat of a car, wearing a black shirt, combined with a faded light gray jacket and light gray wide-leg pants. White shoes should be visible, complementing the casual look. Round sunglasses with dark lenses should be positioned on the nose, highlighting a confident and slightly ironic facial expression. Relaxed posture: one arm on the sports steering wheel, the other supporting the head, conveying a relaxed look. The interior of the car should include side windows showing urban scenery (trees, buildings and part of another vehicle), and a black textured seat. Soft natural lighting, simulating daylight coming through the windows, creating a contrast between the warm colors of the clothing and the neutral environment of the car. Vintage style, with desaturated tones and slightly grainy textures, evoking a nostalgic atmosphere. Dominant tones of gray, white and black, with a balance between external light and internal shadows. Slightly elevated perspective, framing that includes the top of the knees to the head, with the steering wheel partially visible on the right.",
+        bg: 'bg-gradient-to-br from-slate-500 to-gray-700',
+        icon: <CameraIcon className="w-6 h-6 text-white/80" />,
+        type: 'descriptive',
+    },
+    {
+        name: "Esboço Carvão Expressivo",
+        prompt: "Edit this image to transform it into an expressionist charcoal sketch of a stunning woman with piercing blue-green eyes that shimmer like ocean depths. Create the artwork with bold, passionate, and soulful charcoal strokes that dance between control and abandon. She's captured in a dynamic pose—head turned slightly over her bare shoulder, chin subtly lifted, eyes gazing directly at the viewer with penetrating intensity that's both inviting and guarded. Her features are delicately powerful—high cheekbones, full lips rendered with sensual charcoal lines, a graceful neck that flows like a swan's. The strokes defining her face are confident yet tender, with areas of intense darkness contrasting against luminous, barely-touched paper that creates her highlighted features. She wears a flowing, off-shoulder draped fabric in deep burgundy and charcoal tones that cascades around her collarbone, the texture suggested through sweeping, gestural strokes that imply silk or fine cotton. The lighting is moody and cinematic: warm golden light from the right side kisses her cheekbone, the bridge of her nose, and the curve of her shoulder, while deep violet-tinged shadows pool in the hollows of her collarbones and along her neck. Subtle touches of sage green and aquamarine are woven into the charcoal medium—most prominently in her captivating eyes, but also as ghost-like accents in her dark, loosely rendered hair that appears to move with invisible wind. Her hair is suggested rather than detailed—wild, expressive strokes that create volume and movement, some strands sharply defined while others dissolve into abstract marks. A few loose tendrils frame her face, drawn with delicate precision. The tall vertical composition creates a sense of elegance and timelessness, with intentional breathing room above and below her figure. The background is alive with emotional energy—explosive charcoal marks in the upper right suggesting turmoil or passion, transitioning to soft, meditative tones in the lower left. Include visible texture: paper grain showing through, smudged areas where fingers dragged across wet charcoal, and strategic erasing that creates ethereal highlights. The overall atmosphere is one of haunting beauty—vulnerability wrapped in strength, softness containing fire—a portrait that captures the full spectrum of feminine emotional depth in the tradition of André de Dienes' iconic dramatic portraiture",
+        bg: 'bg-gradient-to-br from-gray-400 to-gray-800',
+        icon: <BrushIcon className="w-6 h-6 text-white/80" />,
+    },
+    {
+        name: "Colagem Aquarela (Masc.)",
+        prompt: "edit this image to create a vintage watercolor collage of an elegant man, blending nostalgic artistic elements with expressive paint splashes and delicate textures. The portrait should feature soft, flowing watercolor techniques with intentional drips, bleeds, and layered translucent washes that create romantic depth and emotional storytelling. Focus on warm amber and rich sepia tones as the dominant color palette, with accents of dusty rose, cream, honey gold, and faded mauve to evoke a timeless, vintage photograph aesthetic. Incorporate collage elements such as vintage map fragments, antique scientific illustrations, old handwritten letters, pressed leaves, weathered journal pages, or Victorian-era ephemera subtly woven into the composition. The man should be dressed in classic, romantic attire—perhaps a vintage tweed jacket, a crisp collared shirt, or period-appropriate accessories like a pocket watch or a tie—with his features rendered in graceful, impressionistic watercolor strokes",
+        bg: 'bg-gradient-to-br from-amber-300 to-stone-500',
+        icon: <BrushIcon className="w-6 h-6 text-white/80" />,
+    },
+    {
+        name: "Topo de Paris",
+        prompt: "A hyper-realistic cinematic image of [ASSUNTO] standing at the very top of a famous tower in Paris. From this high vantage point, the entire Paris skyline is visible: the Eiffel Tower in the distance, classic Parisian rooftops, and winding streets below. They are wearing a white tee-shirt and a black watch. Golden daylight shines across the city, with soft atmospheric haze adding depth. The camera angle is wide, slightly low, making the person look majestic and free while embracing the panoramic view. Mood: liberating, cinematic, awe-inspiring. Aspect ratio: 16:9, ultra-realistic, cinematic detail.",
+        bg: 'bg-gradient-to-br from-sky-400 to-amber-400',
+        icon: <CameraIcon className="w-6 h-6 text-white/80" />,
+        type: 'descriptive',
     },
 ];
 

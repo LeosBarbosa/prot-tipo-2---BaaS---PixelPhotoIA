@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { CropIcon, RotateLeftIcon, RotateRightIcon, FlipHorizontalIcon, FlipVerticalIcon } from '../icons';
+import { CropIcon, RotateLeftIcon, RotateRightIcon, FlipHorizontalIcon, FlipVerticalIcon, AspectRatioSquareIcon, AspectRatioLandscapeIcon, AspectRatioPortraitIcon } from '../icons';
 import TipBox from '../common/TipBox';
 
 const CropPanel: React.FC = () => {
@@ -19,37 +19,55 @@ const CropPanel: React.FC = () => {
     } = useEditor();
 
     const aspectRatios = [
-        { name: 'Livre', value: undefined },
-        { name: '1:1', value: 1 / 1 },
-        { name: '4:3', value: 4 / 3 },
-        { name: '16:9', value: 16 / 9 },
+        { name: 'Livre', value: undefined, icon: <CropIcon className="w-6 h-6" /> },
+        { name: '1:1', value: 1 / 1, icon: <AspectRatioSquareIcon className="w-6 h-6" /> },
+        { name: '4:3', value: 4 / 3, icon: <AspectRatioLandscapeIcon className="w-6 h-6" /> },
+        { name: '16:9', value: 16 / 9, icon: <AspectRatioLandscapeIcon className="w-6 h-6" /> },
+        { name: '3:4', value: 3 / 4, icon: <AspectRatioPortraitIcon className="w-6 h-6" /> },
+    ];
+
+    const transforms = [
+        { name: 'Girar Esquerda', type: 'rotate-left' as const, icon: <RotateLeftIcon className="w-6 h-6" /> },
+        { name: 'Girar Direita', type: 'rotate-right' as const, icon: <RotateRightIcon className="w-6 h-6" /> },
+        { name: 'Inverter H.', type: 'flip-h' as const, icon: <FlipHorizontalIcon className="w-6 h-6" /> },
+        { name: 'Inverter V.', type: 'flip-v' as const, icon: <FlipVerticalIcon className="w-6 h-6" /> },
     ];
 
     return (
         <div className="w-full flex flex-col gap-6 animate-fade-in">
-            <div>
-                <h3 className="text-lg font-semibold text-gray-300 mb-2">Proporção</h3>
-                <div className="grid grid-cols-4 gap-2">
-                    {aspectRatios.map(({ name, value }) => (
+            <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50">
+                <h3 className="font-bold text-white text-md mb-3 text-center">Proporção</h3>
+                <div className="grid grid-cols-5 gap-2">
+                    {aspectRatios.map(({ name, value, icon }) => (
                         <button
                             key={name}
                             onClick={() => setAspect(value)}
                             disabled={isLoading}
-                            className={`p-2 rounded-md text-sm font-semibold transition-all duration-200 aspect-square flex items-center justify-center text-center ${aspect === value ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-800/50 hover:bg-gray-700/50 text-gray-200'}`}
+                            className={`p-2 rounded-md text-sm font-semibold transition-all duration-200 aspect-square flex flex-col items-center justify-center gap-1 ${aspect === value ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-800/50 hover:bg-gray-700/50 text-gray-300'}`}
+                            title={name}
                         >
-                            {name}
+                            {icon}
+                            <span className="text-xs">{name}</span>
                         </button>
                     ))}
                 </div>
             </div>
 
-            <div>
-                <h3 className="text-lg font-semibold text-gray-300 mb-2">Transformar</h3>
-                <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => handleTransform('rotate-left')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-gray-800/50 p-3 rounded-lg hover:bg-gray-700/50"><RotateLeftIcon className="w-5 h-5" /> Girar</button>
-                    <button onClick={() => handleTransform('rotate-right')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-gray-800/50 p-3 rounded-lg hover:bg-gray-700/50"><RotateRightIcon className="w-5 h-5" /> Girar</button>
-                    <button onClick={() => handleTransform('flip-h')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-gray-800/50 p-3 rounded-lg hover:bg-gray-700/50"><FlipHorizontalIcon className="w-5 h-5" /> Inverter H</button>
-                    <button onClick={() => handleTransform('flip-v')} disabled={isLoading} className="flex items-center justify-center gap-2 bg-gray-800/50 p-3 rounded-lg hover:bg-gray-700/50"><FlipVerticalIcon className="w-5 h-5" /> Inverter V</button>
+            <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50">
+                 <h3 className="font-bold text-white text-md mb-3 text-center">Transformar</h3>
+                <div className="grid grid-cols-4 gap-2">
+                    {transforms.map(({ name, type, icon }) => (
+                         <button 
+                            key={type} 
+                            onClick={() => handleTransform(type)} 
+                            disabled={isLoading} 
+                            className="p-2 rounded-md text-sm font-semibold transition-all duration-200 aspect-square flex flex-col items-center justify-center gap-1 bg-gray-800/50 hover:bg-gray-700/50 text-gray-300"
+                            title={name}
+                        >
+                            {icon}
+                            <span className="text-xs">{name}</span>
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -57,12 +75,10 @@ const CropPanel: React.FC = () => {
                 Selecione uma proporção predefinida para manter o enquadramento consistente. Arraste as alças para ajustar o corte manualmente.
             </TipBox>
 
-            <div className="border-t border-gray-700/50 my-2"></div>
-
             <button
                 onClick={handleApplyCrop}
                 disabled={isLoading || !completedCrop?.width || !completedCrop?.height}
-                className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
+                className="w-full mt-2 bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
             >
                 <CropIcon className="w-5 h-5" />
                 Aplicar Corte

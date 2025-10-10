@@ -9,20 +9,15 @@ import { outpaintImage } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import { PhotoIcon, ExpandIcon } from '../icons';
-import CollapsibleToolPanel from '../CollapsibleToolPanel';
-import PromptEnhancer from './common/PromptEnhancer';
-import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
-import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 
 const OutpaintingPanel: React.FC = () => {
     const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
+    const [negativePrompt, setNegativePrompt] = useState('');
     const [aspectRatio, setAspectRatio] = useState('16:9');
-    const [isOptionsExpanded, setIsOptionsExpanded] = useState(true);
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const suggestions = usePromptSuggestions(prompt, 'outpainting');
 
      const aspectRatios: { id: string, name: string }[] = [
         { id: '16:9', name: 'Paisagem' },
@@ -31,15 +26,6 @@ const OutpaintingPanel: React.FC = () => {
         { id: '4:3', name: 'Padrão' },
         { id: '3:4', name: 'Padrão (Vert.)' },
     ];
-
-    useEffect(() => {
-        setShowSuggestions(suggestions.length > 0);
-    }, [suggestions]);
-
-    const handleSelectSuggestion = (suggestion: string) => {
-        setPrompt(suggestion);
-        setShowSuggestions(false);
-    };
 
     useEffect(() => {
         if (baseImageFile && !sourceImage) {
@@ -65,7 +51,11 @@ const OutpaintingPanel: React.FC = () => {
         setResultImage(null);
         addPromptToHistory(prompt);
         try {
-            const result = await outpaintImage(sourceImage, prompt, aspectRatio);
+            let fullPrompt = prompt;
+            if (negativePrompt.trim()) {
+                fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
+            }
+            const result = await outpaintImage(sourceImage, fullPrompt, aspectRatio);
             setResultImage(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -87,45 +77,25 @@ const OutpaintingPanel: React.FC = () => {
                     label="Imagem Original"
                 />
                 
-                <CollapsibleToolPanel
-                    title="Opções de Expansão"
-                    icon={<ExpandIcon className="w-5 h-5" />}
-                    isExpanded={isOptionsExpanded}
-                    onExpandToggle={() => setIsOptionsExpanded(!isOptionsExpanded)}
-                >
-                    <div className="flex flex-col gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Nova Proporção</label>
-                            <select value={aspectRatio} onChange={e => setAspectRatio(e.target.value)} className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base">
-                                {aspectRatios.map(({ id, name }) => <option key={id} value={id}>{name} ({id})</option>)}
-                            </select>
-                        </div>
-                        <div className="relative">
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Prompt (Opcional)</label>
-                            <div className="relative">
-                                <textarea
-                                    value={prompt}
-                                    onChange={(e) => setPrompt(e.target.value)}
-                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                                    onFocus={() => setShowSuggestions(suggestions.length > 0)}
-                                    placeholder="Descreva o que adicionar no espaço expandido..."
-                                    className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]"
-                                    disabled={isLoading}
-                                    rows={4}
-                                />
-                                <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="outpainting" />
-                            </div>
-                            {showSuggestions && (
-                                <PromptSuggestionsDropdown
-                                    suggestions={suggestions}
-                                    onSelect={handleSelectSuggestion}
-                                    searchTerm={prompt}
-                                />
-                            )}
-                            <p className="mt-1 text-xs text-gray-500 px-1">Ex: "um céu estrelado com uma lua cheia", "continue a praia com areia e ondas".</p>
-                        </div>
-                    </div>
-                </CollapsibleToolPanel>
+                <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Nova Proporção</label>
+                    <select value={aspectRatio} onChange={e => setAspectRatio(e.target.value)} className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base">
+                        {aspectRatios.map(({ id, name }) => <option key={id} value={id}>{name} ({id})</option>)}
+                    </select>
+                </div>
+                
+                <CollapsiblePromptPanel
+                    title="Descrição da Expansão (Opcional)"
+                    prompt={prompt}
+                    setPrompt={setPrompt}
+                    negativePrompt={negativePrompt}
+                    onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
+                    isLoading={isLoading}
+                    toolId="outpainting"
+                    promptPlaceholder="Descreva o que adicionar no espaço expandido..."
+                    promptHelperText='Ex: "um céu estrelado com uma lua cheia", "continue a praia com areia e ondas".'
+                    negativePromptHelperText="Ex: pessoas, edifícios."
+                />
 
                 <button
                     onClick={handleGenerate}

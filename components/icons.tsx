@@ -417,6 +417,12 @@ export const UnblurIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+export const SharpenIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.25L3 21h18L12 2.25z" />
+    </svg>
+);
+
 export const ToyIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25v7.5A2.25 2.25 0 0 1 18.75 18H15V6a2.25 2.25 0 0 1 2.25-2.25h1.5A2.25 2.25 0 0 1 21 6v2.25zM9 15.75V9.75a2.25 2.25 0 00-2.25-2.25h-.75a2.25 2.25 0 00-2.25 2.25v6m11.25 0v3.75m-11.25-3.75a1.5 1.5 0 011.5-1.5h7.5a1.5 1.5 0 011.5 1.5v2.25a1.5 1.5 0 01-1.5 1.5h-7.5a1.5 1.5 0 01-1.5-1.5v-2.25z" />

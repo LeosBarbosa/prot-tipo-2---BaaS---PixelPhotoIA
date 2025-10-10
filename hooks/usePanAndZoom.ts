@@ -18,9 +18,9 @@ export const usePanAndZoom = () => {
 
   // Refs for touch gestures
   const lastTouchDist = useRef(0);
+  const lastPanPoint = useRef<{ x: number, y: number } | null>(null);
 
-  // FIX: Changed parameter type from the DOM's TouchList to React.TouchList to match React's event types.
-  const getTouchDistance = (touches: React.TouchList) => {
+  const getTouchDistance = (touches: React.TouchList | TouchList) => {
       const touch1 = touches[0];
       const touch2 = touches[1];
       return Math.sqrt(
@@ -29,8 +29,7 @@ export const usePanAndZoom = () => {
       );
   };
 
-  // FIX: Changed parameter type from the DOM's TouchList to React.TouchList to match React's event types.
-  const getTouchCenter = (touches: React.TouchList) => {
+  const getTouchCenter = (touches: React.TouchList | TouchList) => {
       const touch1 = touches[0];
       const touch2 = touches[1];
       return { x: (touch1.clientX + touch2.clientX) / 2, y: (touch1.clientY + touch2.clientY) / 2 };
@@ -72,62 +71,85 @@ export const usePanAndZoom = () => {
   }, [isPanModeActive, panOffset.x, panOffset.y, handlePanMove, handlePanEnd]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-      try {
-          if (e.touches.length === 2) {
-              e.preventDefault();
-              lastTouchDist.current = getTouchDistance(e.touches);
-          } else if (e.touches.length === 1 && isPanModeActive) {
-              e.preventDefault();
-              isPanning.current = true;
-              panStart.current = {
-                  x: e.touches[0].clientX - panOffset.x,
-                  y: e.touches[0].clientY - panOffset.y,
-              };
-          }
-      } catch (err) { /* Silently catch errors */ }
+      if (e.touches.length === 2) {
+          e.preventDefault();
+          lastTouchDist.current = getTouchDistance(e.touches);
+          lastPanPoint.current = getTouchCenter(e.touches);
+      } else if (e.touches.length === 1 && isPanModeActive) {
+          e.preventDefault();
+          isPanning.current = true;
+          panStart.current = {
+              x: e.touches[0].clientX - panOffset.x,
+              y: e.touches[0].clientY - panOffset.y,
+          };
+      }
   }, [isPanModeActive, panOffset.x, panOffset.y]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent, containerRect: DOMRect) => {
-      try {
-          if (e.touches.length === 2) {
-              e.preventDefault();
-              if (lastTouchDist.current === 0) return;
-              
-              const newDist = getTouchDistance(e.touches);
-              const distRatio = newDist / lastTouchDist.current;
-              lastTouchDist.current = newDist;
+      // 1-finger pan (if in pan mode)
+      if (e.touches.length === 1 && isPanModeActive && isPanning.current) {
+          e.preventDefault();
+          setPanOffset({
+              x: e.touches[0].clientX - panStart.current.x,
+              y: e.touches[0].clientY - panStart.current.y,
+          });
+          return;
+      }
 
-              setZoom(prevZoom => {
-                  const newZoom = Math.max(1, Math.min(5, prevZoom * distRatio));
-                  const center = getTouchCenter(e.touches);
+      // 2-finger pan and zoom
+      if (e.touches.length === 2 && lastTouchDist.current > 0 && lastPanPoint.current) {
+          e.preventDefault();
+
+          const newDist = getTouchDistance(e.touches);
+          const newPanPoint = getTouchCenter(e.touches);
+          
+          const panDelta = {
+              x: newPanPoint.x - lastPanPoint.current.x,
+              y: newPanPoint.y - lastPanPoint.current.y
+          };
+          const zoomRatio = newDist / lastTouchDist.current;
+          
+          setZoom(prevZoom => {
+              const newZoom = Math.max(1, Math.min(5, prevZoom * zoomRatio));
+              
+              setPanOffset(prevPan => {
+                  // This combined logic handles both panning the image with two fingers
+                  // and adjusting the pan to zoom towards the pinch center.
+                  
+                  // 1. Start with the previous pan and add the movement of the fingers
+                  const newPan = {
+                      x: prevPan.x + panDelta.x,
+                      y: prevPan.y + panDelta.y,
+                  };
+
+                  // 2. Adjust pan to zoom towards the pinch center point
+                  const center = newPanPoint;
                   const mouseX = center.x - containerRect.left;
                   const mouseY = center.y - containerRect.top;
 
-                  setPanOffset(prevPan => {
-                      const imageX = (mouseX - prevPan.x) / prevZoom;
-                      const imageY = (mouseY - prevPan.y) / prevZoom;
-                      return {
-                          x: mouseX - imageX * newZoom,
-                          y: mouseY - imageY * newZoom
-                      };
-                  });
+                  // Find the image coordinate under the pinch center before the zoom
+                  const imageX_before = (mouseX - newPan.x) / prevZoom;
+                  const imageY_before = (mouseY - newPan.y) / prevZoom;
+                  
+                  // Calculate the new pan offset to keep that image coordinate under the pinch center
+                  newPan.x = mouseX - imageX_before * newZoom;
+                  newPan.y = mouseY - imageY_before * newZoom;
 
-                  return newZoom;
+                  return newPan;
               });
-          } else if (e.touches.length === 1 && isPanModeActive && isPanning.current) {
-              e.preventDefault();
-              setPanOffset({
-                  x: e.touches[0].clientX - panStart.current.x,
-                  y: e.touches[0].clientY - panStart.current.y,
-              });
-          }
-      } catch (err) { /* Silently catch errors */ }
+              return newZoom;
+          });
+
+          lastTouchDist.current = newDist;
+          lastPanPoint.current = newPanPoint;
+      }
   }, [isPanModeActive]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
       isPanning.current = false;
       if (e.touches.length < 2) {
           lastTouchDist.current = 0;
+          lastPanPoint.current = null;
       }
   }, []);
 

@@ -1,3 +1,5 @@
+
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -15,7 +17,6 @@ const gcd = (a: number, b: number): number => {
 
 const ImageViewer: React.FC = () => {
     const {
-        activeTool,
         activeTab,
         baseImageFile,
         currentImageUrl,
@@ -60,6 +61,7 @@ const ImageViewer: React.FC = () => {
     const imageContainerRef = useRef<HTMLDivElement>(null);
     const [cropDimensions, setCropDimensions] = useState<string | null>(null);
     const [brushPreview, setBrushPreview] = useState<{ x: number; y: number; size: number } | null>(null);
+    const [isHoveringObject, setIsHoveringObject] = useState(false);
 
     const cssFilter = hasLocalAdjustments ? buildFilterString(localFilters) : 'none';
     const pixelFontSize = imgRef.current ? (textToolState.fontSize / 100) * imgRef.current.clientWidth : 30;
@@ -271,6 +273,66 @@ const ImageViewer: React.FC = () => {
         }
     };
 
+    const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = overlayCanvasRef.current;
+        const image = imgRef.current;
+        if (!canvas || !image || !detectedObjects || detectedObjects.length === 0) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        const scaleX = image.naturalWidth / image.clientWidth;
+        const scaleY = image.naturalHeight / image.clientHeight;
+        const naturalClickX = clickX * scaleX;
+        const naturalClickY = clickY * scaleY;
+
+        for (let i = detectedObjects.length - 1; i >= 0; i--) {
+            const obj = detectedObjects[i];
+            const { box } = obj;
+            const box_x_min = box.x_min * image.naturalWidth;
+            const box_y_min = box.y_min * image.naturalHeight;
+            const box_x_max = box.x_max * image.naturalWidth;
+            const box_y_max = box.y_max * image.naturalHeight;
+
+            if (naturalClickX >= box_x_min && naturalClickX <= box_x_max && naturalClickY >= box_y_min && naturalClickY <= box_y_max) {
+                handleSelectObject(obj);
+                return;
+            }
+        }
+    };
+
+    const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = overlayCanvasRef.current;
+        const image = imgRef.current;
+        if (!canvas || !image || !detectedObjects || detectedObjects.length === 0) {
+            setIsHoveringObject(false);
+            return;
+        }
+
+        const rect = canvas.getBoundingClientRect();
+        const moveX = e.clientX - rect.left;
+        const moveY = e.clientY - rect.top;
+        const scaleX = image.naturalWidth / image.clientWidth;
+        const scaleY = image.naturalHeight / image.clientHeight;
+        const naturalMoveX = moveX * scaleX;
+        const naturalMoveY = moveY * scaleY;
+
+        let hovering = false;
+        for (const obj of detectedObjects) {
+            const { box } = obj;
+            const box_x_min = box.x_min * image.naturalWidth;
+            const box_y_min = box.y_min * image.naturalHeight;
+            const box_x_max = box.x_max * image.naturalWidth;
+            const box_y_max = box.y_max * image.naturalHeight;
+            if (naturalMoveX >= box_x_min && naturalMoveX <= box_x_max && naturalMoveY >= box_y_min && naturalMoveY <= box_y_max) {
+                hovering = true;
+                break;
+            }
+        }
+        setIsHoveringObject(hovering);
+    };
+
     return (
         <div
             ref={imageContainerRef}
@@ -376,7 +438,14 @@ const ImageViewer: React.FC = () => {
                     {detectedObjects && !showComparisonSlider && (
                         <canvas
                             ref={overlayCanvasRef}
-                            className="absolute top-0 left-0 w-full h-full pointer-events-none z-10"
+                            className="absolute top-0 left-0 w-full h-full z-10"
+                            style={{
+                                pointerEvents: detectedObjects ? 'auto' : 'none',
+                                cursor: isHoveringObject ? 'pointer' : 'default'
+                            }}
+                            onClick={handleCanvasClick}
+                            onMouseMove={handleCanvasMouseMove}
+                            onMouseLeave={() => setIsHoveringObject(false)}
                         />
                     )}
 

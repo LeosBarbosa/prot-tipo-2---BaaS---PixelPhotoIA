@@ -4,11 +4,13 @@
 */
 
 import React from 'react';
+import { type Crop, type PixelCrop } from 'react-image-crop';
+import { DEFAULT_LOCAL_FILTERS, DEFAULT_TEXT_TOOL_STATE } from './context/EditorContext';
 
 // Este ficheiro é agora a única fonte de verdade para todas as definições de tipos na aplicação.
 
 // Tipos de todo o editor
-export type TabId = 'layers' | 'extractArt' | 'removeBg' | 'style' | 'portraits' | 'styleGen' | 'adjust' | 'relight' | 'neuralFilters' | 'generativeEdit' | 'crop' | 'upscale' | 'unblur' | 'trends' | 'localAdjust' | 'dustAndScratches' | 'history' | 'objectRemover' | 'texture' | 'magicMontage' | 'photoRestoration' | 'text' | 'lowPoly' | 'pixelArt' | 'faceSwap';
+export type TabId = 'layers' | 'extractArt' | 'removeBg' | 'style' | 'portraits' | 'styleGen' | 'adjust' | 'relight' | 'neuralFilters' | 'generativeEdit' | 'crop' | 'upscale' | 'unblur' | 'sharpen' | 'trends' | 'localAdjust' | 'dustAndScratches' | 'history' | 'objectRemover' | 'texture' | 'magicMontage' | 'photoRestoration' | 'text' | 'lowPoly' | 'pixelArt' | 'faceSwap' | 'newAspectRatio';
 export type ToastType = 'success' | 'error' | 'info';
 
 // Tipos do Painel de Transformação
@@ -44,37 +46,41 @@ export type ToolId =
   | 'model3DGen'
   | 'styledPortrait'
   | 'photoStudio'
-  // Ferramentas de Edição
+  // Ferramentas de Fluxo de Trabalho
+  | 'bananimate'
+  | 'confidentStudio'
+  | 'polaroid'
+  | 'funkoPopStudio'
+  | 'tryOn'
+  // Ferramentas de Edição - many of these are also TabIds
+  | 'newAspectRatio'
+  | 'magicMontage'
+  | 'objectRemover'
+  | 'faceSwap'
+  | 'generativeEdit'
+  | 'extractArt'
   | 'crop'
   | 'adjust'
   | 'style'
-  | 'generativeEdit'
+  | 'unblur'
+  | 'sharpen'
+  | 'text'
   | 'removeBg'
   | 'upscale'
-  | 'text'
+  | 'photoRestoration'
   | 'relight'
   | 'lowPoly'
   | 'pixelArt'
   | 'portraits'
   | 'styleGen'
-  | 'photoRestoration'
   | 'dustAndScratches'
-  | 'extractArt'
   | 'neuralFilters'
   | 'trends'
-  | 'unblur'
-  | 'objectRemover'
   | 'texture'
-  | 'magicMontage'
-  | 'faceRecovery'
-  | 'denoise'
-  | 'faceSwap'
   | 'localAdjust'
-  // Ferramentas de Fluxo de Trabalho
-  | 'bananimate'
-  | 'polaroid'
-  | 'funkoPopStudio'
-  | 'tryOn';
+  // Tool Aliases/Sub-tools
+  | 'denoise'
+  | 'faceRecovery';
 
 // Novo: Tipo para a funcionalidade de Deteção de Objetos
 export interface DetectedObject {
@@ -206,6 +212,234 @@ export interface LayerStateSnapshot {
     gifFrames?: GifFrame[];
 }
 
+export interface ProactiveSuggestionState {
+    message: string;
+    acceptLabel: string;
+    onAccept: () => void;
+}
+
+export interface TexturePreviewState {
+    url: string;
+    opacity: number;
+    blendMode: 'overlay' | 'multiply' | 'screen' | 'normal';
+}
+
+export interface Trend {
+    name: string;
+    prompt: string;
+    bg: string;
+    icon?: React.ReactNode;
+    type?: 'descriptive';
+}
+
+export interface PreviewState {
+    url: string;
+    trend: Trend;
+    applyToAll: boolean;
+}
+
+export interface TextToolState {
+    content: string;
+    fontFamily: string;
+    fontSize: number;
+    color: string;
+    align: 'left' | 'center' | 'right';
+    bold: boolean;
+    italic: boolean;
+    position: { x: number, y: number };
+}
+
 export interface EditorContextType {
+    // General State
+    activeTool: ToolId | null;
+    setActiveTool: (toolId: ToolId | null) => void;
+    activeTab: TabId;
+    setActiveTab: React.Dispatch<React.SetStateAction<TabId>>;
+    isLoading: boolean;
+    setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    loadingMessage: string | null;
+    setLoadingMessage: React.Dispatch<React.SetStateAction<string | null>>;
+    error: string | null;
+    setError: React.Dispatch<React.SetStateAction<string | null>>;
+    isComparisonModalOpen: boolean;
+    setIsComparisonModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    isInlineComparisonActive: boolean;
+    setIsInlineComparisonActive: React.Dispatch<React.SetStateAction<boolean>>;
+    toast: { message: string, type: ToastType } | null;
+    setToast: React.Dispatch<React.SetStateAction<{ message: string, type: ToastType } | null>>;
+    proactiveSuggestion: ProactiveSuggestionState | null;
+    setProactiveSuggestion: React.Dispatch<React.SetStateAction<ProactiveSuggestionState | null>>;
+    uploadProgress: UploadProgressStatus | null;
+    setUploadProgress: React.Dispatch<React.SetStateAction<UploadProgressStatus | null>>;
+    isSaveWorkflowModalOpen: boolean;
+    setIsSaveWorkflowModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    isLeftPanelVisible: boolean;
+    setIsLeftPanelVisible: React.Dispatch<React.SetStateAction<boolean>>;
+    isRightPanelVisible: boolean;
+    setIsRightPanelVisible: React.Dispatch<React.SetStateAction<boolean>>;
+    theme: 'light' | 'dark';
+    toggleTheme: () => void;
+
+    // Image & Layer State
+    layers: Layer[];
+    activeLayerId: string | null;
+    setActiveLayerId: (id: string | null) => void;
+    baseImageFile: File | null;
+    currentImageUrl: string | null;
+    compositeCssFilter: string;
+    originalImageUrl: string | null; // For comparison
+    imgRef: React.RefObject<HTMLImageElement>;
+    setInitialImage: (file: File | null) => void;
+    hasRestoredSession: boolean;
+
+    // Layer Actions
+    updateLayer: (layerId: string, updates: Partial<Layer>) => void;
+    deleteLayer: (layerId: string) => void;
+    toggleLayerVisibility: (layerId: string) => void;
+    mergeDownLayer: (layerId: string) => void;
+    moveLayerUp: (layerId: string) => void;
+    moveLayerDown: (layerId: string) => void;
+
+
+    // History State
+    history: LayerStateSnapshot[];
+    historyIndex: number;
+    canUndo: boolean;
+    canRedo: boolean;
+    undo: () => void;
+    redo: () => void;
+    jumpToState: (index: number) => void;
+    resetHistory: () => void;
+    toolHistory: ToolId[];
+    commitChange: (newLayers: Layer[], newActiveLayerId: string | null, toolId?: ToolId) => void;
+
+    // GIF State
+    isGif: boolean;
+    gifFrames: GifFrame[];
+    currentFrameIndex: number;
+    setCurrentFrameIndex: React.Dispatch<React.SetStateAction<number>>;
+
+    // Pan & Zoom State
+    zoom: number;
+    setZoom: React.Dispatch<React.SetStateAction<number>>;
+    panOffset: { x: number, y: number };
+    isPanModeActive: boolean;
+    setIsPanModeActive: React.Dispatch<React.SetStateAction<boolean>>;
+    isCurrentlyPanning: boolean;
+    handleWheel: (e: React.WheelEvent<HTMLDivElement>) => void;
+    handlePanStart: (e: React.MouseEvent) => void;
+    handleTouchStart: (e: React.TouchEvent) => void;
+    handleTouchMove: (e: React.TouchEvent, containerRect: DOMRect) => void;
+    handleTouchEnd: (e: React.TouchEvent) => void;
+    resetZoomAndPan: () => void;
+
+    // Crop State
+    crop: Crop | undefined;
+    setCrop: React.Dispatch<React.SetStateAction<Crop | undefined>>;
+    completedCrop: PixelCrop | undefined;
+    setCompletedCrop: React.Dispatch<React.SetStateAction<PixelCrop | undefined>>;
+    aspect: number | undefined;
+    setAspect: React.Dispatch<React.SetStateAction<number | undefined>>;
+
+    // Masking State
+    canvasRef: React.RefObject<HTMLCanvasElement>;
+    maskDataUrl: string | null;
+    setMaskDataUrl: React.Dispatch<React.SetStateAction<string | null>>;
+    brushSize: number;
+    setBrushSize: React.Dispatch<React.SetStateAction<number>>;
+    clearMask: () => void;
+    startDrawing: (e: React.MouseEvent<HTMLCanvasElement>) => void;
+    stopDrawing: () => void;
+    draw: (e: React.MouseEvent<HTMLCanvasElement>) => void;
+
+    // Object Detection State
+    detectedObjects: DetectedObject[] | null;
+    setDetectedObjects: React.Dispatch<React.SetStateAction<DetectedObject[] | null>>;
+    highlightedObject: DetectedObject | null;
+    setHighlightedObject: React.Dispatch<React.SetStateAction<DetectedObject | null>>;
+
+    // Local Adjustments State
+    localFilters: FilterState;
+    setLocalFilters: React.Dispatch<React.SetStateAction<FilterState>>;
+    hasLocalAdjustments: boolean;
+    buildFilterString: (filters: Partial<FilterState>) => string;
+    resetLocalFilters: () => void;
+    histogram: { r: number[], g: number[], b: number[] } | null;
+    
+    // AI Preview State
+    previewState: PreviewState | null;
+    setPreviewState: React.Dispatch<React.SetStateAction<PreviewState | null>>;
+    isPreviewLoading: boolean;
+
+    // Text Tool State
+    textToolState: TextToolState;
+    setTextToolState: React.Dispatch<React.SetStateAction<TextToolState>>;
+    resetTextToolState: () => void;
+
+    // Video Generation State
+    generatedVideoUrl: string | null;
+    setGeneratedVideoUrl: React.Dispatch<React.SetStateAction<string | null>>;
+
+    // Texture State
+    texturePreview: TexturePreviewState | null;
+    setTexturePreview: React.Dispatch<React.SetStateAction<TexturePreviewState | null>>;
+
+    // Smart Search State
+    isSmartSearching: boolean;
+    smartSearchResult: SmartSearchResult | null;
+    setSmartSearchResult: React.Dispatch<React.SetStateAction<SmartSearchResult | null>>;
+    
+    // Workflows State
+    savedWorkflows: Workflow[];
+    addWorkflow: (workflow: Workflow) => void;
+    recentTools: ToolId[];
+
+    // Prompt History State
+    promptHistory: string[];
+    addPromptToHistory: (prompt: string) => void;
+    
+    // Tool Handlers
+    executeWorkflow: (toolIds: ToolId[]) => void;
+    handlePredefinedSearchAction: (action: PredefinedSearch['action']) => void;
+    handleSmartSearch: (term: string) => void;
+    handleFileSelect: (file: File) => Promise<void>;
+    handleGoHome: () => void;
+    handleTriggerUpload: () => void;
+    handleExplicitSave: () => void;
+    handleApplyCrop: () => void;
+    handleTransform: (transformType: TransformType) => void;
+    handleRemoveBackground: () => void;
+    handleRelight: (prompt: string) => void;
+    handleMagicPrompt: (prompt: string) => void;
+    handleApplyLowPoly: () => void;
+    handleExtractArt: () => void;
+    handleApplyDustAndScratch: () => void;
+    handleDenoise: () => void;
+    handleApplyFaceRecovery: () => void;
+    handleGenerateProfessionalPortrait: (applyToAll: boolean) => void;
+    handleRestorePhoto: (colorize: boolean) => void;
+    handleApplyUpscale: (factor: number, preserveFace: boolean) => void;
+    handleUnblurImage: (sharpenLevel: number, denoiseLevel: number, model: string) => void;
+    handleApplySharpen: (intensity: number) => void;
+    handleApplyNewAspectRatio: () => void;
+    handleGenerativeEdit: () => void;
+    handleObjectRemove: () => void;
+    handleDetectObjects: (prompt?: string) => void;
+    handleDetectFaces: () => void;
+    handleFaceRetouch: () => void;
+    handleFaceSwap: (sourceImageFile: File, userPrompt: string) => void;
+    handleSelectObject: (object: DetectedObject) => void;
+    handleApplyLocalAdjustments: (applyToAll: boolean) => void;
+    handleApplyCurve: (lut: number[]) => void;
+    handleApplyStyle: (stylePrompt: string, applyToAll: boolean) => void;
+    handleApplyAIAdjustment: (prompt: string, applyToAll: boolean) => void;
+    handleApplyText: () => void;
+    handleGenerateVideo: (prompt: string, aspectRatio: VideoAspectRatio) => void;
+    handleDownload: () => void;
+    handleApplyTexture: () => void;
+    prompt: string;
+    setPrompt: React.Dispatch<React.SetStateAction<string>>;
+    generateAIPreview: (trend: Trend, applyToAll: boolean) => void;
+    commitAIPreview: () => void;
     initialPromptFromMetadata: string | null;
 }

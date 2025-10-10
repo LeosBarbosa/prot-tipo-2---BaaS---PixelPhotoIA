@@ -8,7 +8,8 @@ import { useEditor } from '../context/EditorContext';
 import { SparkleIcon } from './icons';
 
 const RestoredSessionCard: React.FC = () => {
-    const { handleUploadNew, setActiveTool, currentImageUrl } = useEditor();
+    // FIX: Property 'handleUploadNew' does not exist on type 'EditorContextType'. Replaced with 'handleTriggerUpload'.
+    const { handleTriggerUpload, setActiveTool, currentImageUrl } = useEditor();
 
     const handleContinue = () => {
         // Just open the editor view by selecting a default tool
@@ -37,7 +38,7 @@ const RestoredSessionCard: React.FC = () => {
                     </div>
                      <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0 w-full sm:w-auto">
                         <button
-                            onClick={handleUploadNew}
+                            onClick={handleTriggerUpload}
                             className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-md transition-colors text-sm"
                         >
                             Iniciar Nova

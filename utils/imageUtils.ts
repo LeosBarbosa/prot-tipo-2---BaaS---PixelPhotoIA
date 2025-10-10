@@ -103,7 +103,7 @@ export const createMaskFromCrop = (crop: PixelCrop, imageWidth: number, imageHei
  * Optimizes an image by resizing and compressing it if it's too large.
  * This ensures better performance within the editor.
  * @param file The image file to optimize.
- * @param onProgress A callback to report the optimization progress (0-100).
+ * @param onProgress A callback to report the optimization progress.
  * @param maxWidth The maximum width allowed.
  * @param maxHeight The maximum height allowed.
  * @param quality The quality for JPEG compression (0 to 1).
@@ -114,9 +114,11 @@ export const optimizeImage = (
     onProgress: (status: UploadProgressStatus) => void,
     maxWidth: number = 4096,
     maxHeight: number = 4096,
-    quality: number = 0.95
+    quality: number = 0.85
 ): Promise<File> => {
     return new Promise((resolve, reject) => {
+        const MAX_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB
+
         if (!file.type.startsWith('image/') || file.type === 'image/gif') {
             onProgress({ progress: 100, stage: 'done' });
             return resolve(file);
@@ -127,7 +129,6 @@ export const optimizeImage = (
         
         reader.onprogress = (event) => {
             if (event.lengthComputable) {
-                // Reading the file will be the first 50% of the progress
                 const percentLoaded = Math.round((event.loaded / event.total) * 50);
                 onProgress({ progress: percentLoaded, stage: 'reading' });
             }
@@ -138,55 +139,64 @@ export const optimizeImage = (
             const img = new Image();
             img.src = event.target?.result as string;
             img.onload = () => {
-                onProgress({ progress: 75, stage: 'processing' });
-                let { width, height } = img;
+                try {
+                    onProgress({ progress: 75, stage: 'processing' });
+                    let { width, height } = img;
 
-                if (width <= maxWidth && height <= maxHeight) {
-                    onProgress({ progress: 100, stage: 'done' });
-                    return resolve(file);
-                }
-
-                if (width > height) {
-                    if (width > maxWidth) {
-                        height = Math.round((height * maxWidth) / width);
-                        width = maxWidth;
+                    if (width <= maxWidth && height <= maxHeight && file.size <= MAX_SIZE_BYTES) {
+                        onProgress({ progress: 100, stage: 'done' });
+                        return resolve(file);
                     }
-                } else {
-                    if (height > maxHeight) {
-                        width = Math.round((width * maxHeight) / height);
-                        height = maxHeight;
+
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = Math.round((width * maxHeight) / height);
+                            height = maxHeight;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+
+                    if (!ctx) {
+                        return reject(new Error('Não foi possível obter o contexto do canvas.'));
+                    }
+
+                    ctx.drawImage(img, 0, 0, width, height);
+                    onProgress({ progress: 95, stage: 'compressing' });
+
+                    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    
+                    const originalFilename = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                    const newFilename = `${originalFilename}.jpg`;
+
+                    onProgress({ progress: 100, stage: 'done' });
+                    resolve(dataURLtoFile(dataUrl, newFilename));
+                } catch (e) {
+                    if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.message.includes('Bitmap failed to allocate') || e.message.includes('Canvas area exceeds the maximum limit'))) {
+                         const specificError = new Error(
+                            'DIMENSION_ERROR: A resolução da imagem é muito grande para ser processada neste dispositivo. ' +
+                            'Por favor, reduza a resolução da imagem original e tente o upload novamente.'
+                        );
+                        reject(specificError);
+                    } else {
+                        reject(e);
                     }
                 }
-
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-
-                if (!ctx) {
-                    onProgress({ progress: 100, stage: 'done' });
-                    return reject(new Error('Não foi possível obter o contexto do canvas.'));
-                }
-
-                ctx.drawImage(img, 0, 0, width, height);
-                onProgress({ progress: 95, stage: 'compressing' });
-
-                const dataUrl = canvas.toDataURL('image/jpeg', quality);
-                
-                const originalFilename = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-                const newFilename = `${originalFilename}.jpg`;
-
-                onProgress({ progress: 100, stage: 'done' });
-                resolve(dataURLtoFile(dataUrl, newFilename));
             };
-            img.onerror = (error) => {
-                onProgress({ progress: 100, stage: 'done' });
-                reject(error);
+            img.onerror = () => {
+                reject(new Error("Não foi possível carregar os dados da imagem. O arquivo pode estar corrompido ou não ser um formato de imagem válido."));
             };
         };
-        reader.onerror = (error) => {
-            onProgress({ progress: 100, stage: 'done' });
-            reject(error);
+        reader.onerror = () => {
+            reject(new Error("Falha ao ler o arquivo. Verifique as permissões e a integridade do arquivo."));
         };
     });
 };

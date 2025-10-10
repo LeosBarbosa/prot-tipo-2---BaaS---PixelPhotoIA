@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { SparkleIcon, SwapIcon } from '../icons';
 import ImageDropzone from './common/ImageDropzone';
 import TipBox from '../common/TipBox';
+import { type DetectedObject } from '../../types';
 
 const FaceSwapPanel: React.FC = () => {
     const {
@@ -15,7 +16,6 @@ const FaceSwapPanel: React.FC = () => {
         handleDetectFaces,
         detectedObjects,
         handleSelectObject,
-        highlightedObject,
         handleFaceSwap,
         baseImageFile,
         setToast,
@@ -24,8 +24,36 @@ const FaceSwapPanel: React.FC = () => {
 
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [userPrompt, setUserPrompt] = useState<string>('');
+    const [selectedFace, setSelectedFace] = useState<DetectedObject | null>(null);
 
-    const isReadyForSwap = baseImageFile && sourceImage && highlightedObject;
+    // Limpa a seleção local se as detecções forem limpas no contexto
+    useEffect(() => {
+        if (!detectedObjects) {
+            setSelectedFace(null);
+        }
+    }, [detectedObjects]);
+
+    const handleFaceClick = (face: DetectedObject) => {
+        setSelectedFace(face); // Persiste a seleção localmente
+        handleSelectObject(face); // Atualiza o contexto (define a máscara e o destaque visual)
+    };
+
+    const handleMouseLeaveList = () => {
+        // Quando o mouse sai da lista, ajusta o destaque do contexto de volta para o rosto selecionado
+        setHighlightedObject(selectedFace);
+    };
+
+    const onSwap = () => {
+        if (sourceImage && selectedFace) {
+            // O `highlightedObject` no contexto já está sincronizado com `selectedFace`.
+            // A chamada `handleFaceSwap` lerá o objeto correto do contexto.
+            handleFaceSwap(sourceImage, userPrompt);
+        } else {
+            setToast({ message: "Por favor, selecione um rosto de origem e um de destino.", type: 'error' });
+        }
+    };
+
+    const isReadyForSwap = baseImageFile && sourceImage && selectedFace;
 
     return (
         <div className="w-full flex flex-col gap-4 animate-fade-in">
@@ -49,16 +77,16 @@ const FaceSwapPanel: React.FC = () => {
                         Detetar Rostos na Imagem
                     </button>
                 ) : (
-                    <div className="bg-gray-900/30 p-2 rounded-lg border border-gray-700 max-h-40 overflow-y-auto" onMouseLeave={() => setHighlightedObject(null)}>
+                    <div className="bg-gray-900/30 p-2 rounded-lg border border-gray-700 max-h-40 overflow-y-auto" onMouseLeave={handleMouseLeaveList}>
                          <p className="text-xs text-center text-gray-400 mb-2">Clique num rosto para o selecionar.</p>
                          <ul className="flex flex-wrap gap-2 justify-center">
                              {detectedObjects.length > 0 ? detectedObjects.map((obj, i) => (
                                  <li key={`face-${i}`}>
                                      <button
                                          type="button"
-                                         onClick={() => handleSelectObject(obj)}
+                                         onClick={() => handleFaceClick(obj)}
                                          onMouseEnter={() => setHighlightedObject(obj)}
-                                         className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${highlightedObject === obj ? 'bg-blue-500 text-white' : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/70'}`}
+                                         className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedFace === obj ? 'bg-blue-500 text-white' : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/70'}`}
                                      >
                                          Rosto {i + 1}
                                      </button>
@@ -96,13 +124,7 @@ const FaceSwapPanel: React.FC = () => {
 
             <button
                 type="button"
-                onClick={() => {
-                    if (sourceImage) {
-                        handleFaceSwap(sourceImage, userPrompt);
-                    } else {
-                        setToast({ message: "Por favor, carregue uma imagem de rosto de origem.", type: 'error' });
-                    }
-                }}
+                onClick={onSwap}
                 disabled={!isReadyForSwap || isLoading}
                 className="w-full bg-gradient-to-br from-red-600 to-rose-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
             >

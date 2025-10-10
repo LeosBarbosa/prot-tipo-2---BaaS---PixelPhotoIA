@@ -15,6 +15,8 @@ import {
     TextToolIcon,
     PixelsIcon,
     SwapIcon,
+    ExpandIcon,
+    SharpenIcon,
 } from '../components/icons';
 
 export interface TabConfig {
@@ -28,6 +30,7 @@ export interface TabConfig {
 // This list is used to build the left navigation and the right-side options panel.
 export const editingTabs: TabConfig[] = [
     { id: 'crop', name: 'Cortar e Girar', icon: React.createElement(CropIcon, { className: "w-6 h-6" }) },
+    { id: 'newAspectRatio', name: 'Proporção 16:9', icon: React.createElement(ExpandIcon, { className: "w-6 h-6" }), tag: 'new' },
     { id: 'adjust', name: 'Ajustes Globais', icon: React.createElement(AdjustmentsHorizontalIcon, { className: "w-6 h-6" }) },
     { id: 'localAdjust', name: 'Ajustes Locais', icon: React.createElement(BrushIcon, { className: "w-6 h-6" }), tag: 'tip' },
     { id: 'magicMontage', name: 'Montagem Mágica', icon: React.createElement(MagicWandIcon, { className: "w-6 h-6" }), tag: 'new' },
@@ -39,6 +42,7 @@ export const editingTabs: TabConfig[] = [
     { id: 'photoRestoration', name: 'Restauração de Foto', icon: React.createElement(SparkleIcon, { className: "w-6 h-6" }) },
     { id: 'upscale', name: 'Melhorar Resolução', icon: React.createElement(ArrowUpOnSquareIcon, { className: "w-6 h-6" }) },
     { id: 'unblur', name: 'Remover Desfoque', icon: React.createElement(UnblurIcon, { className: "w-6 h-6" }) },
+    { id: 'sharpen', name: 'Nitidez', icon: React.createElement(SharpenIcon, { className: "w-6 h-6" }), tag: 'new' },
     { id: 'relight', name: 'Reacender', icon: React.createElement(SunIcon, { className: "w-6 h-6" }) },
     { id: 'style', name: 'Estilos Artísticos', icon: React.createElement(PaletteIcon, { className: "w-6 h-6" }) },
     { id: 'portraits', name: 'Retratos IA', icon: React.createElement(UserIcon, { className: "w-6 h-6" }) },

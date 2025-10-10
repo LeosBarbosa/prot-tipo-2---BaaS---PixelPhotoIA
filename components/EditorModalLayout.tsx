@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { useEditor } from '../context/EditorContext';
 import ImageViewer from './ImageViewer';
 import FloatingControls from './FloatingControls';
@@ -12,34 +12,8 @@ import GifTimeline from './common/GifTimeline';
 import LeftPanel from './LeftPanel';
 import RightPanel from './RightPanel';
 import { editingTabs } from '../config/tabs';
-
-const toolToTabMap: Partial<Record<ToolId, TabId>> = {
-    extractArt: 'extractArt',
-    removeBg: 'removeBg',
-    style: 'style',
-    portraits: 'portraits',
-    faceRecovery: 'photoRestoration',
-    styleGen: 'styleGen',
-    adjust: 'adjust',
-    relight: 'relight',
-    generativeEdit: 'generativeEdit',
-    crop: 'crop',
-    upscale: 'upscale',
-    unblur: 'unblur',
-    neuralFilters: 'neuralFilters',
-    trends: 'trends',
-    dustAndScratches: 'dustAndScratches',
-    objectRemover: 'objectRemover',
-    texture: 'texture',
-    magicMontage: 'magicMontage',
-    photoRestoration: 'photoRestoration',
-    text: 'text',
-    lowPoly: 'lowPoly',
-    pixelArt: 'pixelArt',
-    denoise: 'photoRestoration',
-    faceSwap: 'faceSwap',
-    localAdjust: 'localAdjust',
-};
+import MobileBottomNav from './MobileBottomNav';
+import { toolToTabMap } from '../config/tools';
 
 interface EditorModalLayoutProps {
     editingPanelComponents: Partial<Record<TabId, React.LazyExoticComponent<React.FC<{}>>>>;
@@ -49,10 +23,6 @@ interface EditorModalLayoutProps {
 const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelComponents }) => {
     const { activeTool, isGif, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, activeTab, setActiveTab, setToast } = useEditor();
     
-    // Estado para o gesto de deslizar
-    const [touchStartX, setTouchStartX] = useState<number | null>(null);
-    const [touchStartY, setTouchStartY] = useState<number | null>(null);
-
     // Quando a ferramenta inicial da página inicial muda, atualize a aba ativa
     useEffect(() => {
         if (activeTool) {
@@ -60,10 +30,10 @@ const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelCompo
             setActiveTab(initialTab);
         }
         
-        // Exibe uma dica na primeira vez que um usuário mobile abre o editor
+        // Mostra uma dica na primeira vez que um usuário móvel abre o editor
         const firstTimeMobile = localStorage.getItem('hasSeenSwipeHint') !== 'true';
         if (window.innerWidth < 1024 && firstTimeMobile) {
-            setToast({ message: 'Arraste da borda esquerda para ver as ferramentas!', type: 'info' });
+            setToast({ message: 'Use a barra inferior para navegar entre ferramentas e opções.', type: 'info' });
             localStorage.setItem('hasSeenSwipeHint', 'true');
         }
     }, [activeTool, setActiveTab, setToast]);
@@ -72,56 +42,43 @@ const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelCompo
 
     const showBackdrop = isLeftPanelVisible || isRightPanelVisible;
 
+    const touchStartRef = useRef<{ x: number, time: number } | null>(null);
+    const mainContentRef = useRef<HTMLDivElement>(null);
+
     const handleTouchStart = (e: React.TouchEvent) => {
-        // Acompanha apenas deslizes de um dedo para navegação do painel
         if (e.touches.length === 1) {
-            setTouchStartX(e.touches[0].clientX);
-            setTouchStartY(e.touches[0].clientY);
-        } else {
-            setTouchStartX(null);
-            setTouchStartY(null);
+            touchStartRef.current = { x: e.touches[0].clientX, time: Date.now() };
         }
     };
-
+    
     const handleTouchEnd = (e: React.TouchEvent) => {
-        // Gestos apenas para viewports de celular
-        if (window.innerWidth >= 1024 || !touchStartX || !touchStartY) {
-            return;
-        }
-
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
-
-        const deltaX = touchEndX - touchStartX;
-        const deltaY = touchEndY - touchStartY;
-        
-        const minSwipeDistance = 50;
-        
-        // Garante que é um deslize horizontal, não uma tentativa de rolagem vertical
-        if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaX) > Math.abs(deltaY)) {
-            // DESLIZE PARA A DIREITA
-            if (deltaX > 0) { 
-                if (isRightPanelVisible) {
-                    // Fecha o painel direito ao deslizar para a direita
-                    setIsRightPanelVisible(false);
-                } else if (!isLeftPanelVisible && touchStartX < 50) {
-                    // Abre o painel esquerdo se estiver fechado e o deslize começar na borda da tela
-                    setIsLeftPanelVisible(true);
-                    setIsRightPanelVisible(false); // Garante que o painel direito está fechado
-                }
-            } 
-            // DESLIZE PARA A ESQUERDA
-            else { 
-                if (isLeftPanelVisible) {
-                    // Fecha o painel esquerdo ao deslizar para a esquerda
-                    setIsLeftPanelVisible(false);
-                }
+        if (!touchStartRef.current) return;
+    
+        const touchEnd = e.changedTouches[0];
+        const deltaX = touchEnd.clientX - touchStartRef.current.x;
+        const deltaTime = Date.now() - touchStartRef.current.time;
+        const velocity = Math.abs(deltaX / deltaTime);
+    
+        const SWIPE_THRESHOLD = 80;
+        const VELOCITY_THRESHOLD = 0.3;
+    
+        const isFastSwipe = velocity > VELOCITY_THRESHOLD;
+        const isSignificantSwipe = Math.abs(deltaX) > SWIPE_THRESHOLD;
+    
+        if (isFastSwipe || isSignificantSwipe) {
+            if (deltaX > 0 && !isLeftPanelVisible) { // Swipe right to open left panel
+                setIsLeftPanelVisible(true);
+                setIsRightPanelVisible(false);
+            } else if (deltaX < 0 && !isRightPanelVisible) { // Swipe left to open right panel
+                setIsRightPanelVisible(true);
+                setIsLeftPanelVisible(false);
+            } else if (deltaX < 0 && isLeftPanelVisible) { // Swipe left to close left panel
+                 setIsLeftPanelVisible(false);
+            } else if (deltaX > 0 && isRightPanelVisible) { // Swipe right to close right panel
+                setIsRightPanelVisible(false);
             }
         }
-        
-        // Reseta após cada toque finalizado
-        setTouchStartX(null);
-        setTouchStartY(null);
+        touchStartRef.current = null;
     };
 
 
@@ -144,13 +101,14 @@ const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelCompo
             )}
 
             {/* Left Panel */}
-            <aside className={`fixed lg:relative z-40 h-full w-80 flex-shrink-0 transition-transform duration-300 ease-in-out ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+            <aside className={`fixed lg:relative z-40 h-full w-full max-w-sm lg:w-80 flex-shrink-0 transition-transform duration-300 ease-in-out ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
                 <LeftPanel activeTab={activeTab} setActiveTab={setActiveTab} />
             </aside>
 
             {/* Main Content */}
             <main 
-                className="flex-grow flex flex-col relative"
+                ref={mainContentRef}
+                className="flex-grow flex flex-col relative pb-20 lg:pb-0"
             >
                 <div className="flex-grow flex items-center justify-center p-4 relative overflow-hidden">
                     <ImageViewer />
@@ -160,9 +118,11 @@ const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelCompo
             </main>
 
             {/* Right Panel */}
-            <aside className={`fixed lg:relative right-0 z-40 h-full w-11/12 max-w-sm lg:w-96 flex-shrink-0 transition-transform duration-300 ease-in-out ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
+            <aside className={`fixed lg:relative right-0 z-40 h-full w-full max-w-sm lg:w-96 flex-shrink-0 transition-transform duration-300 ease-in-out ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
                 <RightPanel activeTabConfig={activeTabConfig} editingPanelComponents={editingPanelComponents} />
             </aside>
+
+            <MobileBottomNav />
         </div>
     );
 };

@@ -12,7 +12,8 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
   const { 
-    handleUploadNew, 
+    handleGoHome,
+    handleTriggerUpload, 
     baseImageFile, 
     handleExplicitSave,
     isLeftPanelVisible,
@@ -49,7 +50,7 @@ const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
       <div className="flex items-center justify-center gap-3">
           {isEditingTool && (
             <button 
-              onClick={handleUploadNew}
+              onClick={handleGoHome}
               className="flex items-center justify-center w-10 h-10 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 rounded-full transition-all duration-200 ease-in-out active:scale-90"
               title="Voltar ao Início"
               aria-label="Voltar ao Início"
@@ -101,7 +102,7 @@ const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
               <span className="hidden md:inline">Salvar Sessão</span>
             </button>
             <button 
-              onClick={handleUploadNew}
+              onClick={handleTriggerUpload}
               className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out active:scale-95 text-sm"
               title="Carregar nova imagem"
               aria-label="Carregar nova imagem"
@@ -112,7 +113,7 @@ const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
           </>
         )}
         {isEditingTool && (
-            <div className="flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
                 <button 
                     onClick={handleLeftPanelToggle}
                     className={`p-2 rounded-md transition-all duration-200 ease-in-out active:scale-90 z-30 ${isLeftPanelVisible ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200'}`}

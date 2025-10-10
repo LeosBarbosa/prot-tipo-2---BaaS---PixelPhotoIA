@@ -41,7 +41,7 @@ const PortraitsPanel: React.FC = () => {
                 <p className="text-sm text-gray-400 -mt-1">Melhore seus retratos com um clique.</p>
             </div>
             
-            <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 flex flex-col items-center gap-3">
+            <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50 flex flex-col items-center gap-3">
                 <h4 className="font-bold text-white text-md flex items-center gap-2">
                     <SparkleIcon className="w-5 h-5 text-pink-400"/>
                     Retoque Facial com IA
@@ -88,7 +88,7 @@ const PortraitsPanel: React.FC = () => {
                 </button>
             </div>
 
-            <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 flex flex-col items-center gap-3">
+            <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50 flex flex-col items-center gap-3">
                 <h4 className="font-bold text-white text-md flex items-center gap-2">
                     <SunIcon className="w-5 h-5 text-yellow-400"/>
                     Reacender (Dia Ensolarado)
@@ -103,7 +103,7 @@ const PortraitsPanel: React.FC = () => {
                 </button>
             </div>
             
-            <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 flex flex-col items-center gap-3">
+            <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50 flex flex-col items-center gap-3">
                 <h4 className="font-bold text-white text-md flex items-center gap-2">
                     <UserIcon className="w-5 h-5 text-blue-400"/>
                     Retrato Profissional
@@ -118,7 +118,7 @@ const PortraitsPanel: React.FC = () => {
                 </button>
             </div>
 
-            <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 flex flex-col items-center gap-3">
+            <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50 flex flex-col items-center gap-3">
                  <h4 className="font-bold text-white text-md flex items-center gap-2">
                     Mudar Estilo de Cabelo
                 </h4>
@@ -129,7 +129,7 @@ const PortraitsPanel: React.FC = () => {
                             key={style.name}
                             onClick={() => handleApplyAIAdjustment(style.prompt, applyToAll)}
                             disabled={isLoading}
-                            className="p-2 rounded-md text-sm font-semibold transition-all bg-white/10 hover:bg-white/20 text-gray-200 aspect-square flex flex-col items-center justify-center gap-2"
+                            className="p-2 rounded-md text-sm font-semibold transition-all bg-gray-800/50 hover:bg-gray-700/50 text-gray-200 aspect-square flex flex-col items-center justify-center gap-2"
                         >
                             {style.icon}
                             <span>{style.name}</span>

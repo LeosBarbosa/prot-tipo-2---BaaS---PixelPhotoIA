@@ -6,11 +6,11 @@
 import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { SunIcon } from '../icons';
-import PromptEnhancer from './common/PromptEnhancer';
 import TipBox from '../common/TipBox';
 import { validatePromptSpecificity } from '../../services/geminiService';
 import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
 import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import PromptEnhancer from './common/PromptEnhancer';
 
 const lightingPresets = [
     { name: 'Hora Dourada', prompt: 'luz quente e dourada do final da tarde, com sombras longas e suaves' },

@@ -11,6 +11,7 @@ import { dataURLtoFile } from '../../utils/imageUtils';
 import { UploadIcon, SparkleIcon, BrushIcon } from '../icons';
 import PromptEnhancer from './common/PromptEnhancer';
 import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
+import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
 
 const ArchitecturalVizPanel: React.FC = () => {
     const [uploadedImage, setUploadedImage] = useState<File | null>(null);
@@ -19,10 +20,10 @@ const ArchitecturalVizPanel: React.FC = () => {
     const [roomStyle, setRoomStyle] = useState<string>('Moderno');
     const [prompt, setPrompt] = useState<string>('');
     const [brushSize, setBrushSize] = useState(40);
-    const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
-    const { isLoading, error, setError, setIsLoading, setLoadingMessage, baseImageFile, setInitialImage, addPromptToHistory, promptHistory } = useEditor();
+    const { isLoading, error, setError, setIsLoading, setLoadingMessage, baseImageFile, setInitialImage, addPromptToHistory } = useEditor();
+    const suggestions = usePromptSuggestions(prompt, 'architecturalViz');
 
     const imageRef = useRef<HTMLImageElement>(null);
     const maskCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -30,19 +31,8 @@ const ArchitecturalVizPanel: React.FC = () => {
     const { maskDataUrl, startDrawing, stopDrawing, draw, clearMask } = useMaskCanvas(maskCanvasRef, brushSize);
     
     useEffect(() => {
-        if (prompt && prompt.trim().length > 1) {
-            const lowerCasePrompt = prompt.toLowerCase();
-            const filtered = promptHistory.filter(p => 
-                p.toLowerCase().includes(lowerCasePrompt) && 
-                p.toLowerCase() !== lowerCasePrompt
-            );
-            setSuggestions(filtered.slice(0, 5));
-            setShowSuggestions(filtered.length > 0);
-        } else {
-            setSuggestions([]);
-            setShowSuggestions(false);
-        }
-    }, [prompt, promptHistory]);
+        setShowSuggestions(suggestions.length > 0);
+    }, [suggestions]);
 
     const handleSelectSuggestion = (suggestion: string) => {
         setPrompt(suggestion);

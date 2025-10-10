@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { lazy, Suspense, useMemo, useEffect } from 'react';
+import React, { lazy, Suspense, useMemo } from 'react';
 import { EditorProvider, useEditor } from './context/EditorContext';
 import Header from './components/Header';
 import HomePage from './components/HomePage';
@@ -32,6 +32,7 @@ const editingPanelComponents: Partial<Record<TabId, React.LazyExoticComponent<Re
     neuralFilters: lazy(() => import(/* webpackChunkName: "tool-panel-neural-filters" */ './components/tools/NeuralFiltersPanel')),
     trends: lazy(() => import(/* webpackChunkName: "tool-panel-trends" */ './components/tools/TrendsPanel')),
     unblur: lazy(() => import(/* webpackChunkName: "tool-panel-unblur" */ './components/tools/UnblurPanel')),
+    sharpen: lazy(() => import(/* webpackChunkName: "tool-panel-sharpen" */ './components/tools/SharpenPanel')),
     dustAndScratches: lazy(() => import(/* webpackChunkName: "tool-panel-dust-scratches" */ './components/tools/DustAndScratchesPanel')),
     history: lazy(() => import(/* webpackChunkName: "panel-history" */ './components/HistoryPanel')),
     objectRemover: lazy(() => import(/* webpackChunkName: "tool-panel-object-remover" */ './components/tools/ObjectRemoverPanel')),
@@ -43,6 +44,7 @@ const editingPanelComponents: Partial<Record<TabId, React.LazyExoticComponent<Re
     pixelArt: lazy(() => import(/* webpackChunkName: "tool-panel-pixel-art" */ './components/tools/PixelArtPanel')),
     localAdjust: lazy(() => import(/* webpackChunkName: "tool-panel-local-adjustment" */ './components/tools/LocalAdjustmentPanel')),
     faceSwap: lazy(() => import(/* webpackChunkName: "tool-panel-face-swap" */ './components/tools/FaceSwapPanel')),
+    newAspectRatio: lazy(() => import(/* webpackChunkName: "tool-panel-new-aspect-ratio" */ './components/tools/NewAspectRatioPanel')),
 };
 
 // Map Tool IDs to their corresponding components and modal titles for non-editing tools
@@ -66,6 +68,7 @@ const toolMap: Partial<Record<ToolId, { Component: React.LazyExoticComponent<Rea
     aiPortraitStudio: { Component: lazy(() => import(/* webpackChunkName: "tool-ai-portrait-studio" */ './components/tools/AIPortraitStudioPanel')), title: 'Estúdio de Retrato IA' },
     model3DGen: { Component: lazy(() => import(/* webpackChunkName: "tool-model-3d-gen" */ './components/tools/Model3DGenPanel')), title: 'Gerador de Modelo 3D' },
     bananimate: { Component: lazy(() => import(/* webpackChunkName: "tool-bananimate" */ './components/tools/BananimatePanel')), title: 'Bananimate' },
+    confidentStudio: { Component: lazy(() => import(/* webpackChunkName: "tool-confident-studio" */ './components/tools/ConfidentStudioPanel')), title: 'Retrato de Estúdio Confiante' },
     styledPortrait: { Component: lazy(() => import(/* webpackChunkName: "tool-styled-portrait" */ './components/tools/StyledPortraitPanel')), title: 'Retrato Estilizado' },
     photoStudio: { Component: lazy(() => import(/* webpackChunkName: "tool-photo-studio" */ './components/tools/PhotoStudioPanel')), title: 'Ensaio Fotográfico IA' },
     polaroid: { Component: lazy(() => import(/* webpackChunkName: "tool-polaroid" */ './components/tools/PolaroidPanel')), title: 'Polaroid com Artista IA' },
@@ -77,7 +80,6 @@ function AppContent() {
   const { 
     baseImageFile,
     activeTool,
-    setActiveTool,
     isLoading,
     loadingMessage,
     uploadProgress,
@@ -91,11 +93,9 @@ function AppContent() {
     isSaveWorkflowModalOpen,
     isLeftPanelVisible,
     isRightPanelVisible,
-    hasRestoredSession,
   } = useEditor();
 
-  const isEditingTool = baseImageFile && !activeTool && !hasRestoredSession;
-  const isHomePage = !baseImageFile && !activeTool && !hasRestoredSession;
+  const showEditor = !!baseImageFile;
 
   const ActiveToolComponent = useMemo(() => {
     if (!activeTool || !toolMap[activeTool]) return null;
@@ -109,10 +109,10 @@ function AppContent() {
   
   return (
     <div className={`w-full min-h-screen flex flex-col bg-gray-900 text-gray-200 transition-colors duration-300 ${isLeftPanelVisible || isRightPanelVisible ? 'lg:overflow-hidden' : ''}`}>
-      <Header isEditingTool={!!isEditingTool} />
+      <Header isEditingTool={showEditor} />
       <main className="flex-grow flex flex-col relative">
-        {(isHomePage || hasRestoredSession) && <HomePage />}
-        {isEditingTool && (
+        {!showEditor && <HomePage />}
+        {showEditor && (
           <EditorModalLayout editingPanelComponents={editingPanelComponents} />
         )}
 

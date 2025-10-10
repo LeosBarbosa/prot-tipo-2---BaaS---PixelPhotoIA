@@ -118,17 +118,19 @@ const BananimatePanel: React.FC = () => {
                 />
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-300 mb-1">Descrição da Animação</label>
-                  <textarea
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                      onFocus={() => setShowSuggestions(suggestions.length > 0)}
-                      placeholder="Ex: faça o gato dançar, adicione vapor saindo da xícara..."
-                      className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
-                      disabled={isLoading}
-                      rows={5}
-                  />
-                  <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="bananimate" />
+                  <div className="relative">
+                    <textarea
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                        onFocus={() => setShowSuggestions(suggestions.length > 0)}
+                        placeholder="Ex: faça o gato dançar, adicione vapor saindo da xícara..."
+                        className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
+                        disabled={isLoading}
+                        rows={5}
+                    />
+                    <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="bananimate" />
+                  </div>
                   {showSuggestions && (
                     <PromptSuggestionsDropdown
                         suggestions={suggestions}

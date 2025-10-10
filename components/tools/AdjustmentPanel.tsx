@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useEditor, DEFAULT_LOCAL_FILTERS } from '../../context/EditorContext';
 import ToneCurve from '../ToneCurve';
-import { ToneCurveIcon, SparkleIcon } from '../icons';
+import { ToneCurveIcon, SunIcon, PaletteIcon, AdjustmentsHorizontalIcon } from '../icons';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
 import TipBox from '../common/TipBox';
 import { AdjustmentLayer } from '../../types';
@@ -46,7 +46,6 @@ const AdjustmentPanel: React.FC = () => {
         hasLocalAdjustments,
         histogram,
         handleApplyCurve,
-        handleApplyStyle,
         isGif,
         layers,
         activeLayerId,
@@ -73,21 +72,34 @@ const AdjustmentPanel: React.FC = () => {
 
     return (
         <div className="w-full flex flex-col gap-4">
-            <div className="space-y-3">
-                <Slider label="Brilho" value={localFilters.brightness} min={0} max={200} onChange={e => handleFilterChange('brightness', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
-                <Slider label="Contraste" value={localFilters.contrast} min={0} max={200} onChange={e => handleFilterChange('contrast', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
-                <Slider label="Saturação" value={localFilters.saturate} min={0} max={200} onChange={e => handleFilterChange('saturate', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
-                <Slider label="Girar Matiz" value={localFilters.hueRotate} min={0} max={360} onChange={e => handleFilterChange('hueRotate', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
-                <Slider label="Desfoque" value={localFilters.blur} min={0} max={20} onChange={e => handleFilterChange('blur', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
-                <Slider label="Sépia" value={localFilters.sepia} min={0} max={100} onChange={e => handleFilterChange('sepia', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
-                <Slider label="Escala de Cinza" value={localFilters.grayscale} min={0} max={100} onChange={e => handleFilterChange('grayscale', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
-                <Slider label="Inverter" value={localFilters.invert} min={0} max={100} onChange={e => handleFilterChange('invert', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
+            <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50">
+                <h4 className="font-bold text-white text-md mb-3 flex items-center gap-2"><SunIcon className="w-5 h-5 text-yellow-400"/> Luz & Contraste</h4>
+                <div className="space-y-4">
+                    <Slider label="Brilho" value={localFilters.brightness} min={0} max={200} onChange={e => handleFilterChange('brightness', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
+                    <Slider label="Contraste" value={localFilters.contrast} min={0} max={200} onChange={e => handleFilterChange('contrast', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
+                </div>
+            </div>
+
+            <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50">
+                <h4 className="font-bold text-white text-md mb-3 flex items-center gap-2"><PaletteIcon className="w-5 h-5 text-cyan-400"/> Cor</h4>
+                <div className="space-y-4">
+                    <Slider label="Saturação" value={localFilters.saturate} min={0} max={200} onChange={e => handleFilterChange('saturate', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
+                    <Slider label="Girar Matiz" value={localFilters.hueRotate} min={0} max={360} onChange={e => handleFilterChange('hueRotate', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
+                    <Slider label="Sépia" value={localFilters.sepia} min={0} max={100} onChange={e => handleFilterChange('sepia', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
+                </div>
+            </div>
+
+            <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50">
+                <h4 className="font-bold text-white text-md mb-3 flex items-center gap-2"><AdjustmentsHorizontalIcon className="w-5 h-5 text-purple-400"/> Efeitos</h4>
+                <div className="space-y-4">
+                    <Slider label="Desfoque" value={localFilters.blur} min={0} max={20} onChange={e => handleFilterChange('blur', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
+                    <Slider label="Escala de Cinza" value={localFilters.grayscale} min={0} max={100} onChange={e => handleFilterChange('grayscale', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
+                    <Slider label="Inverter" value={localFilters.invert} min={0} max={100} onChange={e => handleFilterChange('invert', Number(e.target.value))} disabled={isLoading || isEditingAdjustmentLayer} />
+                </div>
             </div>
             
-            <div className="border-t border-gray-700/50 my-2"></div>
-            
-            <div className="flex flex-col gap-3">
-                <h4 className="text-md font-semibold text-gray-300 text-center flex items-center justify-center gap-2">
+            <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50">
+                <h4 className="text-md font-semibold text-gray-300 text-center mb-3 flex items-center justify-center gap-2">
                     <ToneCurveIcon className="w-5 h-5"/>
                     Curva de Tons
                 </h4>

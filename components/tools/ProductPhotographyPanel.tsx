@@ -9,29 +9,14 @@ import { generateProductPhoto } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import { SparkleIcon } from '../icons';
-import CollapsibleToolPanel from '../CollapsibleToolPanel';
-import PromptEnhancer from './common/PromptEnhancer';
-import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
-import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 
 const ProductPhotographyPanel: React.FC = () => {
     const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
-    const [isPromptExpanded, setIsPromptExpanded] = useState(true);
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const suggestions = usePromptSuggestions(prompt, 'productPhotography');
-
-    useEffect(() => {
-        setShowSuggestions(suggestions.length > 0);
-    }, [suggestions]);
-
-    const handleSelectSuggestion = (suggestion: string) => {
-        setPrompt(suggestion);
-        setShowSuggestions(false);
-    };
-
+    const [negativePrompt, setNegativePrompt] = useState('');
 
     useEffect(() => {
         if (baseImageFile && !sourceImage) {
@@ -61,7 +46,11 @@ const ProductPhotographyPanel: React.FC = () => {
         setResultImage(null);
         addPromptToHistory(prompt);
         try {
-            const result = await generateProductPhoto(sourceImage, prompt);
+            let fullPrompt = prompt;
+            if (negativePrompt.trim()) {
+                fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
+            }
+            const result = await generateProductPhoto(sourceImage, fullPrompt);
             setResultImage(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -83,34 +72,18 @@ const ProductPhotographyPanel: React.FC = () => {
                     label="Imagem do Produto"
                 />
                 
-                <CollapsibleToolPanel
-                    title="Descrição do Cenário"
-                    icon={<SparkleIcon className="w-5 h-5" />}
-                    isExpanded={isPromptExpanded}
-                    onExpandToggle={() => setIsPromptExpanded(!isPromptExpanded)}
-                >
-                    <div className="relative">
-                        <textarea
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                            onFocus={() => setShowSuggestions(suggestions.length > 0)}
-                            placeholder="Ex: em uma mesa de mármore com uma planta desfocada ao fundo, em uma praia com a luz do pôr do sol..."
-                            className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
-                            disabled={isLoading}
-                            rows={5}
-                        />
-                        <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="productPhotography" />
-                         {showSuggestions && (
-                            <PromptSuggestionsDropdown
-                                suggestions={suggestions}
-                                onSelect={handleSelectSuggestion}
-                                searchTerm={prompt}
-                            />
-                        )}
-                        <p className="mt-1 text-xs text-gray-500 px-1">Exemplo: "em uma mesa de mármore com uma planta desfocada ao fundo". Seja descritivo sobre o ambiente, superfície, iluminação e fundo.</p>
-                    </div>
-                </CollapsibleToolPanel>
+                <CollapsiblePromptPanel
+                  title="Descrição do Cenário"
+                  prompt={prompt}
+                  setPrompt={setPrompt}
+                  negativePrompt={negativePrompt}
+                  onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
+                  isLoading={isLoading}
+                  toolId="productPhotography"
+                  promptPlaceholder="Ex: em uma mesa de mármore com uma planta desfocada ao fundo..."
+                  promptHelperText="Seja descritivo sobre o ambiente, superfície, iluminação e fundo."
+                  negativePromptHelperText="Ex: reflexos indesejados, outras marcas."
+                />
                 
                 <button
                     onClick={handleGenerate}

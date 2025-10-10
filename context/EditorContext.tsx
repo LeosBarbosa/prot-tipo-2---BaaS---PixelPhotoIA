@@ -1,3 +1,5 @@
+
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -17,44 +19,10 @@ import { useMaskCanvas } from '../hooks/useMaskCanvas';
 import { dataURLtoFile, createMaskFromCrop, frameToFile, dataURLToImageData, frameToDataURL, fileToDataURL, optimizeImage, createMaskFromBoundingBox } from '../utils/imageUtils';
 import { parseGif } from '../utils/gifUtils';
 import * as geminiService from '../services/geminiService';
-import { type ToolId, type TransformType, type DetectedObject, TabId, type ToastType, Workflow, SmartSearchResult, PredefinedSearch, type UploadProgressStatus, type ToolConfig, type VideoAspectRatio, Layer, LayerStateSnapshot, ImageLayer, AdjustmentLayer, FilterState, BlendMode } from '../types';
-import { handleOrchestratorCall } from '../services/orchestrator';
+import { EditorContextType, type ToolId, type TransformType, type DetectedObject, TabId, type ToastType, Workflow, SmartSearchResult, PredefinedSearch, type UploadProgressStatus, type ToolConfig, type VideoAspectRatio, Layer, LayerStateSnapshot, ImageLayer, AdjustmentLayer, FilterState, BlendMode, GifFrame, TextToolState } from '../types';
 import * as db from '../utils/db';
 import { tools } from '../config/tools';
 import { fileToPart, generateImageFromParts, generateImageWithDescription } from '../services/geminiService';
-
-
-interface GifFrame {
-    imageData: ImageData;
-    delay: number;
-}
-
-interface ProactiveSuggestionState {
-    message: string;
-    acceptLabel: string;
-    onAccept: () => void;
-}
-
-interface TexturePreviewState {
-    url: string;
-    opacity: number;
-    blendMode: 'overlay' | 'multiply' | 'screen' | 'normal';
-}
-
-// Define Trend here so it can be used by PreviewState and generateAIPreview
-interface Trend {
-    name: string;
-    prompt: string;
-    bg: string;
-    icon?: React.ReactNode;
-    type?: 'descriptive';
-}
-
-interface PreviewState {
-    url: string;
-    trend: Trend;
-    applyToAll: boolean;
-}
 
 export const DEFAULT_LOCAL_FILTERS: FilterState = {
     brightness: 100, 
@@ -68,17 +36,6 @@ export const DEFAULT_LOCAL_FILTERS: FilterState = {
     curve: undefined as number[] | undefined,
 };
 
-export interface TextToolState {
-    content: string;
-    fontFamily: string;
-    fontSize: number;
-    color: string;
-    align: 'left' | 'center' | 'right';
-    bold: boolean;
-    italic: boolean;
-    position: { x: number, y: number };
-}
-
 export const DEFAULT_TEXT_TOOL_STATE: TextToolState = {
     content: 'Texto de Exemplo',
     fontFamily: 'Impact',
@@ -90,199 +47,36 @@ export const DEFAULT_TEXT_TOOL_STATE: TextToolState = {
     position: { x: 50, y: 50 },
 };
 
-interface EditorContextType {
-    // General State
-    activeTool: ToolId | null;
-    setActiveTool: (toolId: ToolId | null) => void;
-    activeTab: TabId;
-    setActiveTab: React.Dispatch<React.SetStateAction<TabId>>;
-    isLoading: boolean;
-    setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
-    loadingMessage: string | null;
-    setLoadingMessage: React.Dispatch<React.SetStateAction<string | null>>;
-    error: string | null;
-    setError: React.Dispatch<React.SetStateAction<string | null>>;
-    isComparisonModalOpen: boolean;
-    setIsComparisonModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    isInlineComparisonActive: boolean;
-    setIsInlineComparisonActive: React.Dispatch<React.SetStateAction<boolean>>;
-    toast: { message: string, type: ToastType } | null;
-    setToast: React.Dispatch<React.SetStateAction<{ message: string, type: ToastType } | null>>;
-    proactiveSuggestion: ProactiveSuggestionState | null;
-    setProactiveSuggestion: React.Dispatch<React.SetStateAction<ProactiveSuggestionState | null>>;
-    uploadProgress: UploadProgressStatus | null;
-    setUploadProgress: React.Dispatch<React.SetStateAction<UploadProgressStatus | null>>;
-    isSaveWorkflowModalOpen: boolean;
-    setIsSaveWorkflowModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    isLeftPanelVisible: boolean;
-    setIsLeftPanelVisible: React.Dispatch<React.SetStateAction<boolean>>;
-    isRightPanelVisible: boolean;
-    setIsRightPanelVisible: React.Dispatch<React.SetStateAction<boolean>>;
-    theme: 'light' | 'dark';
-    toggleTheme: () => void;
-
-    // Image & Layer State
-    layers: Layer[];
-    activeLayerId: string | null;
-    setActiveLayerId: (id: string | null) => void;
-    baseImageFile: File | null;
-    currentImageUrl: string | null;
-    compositeCssFilter: string;
-    originalImageUrl: string | null; // For comparison
-    imgRef: React.RefObject<HTMLImageElement>;
-    setInitialImage: (file: File | null) => void;
-    hasRestoredSession: boolean;
-
-    // Layer Actions
-    updateLayer: (layerId: string, updates: Partial<Layer>) => void;
-    deleteLayer: (layerId: string) => void;
-    toggleLayerVisibility: (layerId: string) => void;
-    mergeDownLayer: (layerId: string) => void;
-    moveLayerUp: (layerId: string) => void;
-    moveLayerDown: (layerId: string) => void;
-
-
-    // History State
-    history: LayerStateSnapshot[];
-    historyIndex: number;
-    canUndo: boolean;
-    canRedo: boolean;
-    undo: () => void;
-    redo: () => void;
-    jumpToState: (index: number) => void;
-    resetHistory: () => void;
-    toolHistory: ToolId[];
-    commitChange: (newLayers: Layer[], newActiveLayerId: string | null, toolId?: ToolId) => void;
-
-    // GIF State
-    isGif: boolean;
-    gifFrames: GifFrame[];
-    currentFrameIndex: number;
-    setCurrentFrameIndex: React.Dispatch<React.SetStateAction<number>>;
-
-    // Pan & Zoom State
-    zoom: number;
-    setZoom: React.Dispatch<React.SetStateAction<number>>;
-    panOffset: { x: number, y: number };
-    isPanModeActive: boolean;
-    setIsPanModeActive: React.Dispatch<React.SetStateAction<boolean>>;
-    isCurrentlyPanning: boolean;
-    handleWheel: (e: React.WheelEvent<HTMLDivElement>) => void;
-    handlePanStart: (e: React.MouseEvent) => void;
-    handleTouchStart: (e: React.TouchEvent) => void;
-    handleTouchMove: (e: React.TouchEvent, containerRect: DOMRect) => void;
-    handleTouchEnd: (e: React.TouchEvent) => void;
-    resetZoomAndPan: () => void;
-
-    // Crop State
-    crop: Crop | undefined;
-    setCrop: React.Dispatch<React.SetStateAction<Crop | undefined>>;
-    completedCrop: PixelCrop | undefined;
-    setCompletedCrop: React.Dispatch<React.SetStateAction<PixelCrop | undefined>>;
-    aspect: number | undefined;
-    setAspect: React.Dispatch<React.SetStateAction<number | undefined>>;
-
-    // Masking State
-    canvasRef: React.RefObject<HTMLCanvasElement>;
-    maskDataUrl: string | null;
-    setMaskDataUrl: React.Dispatch<React.SetStateAction<string | null>>;
-    brushSize: number;
-    setBrushSize: React.Dispatch<React.SetStateAction<number>>;
-    clearMask: () => void;
-    startDrawing: (e: React.MouseEvent<HTMLCanvasElement>) => void;
-    stopDrawing: () => void;
-    draw: (e: React.MouseEvent<HTMLCanvasElement>) => void;
-
-    // Object Detection State
-    detectedObjects: DetectedObject[] | null;
-    setDetectedObjects: React.Dispatch<React.SetStateAction<DetectedObject[] | null>>;
-    highlightedObject: DetectedObject | null;
-    setHighlightedObject: React.Dispatch<React.SetStateAction<DetectedObject | null>>;
-
-    // Local Adjustments State
-    localFilters: typeof DEFAULT_LOCAL_FILTERS;
-    setLocalFilters: React.Dispatch<React.SetStateAction<typeof DEFAULT_LOCAL_FILTERS>>;
-    hasLocalAdjustments: boolean;
-    buildFilterString: (filters: Partial<FilterState>) => string;
-    resetLocalFilters: () => void;
-    histogram: { r: number[], g: number[], b: number[] } | null;
-    
-    // AI Preview State
-    previewState: PreviewState | null;
-    setPreviewState: React.Dispatch<React.SetStateAction<PreviewState | null>>;
-    isPreviewLoading: boolean;
-
-    // Text Tool State
-    textToolState: TextToolState;
-    setTextToolState: React.Dispatch<React.SetStateAction<TextToolState>>;
-    resetTextToolState: () => void;
-
-    // Video Generation State
-    generatedVideoUrl: string | null;
-    setGeneratedVideoUrl: React.Dispatch<React.SetStateAction<string | null>>;
-
-    // Texture State
-    texturePreview: TexturePreviewState | null;
-    setTexturePreview: React.Dispatch<React.SetStateAction<TexturePreviewState | null>>;
-
-    // Smart Search State
-    isSmartSearching: boolean;
-    smartSearchResult: SmartSearchResult | null;
-    setSmartSearchResult: React.Dispatch<React.SetStateAction<SmartSearchResult | null>>;
-    
-    // Workflows State
-    savedWorkflows: Workflow[];
-    addWorkflow: (workflow: Workflow) => void;
-    recentTools: ToolId[];
-
-    // Prompt History State
-    promptHistory: string[];
-    addPromptToHistory: (prompt: string) => void;
-    
-    // Tool Handlers
-    executeWorkflow: (toolIds: ToolId[]) => void;
-    handlePredefinedSearchAction: (action: PredefinedSearch['action']) => void;
-    handleSmartSearch: (term: string) => void;
-    handleFileSelect: (file: File) => Promise<void>;
-    handleUploadNew: () => void;
-    handleExplicitSave: () => void;
-    handleApplyCrop: () => void;
-    handleTransform: (transformType: TransformType) => void;
-    handleRemoveBackground: () => void;
-    handleRelight: (prompt: string) => void;
-    handleMagicPrompt: (prompt: string) => void;
-    handleApplyLowPoly: () => void;
-    handleExtractArt: () => void;
-    handleApplyDustAndScratch: () => void;
-    handleDenoise: () => void;
-    handleApplyFaceRecovery: () => void;
-    handleGenerateProfessionalPortrait: (applyToAll: boolean) => void;
-    handleRestorePhoto: (colorize: boolean) => void;
-    handleApplyUpscale: (factor: number, preserveFace: boolean) => void;
-    handleUnblurImage: (sharpenLevel: number, denoiseLevel: number, model: string) => void;
-    handleGenerativeEdit: () => void;
-    handleObjectRemove: () => void;
-    handleDetectObjects: (prompt?: string) => void;
-    handleDetectFaces: () => void;
-    handleFaceRetouch: () => void;
-    handleFaceSwap: (sourceImageFile: File, userPrompt: string) => void;
-    handleSelectObject: (object: DetectedObject) => void;
-    handleApplyLocalAdjustments: (applyToAll: boolean) => void;
-    handleApplyCurve: (lut: number[]) => void;
-    handleApplyStyle: (stylePrompt: string, applyToAll: boolean) => void;
-    handleApplyAIAdjustment: (prompt: string, applyToAll: boolean) => void;
-    handleApplyText: () => void;
-    handleGenerateVideo: (prompt: string, aspectRatio: VideoAspectRatio) => void;
-    handleDownload: () => void;
-    handleApplyTexture: () => void;
-    prompt: string;
-    setPrompt: React.Dispatch<React.SetStateAction<string>>;
-    generateAIPreview: (trend: Trend, applyToAll: boolean) => void;
-    commitAIPreview: () => void;
-    initialPromptFromMetadata: string | null;
-}
-
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
+
+/**
+ * Converte uma máscara de branco sobre transparente para branco sobre preto, que é o formato esperado pela API Gemini para inpainting.
+ * @param maskDataUrl A URL de dados da máscara de branco sobre transparente.
+ * @returns Uma Promise que resolve com a URL de dados da máscara de branco sobre preto.
+ */
+const convertMaskToBlackAndWhite = (maskDataUrl: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject(new Error("Não foi possível criar o contexto do canvas para o processamento da máscara."));
+            
+            // Preenche com preto primeiro
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Em seguida, desenha a parte branca da máscara original por cima
+            ctx.drawImage(img, 0, 0);
+            
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = (err) => reject(err);
+        img.src = maskDataUrl;
+    });
+};
 
 export const useEditor = (): EditorContextType => {
     const context = useContext(EditorContext);
@@ -347,8 +141,8 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const { maskDataUrl, setMaskDataUrl, startDrawing, stopDrawing, draw, clearMask } = useMaskCanvas(canvasRef, brushSize);
     const [detectedObjects, setDetectedObjects] = useState<DetectedObject[] | null>(null);
     const [highlightedObject, setHighlightedObject] = useState<DetectedObject | null>(null);
-    const [previewState, setPreviewState] = useState<PreviewState | null>(null);
-    const [localFilters, setLocalFilters] = useState(DEFAULT_LOCAL_FILTERS);
+    const [previewState, setPreviewState] = useState<EditorContextType['previewState']>(null);
+    const [localFilters, setLocalFilters] = useState<FilterState>(DEFAULT_LOCAL_FILTERS);
 
     const resetLocalFilters = useCallback(() => {
         setLocalFilters(DEFAULT_LOCAL_FILTERS);
@@ -361,7 +155,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     // AI & Preview State
     const [prompt, setPrompt] = useState('');
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-    const [proactiveSuggestion, setProactiveSuggestion] = useState<ProactiveSuggestionState | null>(null);
+    const [proactiveSuggestion, setProactiveSuggestion] = useState<EditorContextType['proactiveSuggestion']>(null);
     const [smartSearchResult, setSmartSearchResult] = useState<SmartSearchResult | null>(null);
     const [isSmartSearching, setIsSmartSearching] = useState(false);
     const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
@@ -382,6 +176,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const imgRef = useRef<HTMLImageElement>(null);
     const lastAppliedToolRef = useRef<ToolId | null>(null);
     const initRef = useRef(false);
+    const suggestionGenerationRef = useRef<string | null>(null);
 
     // --- DERIVED STATE & MEMOS ---
 
@@ -399,7 +194,14 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const baseImageFile = useMemo(() => baseImageLayer?.file || null, [baseImageLayer]);
     const currentImageUrl = useMemo(() => baseImageFile ? URL.createObjectURL(baseImageFile) : null, [baseImageFile]);
 
-    const originalImageLayer = useMemo(() => history[0]?.layers[0] as ImageLayer | undefined, [history]);
+    const originalImageLayer = useMemo(() => {
+        const targetIndex = isInlineComparisonActive && historyIndex > 0 ? historyIndex - 1 : 0;
+        const snapshot = history[targetIndex];
+        if (!snapshot) return undefined;
+        // Find the first image layer in that snapshot
+        return snapshot.layers.find(l => l.type === 'image') as ImageLayer | undefined;
+    }, [history, historyIndex, isInlineComparisonActive]);
+    
     const originalImageUrl = useMemo(() => originalImageLayer?.file ? URL.createObjectURL(originalImageLayer.file) : null, [originalImageLayer]);
     
     useEffect(() => {
@@ -430,7 +232,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const hasLocalAdjustments = useMemo(() => {
         return Object.keys(localFilters).some(key => {
             if (key === 'curve') return localFilters.curve !== undefined;
-            return localFilters[key as keyof typeof localFilters] !== DEFAULT_LOCAL_FILTERS[key as keyof typeof DEFAULT_LOCAL_FILTERS];
+            return localFilters[key as keyof typeof localFilters] !== DEFAULT_LOCAL_FILTERS[key as keyof typeof localFilters];
         });
     }, [localFilters]);
 
@@ -450,6 +252,33 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
         localStorage.setItem('theme', theme);
     }, [theme]);
+
+    const generateAndSetCreativeSuggestion = useCallback(async (file: File) => {
+        // Prevent re-generating suggestions for the same image or while loading
+        if (isLoading || suggestionGenerationRef.current === file.name) {
+            return;
+        }
+        suggestionGenerationRef.current = file.name;
+
+        // Don't show new suggestions if one is already showing
+        if (proactiveSuggestion) {
+            return;
+        }
+
+        try {
+            const suggestion = await geminiService.suggestCreativeEdits(file);
+            if (suggestion) {
+                setProactiveSuggestion({
+                    message: suggestion.message,
+                    acceptLabel: suggestion.acceptLabel,
+                    onAccept: () => setActiveTool(suggestion.toolId as ToolId),
+                });
+            }
+        } catch (e) {
+            // Fail silently, it's just a suggestion
+            console.error("Creative suggestion failed:", e);
+        }
+    }, [isLoading, proactiveSuggestion, setProactiveSuggestion, setActiveTool]);
     
     // Session Restoration and Metadata on initial load
     useEffect(() => {
@@ -463,11 +292,18 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             try {
                 const savedState = await db.loadHistory();
                 if (savedState && savedState.history && savedState.history.length > 0) {
+                    const lastState = savedState.history[savedState.historyIndex];
+                    const firstImageLayer = lastState.layers.find(l => l.type === 'image') as ImageLayer | undefined;
+                    
                     setHistory(savedState.history);
                     setHistoryIndex(savedState.historyIndex);
                     setToolHistory(savedState.toolHistory || []);
                     setHasRestoredSession(true);
                     setToast({ message: "Sessão anterior restaurada.", type: 'info' });
+
+                    if (firstImageLayer?.file) {
+                        setTimeout(() => generateAndSetCreativeSuggestion(firstImageLayer.file), 3000);
+                    }
                 }
             } catch (e) {
                 console.error("Failed to restore session:", e);
@@ -478,7 +314,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         };
     
         initializeApp();
-    }, []); // Empty dependency array ensures this runs only once on mount
+    }, [generateAndSetCreativeSuggestion]); 
 
     const setActiveLayerId = useCallback((id: string | null) => {
         if (id === activeLayerId) return;
@@ -551,6 +387,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setPreviewState(null);
         resetLocalFilters();
         if(isGif) setCurrentFrameIndex(0);
+        setIsInlineComparisonActive(false);
     }, [isGif, clearMask, resetLocalFilters]);
     
     const commitChange = useCallback((newLayers: Layer[], newActiveLayerId: string | null, toolId?: ToolId) => {
@@ -601,6 +438,8 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const setInitialImage = useCallback(async (file: File | null) => {
         setIsInlineComparisonActive(false); // Reset comparison on new image
+        setDetectedObjects(null);
+        setHighlightedObject(null);
         if (file) {
             if (file.type === 'image/gif') {
                 // GIF handling remains the same for now
@@ -625,30 +464,68 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             setToolHistory([]);
             onHistoryChange();
         }
-    }, [onHistoryChange]);
+    }, [onHistoryChange, setDetectedObjects, setHighlightedObject]);
+
+    const triggerProactiveObjectDetection = useCallback(async (file: File) => {
+        try {
+            if (isLoading || detectedObjects) return;
+            const objects = await geminiService.detectObjects(file);
+            if (baseImageFile?.name === file.name && objects && objects.length > 0) {
+                setDetectedObjects(objects);
+                setToast({ message: "Detectamos objetos! Clique em um para começar a editar.", type: 'info' });
+            }
+        } catch (e) {
+            console.error("Proactive object detection failed:", e);
+        }
+    }, [isLoading, detectedObjects, baseImageFile, setDetectedObjects, setToast]);
 
     const handleFileSelect = useCallback(async (file: File) => {
         setIsLoading(true);
-        setLoadingMessage("Otimizando imagem...");
+        setLoadingMessage("Carregando imagem...");
         setUploadProgress({ progress: 0, stage: 'reading' });
+        setError(null);
+
         try {
-            const optimizedFile = await optimizeImage(file, setUploadProgress);
-            setInitialImage(optimizedFile);
-            if (!activeTool) {
-                setActiveTool('adjust');
+            const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+            if (!SUPPORTED_FORMATS.includes(file.type)) {
+                throw new Error(`Formato de arquivo inválido. Use JPG, PNG, WEBP ou GIF.`);
             }
+
+            setLoadingMessage("Otimizando imagem...");
+            const optimizedFile = await optimizeImage(file, setUploadProgress);
+            
+            if (optimizedFile !== file) {
+                setToast({ message: "Imagem otimizada (redimensionada para 4096px) para melhor desempenho.", type: 'info' });
+            }
+
+            setActiveTool(null);
+            await setInitialImage(optimizedFile);
+            
+            triggerProactiveObjectDetection(optimizedFile);
+            setTimeout(() => generateAndSetCreativeSuggestion(optimizedFile), 2500);
+
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Não foi possível processar a imagem. Por favor, tente outra.";
+            let errorMessage = "Não foi possível carregar a imagem. O arquivo pode estar corrompido ou em um formato não suportado.";
+            if (error instanceof Error) {
+                if (error.message.startsWith('DIMENSION_ERROR:')) {
+                    errorMessage = error.message.replace('DIMENSION_ERROR: ', '');
+                } else {
+                    errorMessage = error.message;
+                }
+            }
             setError(errorMessage);
             setToast({ message: errorMessage, type: 'error' });
+            setInitialImage(null);
         } finally {
             setIsLoading(false);
             setLoadingMessage(null);
             setUploadProgress(null);
         }
-    }, [activeTool, setInitialImage, setActiveTool, setIsLoading, setLoadingMessage, setUploadProgress, setError, setToast]);
+    }, [setInitialImage, setActiveTool, setIsLoading, setLoadingMessage, setUploadProgress, setError, setToast, generateAndSetCreativeSuggestion, triggerProactiveObjectDetection]);
 
-    const handleUploadNew = useCallback(async () => {
+
+    const handleGoHome = useCallback(async () => {
         setInitialImage(null);
         setActiveTool(null);
         setHasRestoredSession(false);
@@ -660,7 +537,33 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             console.error("Failed to clear DB:", e);
             setToast({ message: "Não foi possível limpar a sessão anterior.", type: 'error' });
         }
-    }, [setInitialImage, setActiveTool, setToast]);
+    }, [setInitialImage, setActiveTool, setHasRestoredSession, setProactiveSuggestion, setToast]);
+
+    const handleTriggerUpload = useCallback(() => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+    
+        input.onchange = async (event) => {
+            const target = event.target as HTMLInputElement;
+            const file = target.files?.[0];
+    
+            if (file) {
+                try {
+                    await db.clearHistoryDB();
+                } catch (e) {
+                    console.error("Failed to clear DB:", e);
+                    setToast({ message: "Não foi possível limpar a sessão anterior.", type: 'error' });
+                }
+                await handleFileSelect(file);
+                setHasRestoredSession(false);
+                setProactiveSuggestion(null); 
+            }
+        };
+    
+        input.click();
+    }, [handleFileSelect, setHasRestoredSession, setProactiveSuggestion, setToast]);
+
 
     const handleExplicitSave = useCallback(async () => {
         if (history.length > 0) {
@@ -719,8 +622,6 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }, [layers, activeLayer, activeLayerId, commitChange, setError, setIsLoading, setLoadingMessage, setToast]);
 
     const handleApplyLocalAdjustments = useCallback(async (applyToAll = false) => {
-        // NOTE: The applyToAll logic for GIFs is not yet fully implemented across the app.
-        // This function currently applies adjustments only to the active layer/frame.
         if (!maskDataUrl || !hasLocalAdjustments) return;
     
         const targetLayer = layers.find(l => l.id === activeLayerId);
@@ -779,15 +680,9 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const updateLayer = (layerId: string, updates: Partial<Layer>) => {
         const newLayers = layers.map((l): Layer => {
             if (l.id === layerId) {
-                // By discriminating the union, we ensure that spreading `l` and `updates`
-                // results in a correctly typed object, removing the need for a type cast.
                 if (l.type === 'image') {
-                    // FIX: Cast to ImageLayer. Spreading Partial<Layer> can create an object
-                    // that TypeScript can't verify as part of the Layer union type.
                     return { ...l, ...updates } as ImageLayer;
                 } else { // 'adjustment'
-                    // FIX: Cast to AdjustmentLayer. Spreading Partial<Layer> can create an object
-                    // that TypeScript can't verify as part of the Layer union type.
                     return { ...l, ...updates } as AdjustmentLayer;
                 }
             }
@@ -904,20 +799,41 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const handleRestorePhoto = useCallback((colorize: boolean) => executeDestructiveEdit(geminiService.restorePhoto, 'photoRestoration', 'Restaurando foto...', colorize), [executeDestructiveEdit]);
     const handleApplyUpscale = useCallback((factor: number, preserveFace: boolean) => executeDestructiveEdit(geminiService.upscaleImage, 'upscale', `Aumentando resolução em ${factor}x...`, factor, preserveFace), [executeDestructiveEdit]);
     const handleUnblurImage = useCallback((sharpenLevel: number, denoiseLevel: number, model: string) => executeDestructiveEdit(geminiService.unblurImage, 'unblur', 'Removendo desfoque...', sharpenLevel, denoiseLevel, model), [executeDestructiveEdit]);
+    const handleApplySharpen = useCallback((intensity: number) => executeDestructiveEdit(geminiService.applyGenerativeSharpening, 'sharpen', 'Aplicando nitidez...', intensity), [executeDestructiveEdit]);
     const handleApplyStyle = useCallback((stylePrompt: string) => { addPromptToHistory(stylePrompt); executeDestructiveEdit(geminiService.applyStyle, 'style', 'Aplicando estilo...', stylePrompt); }, [executeDestructiveEdit, addPromptToHistory]);
+    
+    const handleApplyNewAspectRatio = useCallback(() => {
+        const prompt = 'Expanda a imagem criativamente para preencher a nova proporção de 16:9, mantendo o estilo e o tema originais, garantindo uma transição perfeita e natural.';
+        addPromptToHistory(prompt);
+        executeDestructiveEdit(geminiService.outpaintImage, 'newAspectRatio', 'Alterando proporção para 16:9...', prompt, '16:9');
+    }, [executeDestructiveEdit, addPromptToHistory]);
     
     const handleGenerativeEdit = useCallback(async () => {
         if (!maskDataUrl) return;
-        addPromptToHistory(prompt);
-        const maskFile = dataURLtoFile(maskDataUrl, 'mask.png');
-        await executeDestructiveEdit( (file, p, opts) => geminiService.generativeEdit(file, p, 'fill', opts), 'generativeEdit', "Aplicando edição generativa...", prompt, { maskImage: maskFile });
-    }, [executeDestructiveEdit, maskDataUrl, prompt, addPromptToHistory]);
+        try {
+            addPromptToHistory(prompt);
+            const bwMaskDataUrl = await convertMaskToBlackAndWhite(maskDataUrl);
+            const maskFile = dataURLtoFile(bwMaskDataUrl, 'mask.png');
+            await executeDestructiveEdit( (file, p, opts) => geminiService.generativeEdit(file, p, 'fill', opts), 'generativeEdit', "Aplicando edição generativa...", prompt, { maskImage: maskFile });
+        } catch (e) {
+            const errorMessage = e instanceof Error ? e.message : "Falha ao processar a máscara de edição.";
+            setError(errorMessage);
+            setToast({ message: errorMessage, type: 'error' });
+        }
+    }, [executeDestructiveEdit, maskDataUrl, prompt, addPromptToHistory, setError, setToast]);
 
     const handleObjectRemove = useCallback(async () => {
         if (!maskDataUrl) return;
-        const maskFile = dataURLtoFile(maskDataUrl, 'mask.png');
-        await executeDestructiveEdit( (file, p, opts) => geminiService.generativeEdit(file, p, 'remove', opts), 'objectRemover', "Removendo objeto...", '', { maskImage: maskFile });
-    }, [executeDestructiveEdit, maskDataUrl]);
+        try {
+            const bwMaskDataUrl = await convertMaskToBlackAndWhite(maskDataUrl);
+            const maskFile = dataURLtoFile(bwMaskDataUrl, 'mask.png');
+            await executeDestructiveEdit( (file, p, opts) => geminiService.generativeEdit(file, p, 'remove', opts), 'objectRemover', "Removendo objeto...", '', { maskImage: maskFile });
+        } catch (e) {
+            const errorMessage = e instanceof Error ? e.message : "Falha ao processar a máscara de remoção.";
+            setError(errorMessage);
+            setToast({ message: errorMessage, type: 'error' });
+        }
+    }, [executeDestructiveEdit, maskDataUrl, setError, setToast]);
 
     const handleDetectObjects = useCallback(async (prompt?: string) => {
         if (!baseImageFile) {
@@ -957,13 +873,24 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             const mask = createMaskFromBoundingBox(box, naturalWidth, naturalHeight);
             setMaskDataUrl(mask);
             URL.revokeObjectURL(image.src);
+            
+            const selectionTabs: TabId[] = ['generativeEdit', 'objectRemover', 'faceSwap', 'localAdjust'];
+            // If the user is not already on a tab that uses object selection,
+            // switch them to the default generative edit tab.
+            if (!selectionTabs.includes(activeTab)) {
+                 setActiveTab('generativeEdit');
+                 if (window.innerWidth < 1024) {
+                    setIsLeftPanelVisible(false);
+                    setIsRightPanelVisible(true);
+                }
+            }
         };
         image.onerror = () => {
             setError("Não foi possível carregar a imagem para criar a máscara.");
             URL.revokeObjectURL(image.src);
         }
         image.src = URL.createObjectURL(baseImageFile);
-    }, [baseImageFile, setMaskDataUrl, setError]);
+    }, [baseImageFile, setMaskDataUrl, setError, activeTab, setActiveTab, setIsLeftPanelVisible, setIsRightPanelVisible]);
 
     const handleDetectFaces = useCallback(async () => {
         if (!baseImageFile) {
@@ -1024,7 +951,6 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setLoadingMessage("Trocando rostos...");
         setError(null);
         try {
-            // We use generateMagicMontage for this, which is a powerful multi-image prompter
             const resultDataUrl = await geminiService.generateMagicMontage(activeLayer.file, swapPrompt, sourceImageFile);
     
             const newFile = dataURLtoFile(resultDataUrl, `faceswap-result.png`);
@@ -1070,15 +996,19 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }, [setIsLoading, setError, setGeneratedVideoUrl, setToast, setLoadingMessage]);
 
 
-    // Placeholder for non-refactored handlers
     const handleMagicPrompt = useCallback(async (prompt: string) => {
-        if (!baseImageFile) return;
+        if (!baseImageFile) {
+            setToast({ message: 'Carregue uma imagem para usar o Prompt Mágico.', type: 'error' });
+            return;
+        }
         setIsLoading(true);
         setLoadingMessage("IA está pensando...");
+        setError(null);
         try {
-            const resultUrl = await handleOrchestratorCall(baseImageFile, prompt);
+            const resultUrl = await geminiService.generateMagicMontage(baseImageFile, prompt);
             const newFile = dataURLtoFile(resultUrl, `magic-result.png`);
-            const newLayers = layers.map(l => l.id === activeLayerId ? { ...l, file: newFile } : l);
+            
+            const newLayers = layers.map(l => (l.id === activeLayerId && l.type === 'image' ? { ...l, file: newFile } : l) as Layer);
             commitChange(newLayers, activeLayerId, 'magicMontage');
             setToast({ message: "Mágica aplicada!", type: 'success' });
         } catch(e) {
@@ -1112,9 +1042,6 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             
             const newFile = dataURLtoFile(dataUrl, `curve-adjusted-${baseImageFile.name}`);
             const newLayers = layers.map(l => l.id === activeLayerId ? { ...l, file: newFile } : l);
-            // This is a special case where we don't want to commit a full history state for every curve drag
-            // Instead, we just update the current layer's file blob for preview.
-            // A "real" implementation might debounce this and commit on mouse up.
             const newSnapshot: LayerStateSnapshot = { layers: newLayers, activeLayerId };
             const newHistory = [...history];
             newHistory[historyIndex] = newSnapshot;
@@ -1152,168 +1079,286 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             
             const lines = textToolState.content.split('\n');
             lines.forEach((line, index) => {
-                const lineY = y + index * (fontSize * 1.2);
-                ctx.strokeText(line, x, lineY);
-                ctx.fillText(line, x, lineY);
+                ctx.strokeText(line, x, y + (index * fontSize * 1.2));
+                ctx.fillText(line, x, y + (index * fontSize * 1.2));
             });
-    
-            const dataUrl = canvas.toDataURL('image/png');
-            const newFile = dataURLtoFile(dataUrl, `text-added.png`);
-            
-            const newLayers = layers.map(l => (l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer);
+
+            const newFile = dataURLtoFile(canvas.toDataURL(), 'text-added.png');
+            const newLayers = layers.map(l => l.id === activeLayerId ? { ...l, file: newFile } : l);
             commitChange(newLayers, activeLayerId, 'text');
-            setToast({ message: "Texto aplicado!", type: 'success' });
-        } catch(e) {
-            setError("Falha ao aplicar texto.");
-        } finally {
-            setIsLoading(false);
-        setLoadingMessage(null);
-        }
-    }, [baseImageFile, textToolState, layers, activeLayerId, commitChange, setIsLoading, setLoadingMessage, setToast, setError]);
+            setToast({ message: 'Texto aplicado!', type: 'success' });
 
-    const handleApplyTexture = useCallback(async () => {
-        if (!baseImageFile || !texturePreview) return;
-        setIsLoading(true);
-        setLoadingMessage('Aplicando textura...');
-        try {
-            const baseImg = await loadImage(URL.createObjectURL(baseImageFile));
-            const textureImg = await loadImage(texturePreview.url);
-
-            const canvas = document.createElement('canvas');
-            canvas.width = baseImg.naturalWidth;
-            canvas.height = baseImg.naturalHeight;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) throw new Error("Could not get canvas context");
-            
-            ctx.drawImage(baseImg, 0, 0);
-            
-            ctx.globalCompositeOperation = texturePreview.blendMode;
-            ctx.globalAlpha = texturePreview.opacity;
-            ctx.drawImage(textureImg, 0, 0, canvas.width, canvas.height);
-
-            const dataUrl = canvas.toDataURL('image/png');
-            const newFile = dataURLtoFile(dataUrl, `textured.png`);
-            
-            const newLayers = layers.map(l => (l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer);
-            commitChange(newLayers, activeLayerId, 'texture');
-            setToast({ message: "Textura aplicada!", type: 'success' });
-            setTexturePreview(null);
         } catch (e) {
-            setError("Falha ao aplicar textura.");
+            const errorMessage = e instanceof Error ? e.message : "Ocorreu um erro desconhecido.";
+            setError(errorMessage);
+            setToast({ message: errorMessage, type: 'error' });
         } finally {
             setIsLoading(false);
             setLoadingMessage(null);
         }
-    }, [baseImageFile, texturePreview, layers, activeLayerId, commitChange, setIsLoading, setLoadingMessage, setToast, setError, setTexturePreview]);
+    }, [baseImageFile, textToolState, layers, activeLayerId, commitChange, setIsLoading, setLoadingMessage, setError, setToast]);
+
+    const handleDownload = useCallback(async () => {
+        if (!baseImageFile) return;
+
+        setIsLoading(true);
+        setLoadingMessage('Preparando para download...');
+        try {
+            if (!isGif) {
+                // FIX: This implementation was incorrect. Replaced with a canvas-based approach
+                // to correctly render the image with all visible filters and previews.
+                const image = await loadImage(currentImageUrl!);
+                const canvas = document.createElement('canvas');
+                canvas.width = image.naturalWidth;
+                canvas.height = image.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    throw new Error("Não foi possível criar o contexto do canvas para download.");
+                }
+                
+                // Aplicar filtros de camada de ajuste
+                ctx.filter = compositeCssFilter;
+                ctx.drawImage(image, 0, 0);
+                
+                // Redefinir filtro antes de desenhar outros elementos
+                ctx.filter = 'none'; 
+
+                // Aplicar pré-visualização de textura, se ativa
+                if (texturePreview) {
+                    const texture = await loadImage(texturePreview.url);
+                    ctx.globalAlpha = texturePreview.opacity;
+                    ctx.globalCompositeOperation = texturePreview.blendMode;
+                    ctx.drawImage(texture, 0, 0, canvas.width, canvas.height);
+                    ctx.globalAlpha = 1.0;
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+                
+                // Aplicar pré-visualização da ferramenta de texto, se ativa
+                if (activeTab === 'text' && textToolState.content.trim()) {
+                    const fontSize = (textToolState.fontSize / 100) * canvas.width;
+                    ctx.font = `${textToolState.bold ? 'bold ' : ''}${textToolState.italic ? 'italic ' : ''}${fontSize}px ${textToolState.fontFamily}`;
+                    ctx.fillStyle = textToolState.color;
+                    ctx.textAlign = textToolState.align;
+                    
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = Math.max(1, fontSize / 20);
+            
+                    const x = (textToolState.position.x / 100) * canvas.width;
+                    const y = (textToolState.position.y / 100) * canvas.height;
+                    
+                    const lines = textToolState.content.split('\n');
+                    lines.forEach((line, index) => {
+                        ctx.strokeText(line, x, y + (index * fontSize * 1.2));
+                        ctx.fillText(line, x, y + (index * fontSize * 1.2));
+                    });
+                }
+
+                const dataUrl = canvas.toDataURL('image/png');
+                saveAs(dataUrl, 'edited-image.png');
+            } else {
+                setLoadingMessage(`Renderizando ${gifFrames.length} frames...`);
+                const encoder = new GIFEncoder(gifFrames[0].imageData.width, gifFrames[0].imageData.height);
+                encoder.start();
+                encoder.setRepeat(0);
+                encoder.setDelay(gifFrames[0].delay);
+                encoder.setQuality(10); // Adjust quality
+
+                const canvas = document.createElement('canvas');
+                canvas.width = gifFrames[0].imageData.width;
+                canvas.height = gifFrames[0].imageData.height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) throw new Error("Could not get context");
+
+                for (let i = 0; i < gifFrames.length; i++) {
+                    const frame = gifFrames[i];
+                    encoder.setDelay(frame.delay);
+                    const imageData = new ImageData(frame.imageData.data, frame.imageData.width, frame.imageData.height);
+                    ctx.putImageData(imageData, 0, 0);
+                    encoder.addFrame(ctx);
+                }
+
+                encoder.finish();
+                const buffer = encoder.out.getData();
+                const blob = new Blob([buffer], { type: 'image/gif' });
+                saveAs(blob, 'edited-animation.gif');
+            }
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Falha ao baixar.');
+        } finally {
+            setIsLoading(false);
+            setLoadingMessage(null);
+        }
+    }, [baseImageFile, isGif, gifFrames, currentImageUrl, compositeCssFilter, texturePreview, activeTab, textToolState]);
+    
+    const handleApplyCrop = useCallback(() => {
+        if (!completedCrop || !imgRef.current) return;
+        const canvas = document.createElement('canvas');
+        const image = imgRef.current;
+        const scaleX = image.naturalWidth / image.width;
+        const scaleY = image.naturalHeight / image.height;
+        canvas.width = completedCrop.width;
+        canvas.height = completedCrop.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(
+            image,
+            completedCrop.x * scaleX,
+            completedCrop.y * scaleY,
+            completedCrop.width * scaleX,
+            completedCrop.height * scaleY,
+            0,
+            0,
+            completedCrop.width,
+            completedCrop.height
+        );
+        const dataUrl = canvas.toDataURL('image/png');
+        const newFile = dataURLtoFile(dataUrl, 'cropped.png');
+        
+        const newLayers = layers.map(l => (l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer);
+        commitChange(newLayers, activeLayerId, 'crop');
+
+    }, [completedCrop, imgRef, layers, activeLayerId, commitChange]);
     
     const handleTransform = useCallback(async (transformType: TransformType) => {
         if (!baseImageFile) return;
-        setIsLoading(true);
-        setLoadingMessage('Transformando imagem...');
-        try {
-            const image = await loadImage(URL.createObjectURL(baseImageFile));
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            if (!ctx) throw new Error("Could not get canvas context");
-            
-            const { width, height } = image;
-            if (transformType === 'rotate-left' || transformType === 'rotate-right') {
-                canvas.width = height;
-                canvas.height = width;
-                ctx.translate(canvas.width / 2, canvas.height / 2);
-                ctx.rotate(transformType === 'rotate-left' ? -Math.PI / 2 : Math.PI / 2);
-                ctx.drawImage(image, -width / 2, -height / 2);
-            } else {
-                canvas.width = width;
-                canvas.height = height;
-                ctx.translate(transformType === 'flip-h' ? width : 0, transformType === 'flip-v' ? height : 0);
-                ctx.scale(transformType === 'flip-h' ? -1 : 1, transformType === 'flip-v' ? -1 : 1);
-                ctx.drawImage(image, 0, 0);
-            }
-
-            const dataUrl = canvas.toDataURL('image/png');
-            const newFile = dataURLtoFile(dataUrl, `transformed.png`);
-            
-            const newLayers = layers.map(l => (l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer);
-            commitChange(newLayers, activeLayerId, 'crop');
-        } catch (e) {
-            setError("Falha ao transformar imagem.");
-        } finally {
-            setIsLoading(false);
-            setLoadingMessage(null);
-        }
-    }, [baseImageFile, layers, activeLayerId, commitChange, setIsLoading, setLoadingMessage, setError]);
-
-    const handleApplyCrop = useCallback(async () => {
-        if (!completedCrop || !imgRef.current || !baseImageFile) return;
-        setIsLoading(true);
-        setLoadingMessage('Aplicando corte...');
-        try {
-            const image = await loadImage(URL.createObjectURL(baseImageFile));
-            const canvas = document.createElement('canvas');
-            const scaleX = image.naturalWidth / image.width;
-            const scaleY = image.naturalHeight / image.height;
-    
-            canvas.width = completedCrop.width;
-            canvas.height = completedCrop.height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) throw new Error("Could not create canvas context");
-            
-            ctx.drawImage(
-                image,
-                completedCrop.x * scaleX,
-                completedCrop.y * scaleY,
-                completedCrop.width * scaleX,
-                completedCrop.height * scaleY,
-                0, 0,
-                completedCrop.width,
-                completedCrop.height
-            );
-    
-            const dataUrl = canvas.toDataURL('image/png');
-            const newFile = dataURLtoFile(dataUrl, `cropped.png`);
-            
-            const newLayers = layers.map(l => (l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer);
-            commitChange(newLayers, activeLayerId, 'crop');
-            setToast({ message: "Imagem cortada!", type: 'success' });
-        } catch(e) {
-            setError("Falha ao cortar imagem.");
-        } finally {
-            setIsLoading(false);
-            setLoadingMessage(null);
-        }
-    }, [completedCrop, imgRef, baseImageFile, layers, activeLayerId, commitChange, setIsLoading, setLoadingMessage, setError, setToast]);
-
-    const handleDownload = useCallback(async () => {
-        if (!baseImageFile) {
-            setToast({ message: "Nenhuma imagem para baixar.", type: 'error' });
-            return;
-        }
-        
-        if (isGif) {
-            setToast({ message: "A exportação de GIF será implementada em breve. Baixando o frame atual.", type: 'info' });
-            saveAs(baseImageFile, `frame-${currentFrameIndex}-${baseImageFile.name}.png`);
-            return;
-        }
 
         const image = await loadImage(URL.createObjectURL(baseImageFile));
         const canvas = document.createElement('canvas');
-        canvas.width = image.naturalWidth;
-        canvas.height = image.naturalHeight;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-    
-        ctx.filter = compositeCssFilter;
-        ctx.drawImage(image, 0, 0);
-    
-        canvas.toBlob(blob => {
-            if (blob) {
-                saveAs(blob, `edited-${baseImageFile.name}`);
+        
+        let { width, height } = image;
+        
+        if (transformType === 'rotate-left' || transformType === 'rotate-right') {
+            canvas.width = height;
+            canvas.height = width;
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(transformType === 'rotate-left' ? -Math.PI / 2 : Math.PI / 2);
+            ctx.drawImage(image, -width / 2, -height / 2);
+        } else {
+            canvas.width = width;
+            canvas.height = height;
+            if (transformType === 'flip-h') {
+                ctx.translate(width, 0);
+                ctx.scale(-1, 1);
+            } else { // flip-v
+                ctx.translate(0, height);
+                ctx.scale(1, -1);
             }
-        }, 'image/png');
+            ctx.drawImage(image, 0, 0);
+        }
+        
+        const newFile = dataURLtoFile(canvas.toDataURL(), 'transformed.png');
+        const newLayers = layers.map(l => (l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer);
+        commitChange(newLayers, activeLayerId, 'crop');
+
+    }, [baseImageFile, layers, activeLayerId, commitChange]);
+
+    const handleApplyTexture = useCallback(async () => {
+        if (!texturePreview || !baseImageFile) return;
+
+        setIsLoading(true);
+        setLoadingMessage('Aplicando textura...');
+        setError(null);
+
+        try {
+            const image = await loadImage(URL.createObjectURL(baseImageFile));
+            const texture = await loadImage(texturePreview.url);
+            const canvas = document.createElement('canvas');
+            canvas.width = image.naturalWidth;
+            canvas.height = image.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error("Could not get canvas context");
+
+            ctx.drawImage(image, 0, 0);
+
+            ctx.globalAlpha = texturePreview.opacity;
+            ctx.globalCompositeOperation = texturePreview.blendMode;
+
+            ctx.drawImage(texture, 0, 0, canvas.width, canvas.height);
+            
+            const newFile = dataURLtoFile(canvas.toDataURL(), 'textured.png');
+            const newLayers = layers.map(l => l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer;
+            commitChange(newLayers, activeLayerId, 'texture');
+
+            setToast({ message: "Textura aplicada!", type: 'success' });
+            setTexturePreview(null);
+        } catch (e) {
+            const errorMessage = e instanceof Error ? e.message : "Ocorreu um erro desconhecido.";
+            setError(errorMessage);
+            setToast({ message: errorMessage, type: 'error' });
+        } finally {
+            setIsLoading(false);
+            setLoadingMessage(null);
+        }
+    }, [texturePreview, baseImageFile, layers, activeLayerId, commitChange, setIsLoading, setLoadingMessage, setError, setToast, setTexturePreview]);
     
-    }, [isGif, baseImageFile, currentFrameIndex, compositeCssFilter, setToast]);
-    
+    // --- AI PREVIEW ---
+    const generateAIPreview = useCallback(async (trend: any, applyToAll: boolean) => {
+        if (!baseImageFile) return;
+        setIsPreviewLoading(true);
+        setPreviewState(null);
+        setError(null);
+        try {
+            let resultUrl;
+            if (trend.type === 'descriptive') {
+                resultUrl = await generateImageWithDescription(baseImageFile, trend.prompt);
+            } else {
+                resultUrl = await geminiService.applyStyle(baseImageFile, trend.prompt);
+            }
+            setPreviewState({ url: resultUrl, trend, applyToAll });
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Falha ao gerar pré-visualização.');
+        } finally {
+            setIsPreviewLoading(false);
+        }
+    }, [baseImageFile, setError]);
+
+    const commitAIPreview = useCallback(async () => {
+        if (!previewState) return;
+        setIsLoading(true);
+        setLoadingMessage('Aplicando estilo...');
+        setError(null);
+        try {
+            const newFile = dataURLtoFile(previewState.url, `styled-${Date.now()}.png`);
+            
+            const newLayers = layers.map(l => l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer;
+            commitChange(newLayers, activeLayerId, 'style');
+            setToast({ message: 'Estilo aplicado!', type: 'success' });
+            setPreviewState(null);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Falha ao aplicar estilo.');
+        } finally {
+            setIsLoading(false);
+            setLoadingMessage(null);
+        }
+    }, [previewState, layers, activeLayerId, commitChange, setError, setIsLoading, setLoadingMessage, setToast]);
+
+    const handleSmartSearch = useCallback(async (term: string) => {
+        setIsSmartSearching(true);
+        setSmartSearchResult(null);
+        setError(null);
+        addPromptToHistory(term);
+        try {
+            const result = await geminiService.suggestToolFromPrompt(term);
+            if (result) {
+                const toolConfig = tools.find(t => t.id === result.name);
+                if (toolConfig) {
+                    setSmartSearchResult({ tool: toolConfig, args: result.args });
+                } else {
+                    throw new Error(`A IA sugeriu uma ferramenta desconhecida: ${result.name}`);
+                }
+            } else {
+                // If no tool is suggested, fall back to a standard text search
+                setToast({ message: "Nenhuma ferramenta específica encontrada. Mostrando resultados da busca de texto.", type: 'info' });
+            }
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'A busca inteligente falhou.');
+        } finally {
+            setIsSmartSearching(false);
+        }
+    }, [setError, addPromptToHistory, setToast]);
+
     const handlePredefinedSearchAction = useCallback((action: PredefinedSearch['action']) => {
         if (action.type === 'tool') {
             setActiveTool(action.payload as ToolId);
@@ -1322,101 +1367,172 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
     }, [setActiveTool, executeWorkflow]);
     
-    const handleSmartSearch = useCallback(async (term: string) => {
-        setIsSmartSearching(true);
-        setError(null);
-        try {
-            const result = await geminiService.suggestToolFromPrompt(term);
-            if (result) {
-                const toolConfig = tools.find(t => t.id === result.name);
-                if (toolConfig) {
-                    setSmartSearchResult({ tool: toolConfig, args: result.args });
-                    if(result.args?.subject) {
-                        setPrompt(result.args.subject);
-                    }
-                } else {
-                    setToast({ message: 'A IA sugeriu uma ferramenta desconhecida.', type: 'error' });
-                }
-            } else {
-                setToast({ message: 'A IA não encontrou uma ferramenta para sua solicitação. Tente a busca manual.', type: 'info' });
-            }
-        } catch(e) {
-            const msg = e instanceof Error ? e.message : "Erro na busca inteligente.";
-            setToast({ message: msg, type: 'error' });
-        } finally {
-            setIsSmartSearching(false);
-        }
-    }, [setError, setToast, setSmartSearchResult, setPrompt]);
-
-    const generateAIPreview = useCallback(async (trend: Trend, applyToAll: boolean) => {
-        if (!baseImageFile) return;
-        setIsPreviewLoading(true);
-        setError(null);
-        try {
-            let resultUrl: string;
-            if (trend.type === 'descriptive') {
-                resultUrl = await generateImageWithDescription(baseImageFile, trend.prompt);
-            } else {
-                resultUrl = await geminiService.applyStyle(baseImageFile, trend.prompt);
-            }
-            setPreviewState({ url: resultUrl, trend, applyToAll });
-        } catch (e) {
-            const errorMessage = e instanceof Error ? e.message : "Falha ao gerar pré-visualização.";
-            setError(errorMessage);
-            setToast({ message: errorMessage, type: 'error' });
-        } finally {
-            setIsPreviewLoading(false);
-        }
-    }, [baseImageFile, setError, setToast, setIsPreviewLoading, setPreviewState]);
-
-    const commitAIPreview = useCallback(() => {
-        if (!previewState) return;
-    
-        const newFile = dataURLtoFile(previewState.url, `preview-result-${Date.now()}.png`);
-        
-        const newLayers = layers.map(l => (l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer);
-        commitChange(newLayers, activeLayerId, activeTab as ToolId);
-    
-        setToast({ message: `${previewState.trend.name} aplicado!`, type: 'success'});
-        setPreviewState(null);
-    }, [previewState, layers, activeLayerId, activeTab, commitChange, setToast, setPreviewState]);
-
+    // Reset transient text tool state
     const resetTextToolState = useCallback(() => {
         setTextToolState(DEFAULT_TEXT_TOOL_STATE);
-    }, [setTextToolState]);
+    }, []);
 
+    const contextValue: EditorContextType = {
+        activeTool,
+        setActiveTool,
+        activeTab,
+        setActiveTab,
+        isLoading,
+        setIsLoading,
+        loadingMessage,
+        setLoadingMessage,
+        error,
+        setError,
+        isComparisonModalOpen,
+        setIsComparisonModalOpen,
+        isInlineComparisonActive,
+        setIsInlineComparisonActive,
+        toast,
+        setToast,
+        proactiveSuggestion,
+        setProactiveSuggestion,
+        uploadProgress,
+        setUploadProgress,
+        isSaveWorkflowModalOpen,
+        setIsSaveWorkflowModalOpen,
+        isLeftPanelVisible,
+        setIsLeftPanelVisible,
+        isRightPanelVisible,
+        setIsRightPanelVisible,
+        theme,
+        toggleTheme,
+        layers,
+        activeLayerId,
+        setActiveLayerId,
+        baseImageFile,
+        currentImageUrl,
+        compositeCssFilter,
+        originalImageUrl,
+        imgRef,
+        setInitialImage,
+        hasRestoredSession,
+        updateLayer,
+        deleteLayer,
+        toggleLayerVisibility,
+        mergeDownLayer,
+        moveLayerUp,
+        moveLayerDown,
+        history,
+        historyIndex,
+        canUndo,
+        canRedo,
+        undo,
+        redo,
+        jumpToState,
+        resetHistory,
+        toolHistory,
+        commitChange,
+        isGif,
+        gifFrames,
+        currentFrameIndex,
+        setCurrentFrameIndex,
+        zoom,
+        setZoom,
+        panOffset,
+        isPanModeActive,
+        setIsPanModeActive,
+        isCurrentlyPanning,
+        handleWheel,
+        handlePanStart,
+        handleTouchStart,
+        handleTouchMove,
+        handleTouchEnd,
+        resetZoomAndPan,
+        crop,
+        setCrop,
+        completedCrop,
+        setCompletedCrop,
+        aspect,
+        setAspect,
+        canvasRef,
+        maskDataUrl,
+        setMaskDataUrl,
+        brushSize,
+        setBrushSize,
+        clearMask,
+        startDrawing,
+        stopDrawing,
+        draw,
+        detectedObjects,
+        setDetectedObjects,
+        highlightedObject,
+        setHighlightedObject,
+        localFilters,
+        setLocalFilters,
+        hasLocalAdjustments,
+        buildFilterString,
+        resetLocalFilters,
+        histogram,
+        previewState,
+        setPreviewState,
+        isPreviewLoading,
+        textToolState,
+        setTextToolState,
+        resetTextToolState,
+        generatedVideoUrl,
+        setGeneratedVideoUrl,
+        texturePreview,
+        setTexturePreview,
+        isSmartSearching,
+        smartSearchResult,
+        setSmartSearchResult,
+        savedWorkflows,
+        addWorkflow,
+        recentTools,
+        promptHistory,
+        addPromptToHistory,
+        executeWorkflow,
+        handlePredefinedSearchAction,
+        handleSmartSearch,
+        handleFileSelect,
+        handleGoHome,
+        handleTriggerUpload,
+        handleExplicitSave,
+        handleApplyCrop,
+        handleTransform,
+        handleRemoveBackground,
+        handleRelight,
+        handleMagicPrompt,
+        handleApplyLowPoly,
+        handleExtractArt,
+        handleApplyDustAndScratch,
+        handleDenoise,
+        handleApplyFaceRecovery,
+        handleGenerateProfessionalPortrait,
+        handleRestorePhoto,
+        handleApplyUpscale,
+        handleUnblurImage,
+        handleApplySharpen,
+        handleApplyNewAspectRatio,
+        handleGenerativeEdit,
+        handleObjectRemove,
+        handleDetectObjects,
+        handleDetectFaces,
+        handleFaceRetouch,
+        handleFaceSwap,
+        handleSelectObject,
+        handleApplyLocalAdjustments,
+        handleApplyCurve,
+        handleApplyStyle,
+        handleApplyAIAdjustment,
+        handleApplyText,
+        handleGenerateVideo,
+        handleDownload,
+        handleApplyTexture,
+        prompt,
+        setPrompt,
+        generateAIPreview,
+        commitAIPreview,
+        initialPromptFromMetadata,
+    };
 
     return (
-        <EditorContext.Provider value={{
-            activeTool, setActiveTool, activeTab, setActiveTab, isLoading, setIsLoading, loadingMessage, setLoadingMessage, error, setError,
-            isComparisonModalOpen, setIsComparisonModalOpen, isInlineComparisonActive, setIsInlineComparisonActive, toast, setToast, proactiveSuggestion, setProactiveSuggestion,
-            uploadProgress, setUploadProgress, isSaveWorkflowModalOpen, setIsSaveWorkflowModalOpen, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible,
-            theme, toggleTheme, imgRef, setInitialImage, canUndo, canRedo, undo, redo,
-            toolHistory, hasRestoredSession, isGif, gifFrames, currentFrameIndex, setCurrentFrameIndex, zoom, setZoom, panOffset, isPanModeActive, setIsPanModeActive, handleTouchStart, handleTouchMove, handleTouchEnd,
-            isCurrentlyPanning, handleWheel, handlePanStart, resetZoomAndPan, crop, setCrop, completedCrop, setCompletedCrop, aspect, setAspect, canvasRef, maskDataUrl, setMaskDataUrl,
-            brushSize, setBrushSize, clearMask, startDrawing, stopDrawing, draw, detectedObjects, setDetectedObjects, highlightedObject, setHighlightedObject, localFilters,
-            setLocalFilters, hasLocalAdjustments, buildFilterString, resetLocalFilters, histogram, previewState, setPreviewState,
-            isPreviewLoading, textToolState, setTextToolState, resetTextToolState, generatedVideoUrl, setGeneratedVideoUrl, texturePreview, setTexturePreview, isSmartSearching,
-            smartSearchResult, setSmartSearchResult, savedWorkflows, addWorkflow, recentTools, executeWorkflow, handlePredefinedSearchAction, handleSmartSearch,
-            handleFileSelect, handleUploadNew, handleExplicitSave, handleApplyCrop, handleTransform, handleRemoveBackground, handleRelight, handleMagicPrompt, handleApplyLowPoly, handleExtractArt,
-            handleApplyDustAndScratch, handleDenoise, handleApplyFaceRecovery, handleGenerateProfessionalPortrait, handleRestorePhoto, handleApplyUpscale, handleUnblurImage,
-            handleGenerativeEdit, handleObjectRemove, handleDetectObjects, handleSelectObject, handleApplyLocalAdjustments, handleApplyCurve, handleApplyStyle,
-            handleApplyAIAdjustment, handleApplyText, handleGenerateVideo, handleDownload, handleApplyTexture, prompt, setPrompt, generateAIPreview, commitAIPreview,
-            handleDetectFaces,
-            handleFaceRetouch,
-            handleFaceSwap,
-            layers, activeLayerId, setActiveLayerId, baseImageFile, compositeCssFilter, originalImageUrl,
-            updateLayer, deleteLayer, toggleLayerVisibility, mergeDownLayer, moveLayerUp, moveLayerDown,
-            currentImageUrl,
-            jumpToState,
-            resetHistory,
-            history,
-            historyIndex,
-            commitChange,
-            promptHistory,
-            addPromptToHistory,
-            initialPromptFromMetadata,
-        }}>
+        <EditorContext.Provider value={contextValue}>
             {children}
         </EditorContext.Provider>
     );

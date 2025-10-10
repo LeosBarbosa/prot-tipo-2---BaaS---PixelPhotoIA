@@ -7,36 +7,21 @@ import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { generateImageFromText, validatePromptSpecificity } from '../../services/geminiService';
 import ResultViewer from './common/ResultViewer';
-import { PhotoIcon, MagicWandIcon, AspectRatioSquareIcon, AspectRatioLandscapeIcon, AspectRatioPortraitIcon } from '../icons';
-import CollapsibleToolPanel from '../CollapsibleToolPanel';
-import PromptEnhancer from './common/PromptEnhancer';
-import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
-import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import { PhotoIcon, AspectRatioSquareIcon, AspectRatioLandscapeIcon, AspectRatioPortraitIcon } from '../icons';
+import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 
 const ImageGenPanel: React.FC = () => {
     const { isLoading, error, setError, setIsLoading, setLoadingMessage, setToast, addPromptToHistory, initialPromptFromMetadata } = useEditor();
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('Uma vasta biblioteca interior com livros que se estendem até um teto abobadado, feixes de luz empoeirados, estilo de fantasia cinematográfica, detalhado.');
+    const [negativePrompt, setNegativePrompt] = useState('');
     const [aspectRatio, setAspectRatio] = useState('1:1');
-    const [isPromptExpanded, setIsPromptExpanded] = useState(true);
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const suggestions = usePromptSuggestions(prompt, 'imageGen');
 
     useEffect(() => {
         if (initialPromptFromMetadata) {
             setPrompt(initialPromptFromMetadata);
         }
     }, [initialPromptFromMetadata]);
-
-    useEffect(() => {
-        setShowSuggestions(suggestions.length > 0);
-    }, [suggestions]);
-
-    const handleSelectSuggestion = (suggestion: string) => {
-        setPrompt(suggestion);
-        setShowSuggestions(false);
-    };
-
 
     const aspectRatios: { id: string, name: string, icon: React.ReactNode }[] = [
         { id: '1:1', name: 'Quadrado', icon: <AspectRatioSquareIcon className="w-6 h-6" /> },
@@ -65,7 +50,11 @@ const ImageGenPanel: React.FC = () => {
             }
 
             setLoadingMessage('Gerando sua imagem...');
-            const result = await generateImageFromText(prompt, aspectRatio);
+            let fullPrompt = prompt;
+            if (negativePrompt.trim()) {
+                fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
+            }
+            const result = await generateImageFromText(fullPrompt, aspectRatio);
             setResultImage(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -82,56 +71,38 @@ const ImageGenPanel: React.FC = () => {
                     <h3 className="text-xl font-bold text-gray-100">Gerador de Imagens AI</h3>
                     <p className="text-sm text-gray-400 mt-1">Crie imagens a partir de descrições de texto.</p>
                 </div>
+                
+                <CollapsiblePromptPanel
+                  title="Prompt & Configurações"
+                  prompt={prompt}
+                  setPrompt={setPrompt}
+                  negativePrompt={negativePrompt}
+                  onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
+                  isLoading={isLoading}
+                  toolId="imageGen"
+                  promptPlaceholder="Ex: um astronauta surfando em uma onda cósmica..."
+                  promptHelperText="Adicione estilo (ex: 'fotorrealista'), iluminação e detalhes da câmera para melhores resultados."
+                  negativePromptHelperText="Ex: texto, desfocado, baixa qualidade."
+                />
 
-                <CollapsibleToolPanel
-                    title="Prompt & Configurações"
-                    icon={<MagicWandIcon className="w-5 h-5" />}
-                    isExpanded={isPromptExpanded}
-                    onExpandToggle={() => setIsPromptExpanded(!isPromptExpanded)}
-                >
-                    <div className="flex flex-col gap-4">
-                        <div className="relative">
-                            <textarea
-                                id="image-gen-prompt"
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                                onFocus={() => setShowSuggestions(suggestions.length > 0)}
-                                placeholder="Ex: um astronauta surfando em uma onda cósmica, com nebulosas coloridas ao fundo, estilo cinematográfico..."
-                                className="w-full bg-gray-800/70 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[150px] resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                                disabled={isLoading}
-                                rows={6}
-                            />
-                            <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="imageGen" />
-                            {showSuggestions && (
-                                <PromptSuggestionsDropdown
-                                    suggestions={suggestions}
-                                    onSelect={handleSelectSuggestion}
-                                    searchTerm={prompt}
-                                />
-                            )}
-                            <p className="mt-1 text-xs text-gray-500 px-1">Dica: Adicione estilo (ex: 'fotorrealista', 'pintura a óleo'), iluminação e detalhes da câmera para melhores resultados.</p>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-200 mb-2">Proporção da Imagem</label>
-                            <div className="grid grid-cols-3 gap-3">
-                                {aspectRatios.map(({ id, name, icon }) => (
-                                    <button 
-                                        key={id} 
-                                        type="button" 
-                                        onClick={() => setAspectRatio(id)} 
-                                        disabled={isLoading} 
-                                        className={`p-3 rounded-lg text-sm font-semibold transition-all flex flex-col items-center justify-center gap-2 aspect-square ${aspectRatio === id ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-800/70 hover:bg-gray-700/70 text-gray-300'}`}
-                                        aria-label={name}
-                                    >
-                                        {icon}
-                                        <span>{name}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                <div>
+                    <label className="block text-sm font-semibold text-gray-200 mb-2">Proporção da Imagem</label>
+                    <div className="grid grid-cols-3 gap-3">
+                        {aspectRatios.map(({ id, name, icon }) => (
+                            <button 
+                                key={id} 
+                                type="button" 
+                                onClick={() => setAspectRatio(id)} 
+                                disabled={isLoading} 
+                                className={`p-3 rounded-lg text-sm font-semibold transition-all flex flex-col items-center justify-center gap-2 aspect-square ${aspectRatio === id ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-800/70 hover:bg-gray-700/70 text-gray-300'}`}
+                                aria-label={name}
+                            >
+                                {icon}
+                                <span>{name}</span>
+                            </button>
+                        ))}
                     </div>
-                </CollapsibleToolPanel>
+                </div>
 
                 <button
                     onClick={handleGenerate}

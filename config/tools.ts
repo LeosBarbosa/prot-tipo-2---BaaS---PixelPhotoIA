@@ -26,9 +26,10 @@ import {
     BoltIcon,
     FireIcon,
     PixelsIcon,
-    ToyIcon
+    ToyIcon,
+    SharpenIcon,
 } from '../components/icons';
-import { type ToolId, type ToolConfig, type ToolCategory } from '../types';
+import { type ToolId, type ToolConfig, type ToolCategory, type TabId } from '../types';
 
 export const tools: ToolConfig[] = [
     // Generation Tools
@@ -176,6 +177,13 @@ export const tools: ToolConfig[] = [
         category: 'workflow',
     },
     {
+        id: 'confidentStudio',
+        name: 'Retrato de Estúdio Confiante',
+        description: 'Crie um retrato profissional em um estúdio com roupas elegantes e iluminação cinematográfica.',
+        icon: React.createElement(UserIcon, { className: 'w-8 h-8 text-cyan-400' }),
+        category: 'workflow',
+    },
+    {
         id: 'funkoPopStudio',
         name: 'Estúdio Funko Pop',
         description: 'Transforme fotos em colecionáveis Funko Pop 3D realistas com cenários personalizados.',
@@ -245,6 +253,13 @@ export const tools: ToolConfig[] = [
         name: 'Remover Desfoque',
         description: 'Corrija desfoque de movimento e lente com IA para aguçar sua imagem.',
         icon: React.createElement(UnblurIcon, { className: 'w-8 h-8 text-cyan-400' }),
+        category: 'editing',
+    },
+    {
+        id: 'sharpen',
+        name: 'Nitidez Generativa',
+        description: 'Realce contornos e texturas com nitidez inteligente de IA.',
+        icon: React.createElement(SharpenIcon, { className: 'w-8 h-8 text-cyan-400' }),
         category: 'editing',
     },
     {
@@ -345,4 +360,42 @@ export const tools: ToolConfig[] = [
         icon: React.createElement(TextureIcon, { className: 'w-8 h-8 text-lime-400' }),
         category: 'editing',
     },
+    {
+        id: 'newAspectRatio',
+        name: 'Proporção 16:9',
+        description: 'Expanda sua imagem para a proporção de paisagem (16:9) usando IA.',
+        icon: React.createElement(ExpandIcon, { className: 'w-8 h-8 text-indigo-400' }),
+        category: 'editing',
+    },
 ];
+
+
+export const toolToTabMap: Partial<Record<ToolId, TabId>> = {
+    extractArt: 'extractArt',
+    removeBg: 'removeBg',
+    style: 'style',
+    portraits: 'portraits',
+    faceRecovery: 'photoRestoration',
+    styleGen: 'styleGen',
+    adjust: 'adjust',
+    relight: 'relight',
+    generativeEdit: 'generativeEdit',
+    crop: 'crop',
+    upscale: 'upscale',
+    unblur: 'unblur',
+    sharpen: 'sharpen',
+    neuralFilters: 'neuralFilters',
+    trends: 'trends',
+    dustAndScratches: 'dustAndScratches',
+    objectRemover: 'objectRemover',
+    texture: 'texture',
+    magicMontage: 'magicMontage',
+    photoRestoration: 'photoRestoration',
+    text: 'text',
+    lowPoly: 'lowPoly',
+    pixelArt: 'pixelArt',
+    denoise: 'photoRestoration',
+    faceSwap: 'faceSwap',
+    localAdjust: 'localAdjust',
+    newAspectRatio: 'newAspectRatio',
+};

@@ -89,6 +89,15 @@ const presets: Preset[] = [
         pose: "Olhos fechados, lábios entreabertos, rosto inclinado para cima. Cabelo bagunçado ao vento e sobre os olhos.",
     },
     {
+        name: 'Retrato Introspectivo',
+        thumbnail: 'https://storage.googleapis.com/maker-studio-tools-us-east1/photostudio/introspective_portrait.webp',
+        photoStyle: "Retrato estético em preto e branco com precisão de 100% do rosto, estilo cinematográfico.",
+        location: "Sentado no chão em um cômodo escuro. Sombras de uma janela projetam-se sobre a parede atrás dele, criando uma atmosfera artística e melancólica.",
+        clothing: "Traje escuro grande demais (oversized).",
+        lighting: "Iluminação dramática e de alto contraste, vinda de uma única fonte de luz lateral.",
+        pose: "Pose emocional e introspectiva, com uma mão perto da boca e a cabeça ligeiramente inclinada para o lado. A atmosfera geral é misteriosa e emocional.",
+    },
+    {
         name: 'Retrato de Estúdio',
         thumbnail: 'https://storage.googleapis.com/maker-studio-tools-us-east1/photostudio/studio_portrait.webp',
         photoStyle: "Ensaio fotográfico estilo revista de moda, fotografia realista, alta qualidade.",
