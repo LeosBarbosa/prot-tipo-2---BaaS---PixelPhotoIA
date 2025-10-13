@@ -147,6 +147,7 @@ function AppContent() {
         
         {proactiveSuggestion && (
             <ProactiveSuggestion
+                key={proactiveSuggestion.message}
                 message={proactiveSuggestion.message}
                 acceptLabel={proactiveSuggestion.acceptLabel}
                 onAccept={proactiveSuggestion.onAccept}
