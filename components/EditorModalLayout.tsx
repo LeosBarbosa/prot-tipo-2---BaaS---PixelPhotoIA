@@ -7,13 +7,15 @@ import React, { useMemo, useEffect, useRef } from 'react';
 import { useEditor } from '../context/EditorContext';
 import ImageViewer from './ImageViewer';
 import FloatingControls from './FloatingControls';
-import { type TabId, type ToolId } from '../types';
+// FIX: Import ToolConfig
+import { type TabId, type ToolId, type ToolConfig } from '../types';
 import GifTimeline from './common/GifTimeline';
 import LeftPanel from './LeftPanel';
 import RightPanel from './RightPanel';
-import { editingTabs } from '../config/tabs';
+// import { editingTabs } from '../config/tabs'; // This is no longer needed
 import MobileBottomNav from './MobileBottomNav';
-import { toolToTabMap } from '../config/tools';
+// FIX: Import tools array
+import { toolToTabMap, tools } from '../config/tools';
 
 interface EditorModalLayoutProps {
     editingPanelComponents: Partial<Record<TabId, React.LazyExoticComponent<React.FC<{}>>>>;
@@ -21,7 +23,7 @@ interface EditorModalLayoutProps {
 
 
 const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelComponents }) => {
-    const { activeTool, isGif, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, activeTab, setActiveTab, setToast } = useEditor();
+    const { activeTool, isGif, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, activeTab, setActiveTab, setToast, isPanModeActive } = useEditor();
     
     // Quando a ferramenta inicial da página inicial muda, atualize a aba ativa
     useEffect(() => {
@@ -38,21 +40,33 @@ const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelCompo
         }
     }, [activeTool, setActiveTab, setToast]);
 
-    const activeTabConfig = useMemo(() => editingTabs.find(tab => tab.id === activeTab), [activeTab]);
+    // FIX: Use `tools` which contains the full ToolConfig including the 'category' property.
+    const activeToolConfig = useMemo(() => tools.find(tool => tool.id === activeTab), [activeTab]);
 
     const showBackdrop = isLeftPanelVisible || isRightPanelVisible;
 
     const touchStartRef = useRef<{ x: number, time: number } | null>(null);
-    const mainContentRef = useRef<HTMLDivElement>(null);
 
     const handleTouchStart = (e: React.TouchEvent) => {
+        if (isPanModeActive) {
+            touchStartRef.current = null;
+            return;
+        }
+        const target = e.target as HTMLElement;
+        // Ignore swipes if the touch starts on an interactive element or inside a scrollable panel.
+        // This prevents swipe-to-close from interfering with scrolling or button clicks.
+        if (target.closest('button, a, input, [role="button"], .scrollbar-thin, .ReactCrop__crop-selection, .ReactCrop__drag-handle')) {
+            touchStartRef.current = null;
+            return;
+        }
+
         if (e.touches.length === 1) {
             touchStartRef.current = { x: e.touches[0].clientX, time: Date.now() };
         }
     };
     
     const handleTouchEnd = (e: React.TouchEvent) => {
-        if (!touchStartRef.current) return;
+        if (isPanModeActive || !touchStartRef.current) return;
     
         const touchEnd = e.changedTouches[0];
         const deltaX = touchEnd.clientX - touchStartRef.current.x;
@@ -91,7 +105,7 @@ const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelCompo
             {/* Backdrop for mobile overlays */}
             {showBackdrop && (
                 <div
-                    className="fixed inset-0 bg-black/60 z-30 lg:hidden animate-fade-in"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-md z-30 lg:hidden animate-fade-in"
                     onClick={() => {
                         setIsLeftPanelVisible(false);
                         setIsRightPanelVisible(false);
@@ -102,13 +116,14 @@ const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelCompo
 
             {/* Left Panel */}
             <aside className={`fixed lg:relative z-40 h-full w-full max-w-sm lg:w-80 flex-shrink-0 transition-transform duration-300 ease-in-out ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-                <LeftPanel activeTab={activeTab} setActiveTab={setActiveTab} />
+                <LeftPanel />
             </aside>
 
             {/* Main Content */}
             <main 
-                ref={mainContentRef}
-                className="flex-grow flex flex-col relative pb-20 lg:pb-0"
+                className={`flex-grow flex flex-col relative pb-20 lg:pb-0 transition-all duration-300 ease-in-out origin-center
+                    ${(isLeftPanelVisible || isRightPanelVisible) ? 'scale-90 rounded-2xl shadow-2xl overflow-hidden blur-sm lg:scale-100 lg:rounded-none lg:shadow-none lg:overflow-auto lg:blur-0' : 'scale-100'}
+                `}
             >
                 <div className="flex-grow flex items-center justify-center p-4 relative overflow-hidden">
                     <ImageViewer />
@@ -119,7 +134,8 @@ const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelCompo
 
             {/* Right Panel */}
             <aside className={`fixed lg:relative right-0 z-40 h-full w-full max-w-sm lg:w-96 flex-shrink-0 transition-transform duration-300 ease-in-out ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
-                <RightPanel activeTabConfig={activeTabConfig} editingPanelComponents={editingPanelComponents} />
+                {/* FIX: Use `activeToolConfig` and `editingPanelComponents` which are now correctly defined/passed. */}
+                <RightPanel activeToolConfig={activeToolConfig} panelComponents={editingPanelComponents} />
             </aside>
 
             <MobileBottomNav />

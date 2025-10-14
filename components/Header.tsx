@@ -6,11 +6,7 @@ import React from 'react';
 import { SparkleIcon, UploadIcon, SaveIcon, LayersIcon, AdjustmentsHorizontalIcon, SunIcon, MoonIcon, UndoIcon, RedoIcon, HomeIcon } from './icons';
 import { useEditor } from '../context/EditorContext';
 
-interface HeaderProps {
-  isEditingTool: boolean;
-}
-
-const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
+const Header: React.FC = () => {
   const { 
     handleGoHome,
     handleTriggerUpload, 
@@ -26,9 +22,10 @@ const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
     redo,
     canUndo,
     canRedo,
-    setActiveTool,
   } = useEditor()!;
   
+  const showEditorControls = !!baseImageFile;
+
   const handleLeftPanelToggle = () => {
     const newLeftVisibility = !isLeftPanelVisible;
     setIsLeftPanelVisible(newLeftVisibility);
@@ -47,8 +44,8 @@ const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
 
   return (
     <header className="w-full py-3 px-4 md:px-8 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50 flex items-center justify-between">
-      <div className="flex items-center justify-center gap-3">
-          {isEditingTool && (
+      <div className="flex items-center gap-4">
+          {showEditorControls && (
             <button 
               onClick={handleGoHome}
               className="flex items-center justify-center w-10 h-10 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 rounded-full transition-all duration-200 ease-in-out active:scale-90"
@@ -59,9 +56,12 @@ const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
             </button>
           )}
           <SparkleIcon className="w-6 h-6 text-blue-500" />
-          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-            PixelPhoto IA
-          </h1>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+              PixelPhoto IA
+            </h1>
+            <p className="text-xs font-sans text-gray-500 dark:text-gray-400 -mt-1">Adventure Co.</p>
+          </div>
       </div>
       <div className="flex items-center gap-2">
         <button 
@@ -72,26 +72,31 @@ const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
         >
           {theme === 'dark' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
         </button>
-        {baseImageFile && (
+        {showEditorControls && (
           <>
-            <button 
-              onClick={undo}
-              disabled={!canUndo}
-              className="flex items-center justify-center w-10 h-10 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 rounded-full transition-all duration-200 ease-in-out active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Desfazer"
-              aria-label="Desfazer"
-            >
-              <UndoIcon className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={redo}
-              disabled={!canRedo}
-              className="flex items-center justify-center w-10 h-10 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 rounded-full transition-all duration-200 ease-in-out active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Refazer"
-              aria-label="Refazer"
-            >
-              <RedoIcon className="w-5 h-5" />
-            </button>
+            {/* Undo/Redo for Desktop only */}
+            <div className="hidden lg:flex items-center gap-2">
+                <button 
+                onClick={undo}
+                disabled={!canUndo}
+                className="flex items-center justify-center w-10 h-10 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 rounded-full transition-all duration-200 ease-in-out active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Desfazer"
+                aria-label="Desfazer"
+                >
+                <UndoIcon className="w-5 h-5" />
+                </button>
+                <button 
+                onClick={redo}
+                disabled={!canRedo}
+                className="flex items-center justify-center w-10 h-10 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 rounded-full transition-all duration-200 ease-in-out active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refazer"
+                aria-label="Refazer"
+                >
+                <RedoIcon className="w-5 h-5" />
+                </button>
+            </div>
+            
+            {/* Save & New Image */}
             <button 
               onClick={handleExplicitSave}
               className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out active:scale-95 text-sm"
@@ -110,9 +115,8 @@ const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
               <UploadIcon className="w-5 h-5" />
               <span className="hidden md:inline">Nova Imagem</span>
             </button>
-          </>
-        )}
-        {isEditingTool && (
+            
+            {/* Panel Toggles for Desktop only */}
             <div className="hidden lg:flex items-center gap-2">
                 <button 
                     onClick={handleLeftPanelToggle}
@@ -133,6 +137,7 @@ const Header: React.FC<HeaderProps> = ({ isEditingTool }) => {
                     <AdjustmentsHorizontalIcon className="w-5 h-5" />
                 </button>
             </div>
+          </>
         )}
       </div>
     </header>

@@ -8,11 +8,15 @@ import { useEditor } from '../../context/EditorContext';
 import { outpaintImage } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { PhotoIcon, ExpandIcon } from '../icons';
+import { PhotoIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
+import TipBox from '../common/TipBox';
+import * as db from '../../utils/db';
+import { dataURLtoFile } from '../../utils/imageUtils';
+import { hashFile, sha256 } from '../../utils/cryptoUtils';
 
 const OutpaintingPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage, setToast, setLoadingMessage } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
@@ -33,6 +37,15 @@ const OutpaintingPanel: React.FC = () => {
         }
     }, [baseImageFile, sourceImage]);
 
+    useEffect(() => {
+        // Cleanup for object URLs
+        return () => {
+            if (resultImage && resultImage.startsWith('blob:')) {
+                URL.revokeObjectURL(resultImage);
+            }
+        };
+    }, [resultImage]);
+
     const handleFileSelect = (file: File | null) => {
         setSourceImage(file);
         if (file) {
@@ -51,16 +64,39 @@ const OutpaintingPanel: React.FC = () => {
         setResultImage(null);
         addPromptToHistory(prompt);
         try {
+            const imageHash = await hashFile(sourceImage);
+            const promptHash = await sha256(`${prompt}:${negativePrompt}:${aspectRatio}`);
+            const cacheKey = `outpainting:${imageHash}:${promptHash}`;
+
+            setLoadingMessage('Verificando cache...');
+            const cachedBlob = await db.loadImageFromCache(cacheKey);
+            if (cachedBlob) {
+                setResultImage(URL.createObjectURL(cachedBlob));
+                setToast({ message: 'Imagem carregada do cache!', type: 'info' });
+                setIsLoading(false);
+                setLoadingMessage(null);
+                return;
+            }
+
+            setLoadingMessage('Expandindo sua imagem...');
             let fullPrompt = prompt;
             if (negativePrompt.trim()) {
                 fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
             }
             const result = await outpaintImage(sourceImage, fullPrompt, aspectRatio);
             setResultImage(result);
+            
+            try {
+                const resultFile = dataURLtoFile(result, `cache-${cacheKey}.png`);
+                await db.saveImageToCache(cacheKey, resultFile);
+            } catch (cacheError) {
+                console.warn("Falha ao salvar a imagem no cache:", cacheError);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
         } finally {
             setIsLoading(false);
+            setLoadingMessage(null);
         }
     };
 
@@ -96,6 +132,10 @@ const OutpaintingPanel: React.FC = () => {
                     promptHelperText='Ex: "um céu estrelado com uma lua cheia", "continue a praia com areia e ondas".'
                     negativePromptHelperText="Ex: pessoas, edifícios."
                 />
+
+                <TipBox>
+                    Descreva apenas o que você deseja adicionar nas áreas expandidas. A IA se encarregará de estender a imagem de forma coerente com o original.
+                </TipBox>
 
                 <button
                     onClick={handleGenerate}

@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
-import { useLoadingError } from '../../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import { generate3DModel } from '../../services/geminiService';
 import ResultViewer from './common/ResultViewer';
 import { Model3DIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 
 const Model3DGenPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading } = useLoadingError();
+    const { isLoading, error, setError, setIsLoading } = useEditor();
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
     const [negativePrompt, setNegativePrompt] = useState('');

@@ -121,16 +121,16 @@ const AdjustmentPanel: React.FC = () => {
                 <button
                     onClick={resetLocalFilters}
                     disabled={isLoading || !hasLocalAdjustments || isEditingAdjustmentLayer}
-                    className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-4 rounded-lg transition-transform disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                 >
                     Resetar
                 </button>
                 <button
                     onClick={() => handleApplyLocalAdjustments(applyToAll)}
                     disabled={isLoading || !hasLocalAdjustments || isEditingAdjustmentLayer}
-                    className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg shadow-green-500/20 hover:shadow-xl disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
+                    className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg shadow-green-500/20 hover:shadow-xl disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed active:scale-95"
                 >
-                    Aplicar
+                    {isLoading ? <span className="animate-pulse">Aplicando...</span> : 'Aplicar'}
                 </button>
             </div>
         </div>

@@ -65,8 +65,8 @@ const StylePreview: React.FC = () => {
                         disabled={isLoading}
                         className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
                     >
-                        <CheckCircleIcon className="w-5 h-5" />
-                        Aplicar Estilo
+                        <CheckCircleIcon className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
+                        {isLoading ? 'Aplicando...' : 'Aplicar Estilo'}
                     </button>
                 </div>
             )}

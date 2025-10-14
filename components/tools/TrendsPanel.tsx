@@ -8,14 +8,7 @@ import { SparkleIcon, PixarIcon, ToyIcon, ClockIcon, GtaIcon, LegoIcon, PixelsIc
 import StylePreview from '../common/StylePreview';
 import TipBox from '../common/TipBox';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
-
-interface Trend {
-    name: string;
-    prompt: string;
-    bg: string;
-    icon?: React.ReactNode;
-    type?: 'descriptive';
-}
+import { type Trend } from '../../types';
 
 const trends: Trend[] = [
     {

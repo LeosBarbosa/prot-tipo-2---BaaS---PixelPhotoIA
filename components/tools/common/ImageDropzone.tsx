@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { UploadIcon, CloseIcon } from '../../icons';
 
 interface ImageDropzoneProps {
@@ -14,16 +14,26 @@ interface ImageDropzoneProps {
 const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageFile, onFileSelect, label }) => {
     const [isDraggingOver, setIsDraggingOver] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    const imageUrl = useMemo(() => {
-        if (!imageFile) return null;
-        try {
-            return URL.createObjectURL(imageFile);
-        } catch (e) {
-            console.error("Error creating object URL", e);
-            return null;
+    useEffect(() => {
+        // If there's no image file, there's no URL to create or show.
+        if (!imageFile) {
+            setImageUrl(null);
+            return; // Exit early.
         }
-    }, [imageFile]);
+
+        // Create a URL for the current file.
+        const objectUrl = URL.createObjectURL(imageFile);
+        setImageUrl(objectUrl);
+
+        // Return a cleanup function. This will be called when the component
+        // unmounts, or before the effect runs again (e.g., if imageFile changes).
+        // This is crucial to prevent memory leaks.
+        return () => URL.revokeObjectURL(objectUrl);
+    }, [imageFile]); // Rerun this effect only when the imageFile prop changes.
+
 
     const handleFileChange = useCallback((files: FileList | null) => {
         setError(null);
@@ -37,7 +47,7 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageFile, onFileSelect, 
         }
     }, [onFileSelect]);
 
-    const handleDrop = useCallback((e: React.DragEvent<HTMLLabelElement>) => {
+    const handleDrop = useCallback((e: React.DragEvent<HTMLButtonElement>) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDraggingOver(false);
@@ -45,11 +55,19 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageFile, onFileSelect, 
             handleFileChange(e.dataTransfer.files);
         }
     }, [handleFileChange]);
+    
+    // Programmatically trigger the file input click. This is more reliable on mobile devices.
+    const handleClick = () => {
+        inputRef.current?.click();
+    };
 
     const handleClear = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         onFileSelect(null);
+        if (inputRef.current) {
+            inputRef.current.value = ''; // Reset the input value
+        }
     };
     
     const borderColor = error
@@ -61,13 +79,15 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageFile, onFileSelect, 
     return (
         <div className="flex flex-col items-center gap-2 w-full">
             <h4 className="font-semibold text-gray-300 text-sm">{label}</h4>
-            <label
-                htmlFor={`upload-${label.replace(/\s+/g, '-')}`}
+            <button
+                type="button"
+                onClick={handleClick}
                 className={`relative group w-full aspect-square bg-gray-900/50 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-all ${borderColor}`}
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingOver(true); }}
                 onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingOver(true); }}
                 onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingOver(false); }}
                 onDrop={handleDrop}
+                aria-label={`Carregar imagem para ${label}`}
             >
                 {imageUrl ? (
                     <>
@@ -87,13 +107,13 @@ const ImageDropzone: React.FC<ImageDropzoneProps> = ({ imageFile, onFileSelect, 
                     </div>
                 )}
                 <input
-                    id={`upload-${label.replace(/\s+/g, '-')}`}
+                    ref={inputRef}
                     type="file"
                     className="hidden"
                     accept="image/*"
                     onChange={(e) => handleFileChange(e.target.files)}
                 />
-            </label>
+            </button>
             {error && <p className="text-xs text-red-400 w-full text-center px-1 h-4">{error}</p>}
             {imageFile && !error && (
                  <p className="text-xs text-gray-400 w-full text-center truncate px-1 h-4" title={imageFile.name}>

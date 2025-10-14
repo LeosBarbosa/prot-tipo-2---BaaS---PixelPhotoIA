@@ -96,15 +96,15 @@ const VideoGenPanel: React.FC = () => {
                                     rows={5}
                                 />
                                 <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="videoGen" />
-                                {showSuggestions && (
-                                    <PromptSuggestionsDropdown
-                                        suggestions={suggestions}
-                                        onSelect={handleSelectSuggestion}
-                                        searchTerm={prompt}
-                                    />
-                                )}
-                                <p className="mt-1 text-xs text-gray-500 px-1">Descreva a ação, o movimento da câmera (ex: panorâmica, zoom) e o estilo cinematográfico.</p>
                             </div>
+                            {showSuggestions && (
+                                <PromptSuggestionsDropdown
+                                    suggestions={suggestions}
+                                    onSelect={handleSelectSuggestion}
+                                    searchTerm={prompt}
+                                />
+                            )}
+                             <p className="mt-1 text-xs text-gray-500 px-1">Descreva a ação, o movimento da câmera (ex: panorâmica, zoom) e o estilo cinematográfico.</p>
                         </div>
 
                         <div>

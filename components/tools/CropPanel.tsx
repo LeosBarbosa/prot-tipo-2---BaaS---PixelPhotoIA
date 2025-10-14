@@ -37,7 +37,7 @@ const CropPanel: React.FC = () => {
         <div className="w-full flex flex-col gap-6 animate-fade-in">
             <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50">
                 <h3 className="font-bold text-white text-md mb-3 text-center">Proporção</h3>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                     {aspectRatios.map(({ name, value, icon }) => (
                         <button
                             key={name}
@@ -78,10 +78,10 @@ const CropPanel: React.FC = () => {
             <button
                 onClick={handleApplyCrop}
                 disabled={isLoading || !completedCrop?.width || !completedCrop?.height}
-                className="w-full mt-2 bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
+                className="w-full mt-2 bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed active:scale-95"
             >
-                <CropIcon className="w-5 h-5" />
-                Aplicar Corte
+                <CropIcon className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
+                {isLoading ? 'Aplicando...' : 'Aplicar Corte'}
             </button>
         </div>
     );

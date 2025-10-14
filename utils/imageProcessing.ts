@@ -167,3 +167,27 @@ export const applyFiltersToMaskedArea = async (
     
     return canvas.toDataURL('image/png');
 };
+
+/**
+ * Applies a solid background color to a transparent image.
+ * @param imageUrl The data URL of the image (preferably a transparent PNG).
+ * @param color The CSS color string for the background.
+ * @returns A promise that resolves with the data URL of the image with the new background.
+ */
+export const applyBackgroundColor = async (
+    imageUrl: string,
+    color: string
+): Promise<string> => {
+    const image = await loadImage(imageUrl);
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error("Could not get canvas context");
+
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0);
+
+    return canvas.toDataURL('image/png');
+};

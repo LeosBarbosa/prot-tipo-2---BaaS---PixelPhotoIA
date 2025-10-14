@@ -28,6 +28,9 @@ import {
     PixelsIcon,
     ToyIcon,
     SharpenIcon,
+    PngIcon,
+    ShieldCheckIcon,
+    DoubleExposureIcon,
 } from '../components/icons';
 import { type ToolId, type ToolConfig, type ToolCategory, type TabId } from '../types';
 
@@ -100,6 +103,13 @@ export const tools: ToolConfig[] = [
 
     // Workflows
     {
+        id: 'aiPngCreator',
+        name: 'Criador de PNG Transparente',
+        description: 'Converta qualquer imagem para PNG com fundo transparente, com opções de aprimoramento.',
+        icon: React.createElement(PngIcon, { className: 'w-8 h-8 text-green-400' }),
+        category: 'workflow',
+    },
+    {
         id: 'photoStudio',
         name: 'Ensaio Fotográfico IA',
         description: 'Gere ensaios fotográficos realistas com cenários, roupas e iluminação personalizados.',
@@ -111,6 +121,13 @@ export const tools: ToolConfig[] = [
         name: 'Polaroid com Artista IA',
         description: 'Crie uma foto Polaroid sua com seu artista favorito.',
         icon: React.createElement(PolaroidIcon, { className: 'w-8 h-8 text-stone-400' }),
+        category: 'workflow',
+    },
+    {
+        id: 'superheroFusion',
+        name: 'Fusão de Super-Herói',
+        description: 'Transforme-se no seu super-herói favorito, mantendo seu rosto.',
+        icon: React.createElement(ShieldCheckIcon, { className: 'w-8 h-8 text-red-400' }),
         category: 'workflow',
     },
     {
@@ -147,6 +164,14 @@ export const tools: ToolConfig[] = [
         description: 'Combine a composição de uma imagem com o estilo de outra.',
         icon: React.createElement(CombineIcon, { className: 'w-8 h-8 text-pink-400' }),
         category: 'workflow',
+    },
+    {
+        id: 'doubleExposure',
+        name: 'Dupla Exposição Artística',
+        description: 'Combine um retrato e uma paisagem para um efeito artístico cinematográfico.',
+        icon: React.createElement(DoubleExposureIcon, { className: 'w-8 h-8 text-purple-400' }),
+        category: 'workflow',
+        tag: 'new',
     },
     {
         id: 'outpainting',
@@ -284,6 +309,14 @@ export const tools: ToolConfig[] = [
         category: 'editing',
     },
     {
+        id: 'superResolution',
+        name: 'Super Resolução IA',
+        description: 'Aumente a resolução e a nitidez da imagem drasticamente com um clique.',
+        icon: React.createElement(SparkleIcon, { className: 'w-8 h-8 text-yellow-300' }),
+        category: 'editing',
+        tag: 'new',
+    },
+    {
         id: 'photoRestoration',
         name: 'Restauração de Foto',
         description: 'Restaure fotos antigas removendo ruído, arranhões e melhorando rostos.',
@@ -375,6 +408,7 @@ export const toolToTabMap: Partial<Record<ToolId, TabId>> = {
     removeBg: 'removeBg',
     style: 'style',
     portraits: 'portraits',
+    // Fix: 'faceRecovery' was not a valid ToolId. It has been added to types.ts.
     faceRecovery: 'photoRestoration',
     styleGen: 'styleGen',
     adjust: 'adjust',
@@ -382,6 +416,7 @@ export const toolToTabMap: Partial<Record<ToolId, TabId>> = {
     generativeEdit: 'generativeEdit',
     crop: 'crop',
     upscale: 'upscale',
+    superResolution: 'superResolution',
     unblur: 'unblur',
     sharpen: 'sharpen',
     neuralFilters: 'neuralFilters',
@@ -394,6 +429,7 @@ export const toolToTabMap: Partial<Record<ToolId, TabId>> = {
     text: 'text',
     lowPoly: 'lowPoly',
     pixelArt: 'pixelArt',
+    // Fix: 'denoise' was not a valid ToolId. It has been added to types.ts.
     denoise: 'photoRestoration',
     faceSwap: 'faceSwap',
     localAdjust: 'localAdjust',

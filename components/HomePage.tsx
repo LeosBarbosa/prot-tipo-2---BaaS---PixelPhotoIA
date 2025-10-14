@@ -19,6 +19,8 @@ import { predefinedSearches } from '../config/predefinedSearches';
 import PredefinedSearchCard from './PredefinedSearchCard';
 import PromptSuggestions from './PromptSuggestions';
 import StartScreen from './StartScreen';
+import { quickStyles } from '../config/trends';
+import TrendCard from './TrendCard';
 
 const categoryConfig: Record<ToolCategory, { title: string; description: string; icon: React.ReactElement<{ className?: string }> }> = {
     generation: { 
@@ -229,6 +231,16 @@ const HomePage: React.FC = () => {
                     suggestions={suggestions}
                     onSuggestionClick={handleSuggestionClick}
                 />
+            </div>
+            
+            <div className="mb-12 animate-fade-in">
+                <h2 className="text-xl font-bold text-white text-center mb-6">Estilos Rápidos</h2>
+                <div className="flex gap-4 -mx-4 px-4 overflow-x-auto pb-4 scrollbar-thin">
+                    {quickStyles.map(style => (
+                        <TrendCard key={style.name} trend={style} />
+                    ))}
+                    <div className="flex-shrink-0 w-1 h-1"></div> {/* Spacer for better scroll appearance */}
+                </div>
             </div>
 
             {predefinedResult && !isSmartSearching && !smartSearchResult && (

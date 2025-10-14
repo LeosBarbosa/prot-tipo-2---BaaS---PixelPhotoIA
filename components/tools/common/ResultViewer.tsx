@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { PhotoIcon } from '../../icons';
+import { PhotoIcon, DownloadIcon, BrushIcon, LayersIcon } from '../../icons';
 import Spinner from '../../Spinner';
+import { useEditor } from '../../../context/EditorContext';
+import { dataURLtoFile } from '../../../utils/imageUtils';
 
 interface ResultViewerProps {
     isLoading: boolean;
@@ -13,7 +15,49 @@ interface ResultViewerProps {
     loadingMessage?: string;
 }
 
-const ResultViewer: React.FC<ResultViewerProps> = ({ isLoading, error, resultImage, loadingMessage }) => {
+const ResultViewer: React.FC<ResultViewerProps> = ({ 
+    isLoading, 
+    error, 
+    resultImage, 
+    loadingMessage,
+}) => {
+    const { setInitialImage, setActiveTool, setToast } = useEditor();
+
+    const handleCreateVariation = () => {
+        if (!resultImage) return;
+        try {
+            const file = dataURLtoFile(resultImage, `variation-base-${Date.now()}.png`);
+            setInitialImage(file);
+            setActiveTool('imageVariation');
+            setToast({ message: "Imagem enviada para o 'Gerador de Variação'.", type: 'info' });
+        } catch (e) {
+            console.error("Failed to set result as base image:", e);
+            setToast({ message: "Não foi possível enviar para o editor: arquivo inválido.", type: 'error' });
+        }
+    };
+
+    const handleUseInEditor = () => {
+        if (!resultImage) return;
+        try {
+            const file = dataURLtoFile(resultImage, `edited-from-gen-${Date.now()}.png`);
+            setInitialImage(file);
+            setActiveTool('adjust'); 
+        } catch (e) {
+            console.error("Failed to use in editor:", e);
+            setToast({ message: "Não foi possível usar no editor: arquivo inválido.", type: 'error' });
+        }
+    };
+    
+    const handleDownload = () => {
+        if (!resultImage) return;
+        const link = document.createElement('a');
+        link.href = resultImage;
+        link.download = `generated-image-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     if (isLoading) {
         return (
             <div className="text-center text-gray-400 animate-fade-in flex flex-col items-center justify-center h-full">
@@ -38,7 +82,36 @@ const ResultViewer: React.FC<ResultViewerProps> = ({ isLoading, error, resultIma
     }
     
     if (resultImage) {
-        return <img src={resultImage} alt="Resultado da Geração" className="max-w-full max-h-full object-contain rounded-lg animate-fade-in" />;
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-4 animate-zoom-rise">
+                <div className="flex-grow w-full flex items-center justify-center overflow-hidden min-h-0">
+                    <img src={resultImage} alt="Resultado da Geração" className="max-w-full max-h-full object-contain rounded-lg" />
+                </div>
+                 <div className="flex-shrink-0 flex flex-wrap justify-center gap-3 animate-fade-in mt-2">
+                    <button
+                        onClick={handleDownload}
+                        className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all text-sm active:scale-95"
+                    >
+                        <DownloadIcon className="w-5 h-5" />
+                        Baixar Imagem
+                    </button>
+                    <button
+                        onClick={handleCreateVariation}
+                        className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-md transition-all text-sm active:scale-95"
+                    >
+                        <LayersIcon className="w-5 h-5" />
+                        Gerar Variações
+                    </button>
+                    <button
+                        onClick={handleUseInEditor}
+                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-all text-sm active:scale-95"
+                    >
+                         <BrushIcon className="w-5 h-5" />
+                        Usar no Editor
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     // Default state when not loading, no error, and no image

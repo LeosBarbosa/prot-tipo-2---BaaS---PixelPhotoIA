@@ -9,22 +9,6 @@ import { DEFAULT_LOCAL_FILTERS, DEFAULT_TEXT_TOOL_STATE } from './context/Editor
 
 // Este ficheiro é agora a única fonte de verdade para todas as definições de tipos na aplicação.
 
-// Tipos de todo o editor
-export type TabId = 'layers' | 'extractArt' | 'removeBg' | 'style' | 'portraits' | 'styleGen' | 'adjust' | 'relight' | 'neuralFilters' | 'generativeEdit' | 'crop' | 'upscale' | 'unblur' | 'sharpen' | 'trends' | 'localAdjust' | 'dustAndScratches' | 'history' | 'objectRemover' | 'texture' | 'magicMontage' | 'photoRestoration' | 'text' | 'lowPoly' | 'pixelArt' | 'faceSwap' | 'newAspectRatio';
-export type ToastType = 'success' | 'error' | 'info';
-
-// Tipos do Painel de Transformação
-export type TransformType = 'rotate-left' | 'rotate-right' | 'flip-h' | 'flip-v';
-
-// Tipos do Painel de Melhoria
-export type SharpenMode = 'light' | 'standard' | 'strong';
-
-// Tipos do Painel de Colagem
-export type CollageLayout = '2-vertical' | '2-horizontal' | '3-mixed-1' | '3-mixed-2' | '4-grid';
-
-// Tipos do Painel de Vídeo
-export type VideoAspectRatio = '16:9' | '1:1' | '9:16';
-
 export type ToolId =
   // Ferramentas de Geração
   | 'imageGen'
@@ -52,7 +36,11 @@ export type ToolId =
   | 'polaroid'
   | 'funkoPopStudio'
   | 'tryOn'
-  // Ferramentas de Edição - many of these are also TabIds
+  | 'aiPngCreator'
+  | 'superheroFusion'
+  | 'doubleExposure'
+  // Ferramentas de Edição
+  | 'layers'
   | 'newAspectRatio'
   | 'magicMontage'
   | 'objectRemover'
@@ -67,6 +55,7 @@ export type ToolId =
   | 'text'
   | 'removeBg'
   | 'upscale'
+  | 'superResolution'
   | 'photoRestoration'
   | 'relight'
   | 'lowPoly'
@@ -78,9 +67,26 @@ export type ToolId =
   | 'trends'
   | 'texture'
   | 'localAdjust'
-  // Tool Aliases/Sub-tools
-  | 'denoise'
-  | 'faceRecovery';
+  | 'history'
+  // Fix: Add missing ToolIds 'faceRecovery' and 'denoise'
+  | 'faceRecovery'
+  | 'denoise';
+
+// Tipos de todo o editor
+export type TabId = ToolId;
+export type ToastType = 'success' | 'error' | 'info';
+
+// Tipos do Painel de Transformação
+export type TransformType = 'rotate-left' | 'rotate-right' | 'flip-h' | 'flip-v';
+
+// Tipos do Painel de Melhoria
+export type SharpenMode = 'light' | 'standard' | 'strong';
+
+// Tipos do Painel de Colagem
+export type CollageLayout = '2-vertical' | '2-horizontal' | '3-mixed-1' | '3-mixed-2' | '4-grid';
+
+// Tipos do Painel de Vídeo
+export type VideoAspectRatio = '16:9' | '1:1' | '9:16';
 
 // Novo: Tipo para a funcionalidade de Deteção de Objetos
 export interface DetectedObject {
@@ -114,6 +120,7 @@ export interface ToolConfig {
     description: string;
     icon: React.ReactNode;
     category: ToolCategory;
+    tag?: 'new' | 'tip';
 }
 
 // Novo: Tipo para os resultados da Busca Inteligente
@@ -251,7 +258,7 @@ export interface TextToolState {
 
 export interface EditorContextType {
     // General State
-    activeTool: ToolId | null;
+    activeTool: ToolId | null; // This might be deprecated in favor of activeTab
     setActiveTool: (toolId: ToolId | null) => void;
     activeTab: TabId;
     setActiveTab: React.Dispatch<React.SetStateAction<TabId>>;
@@ -289,8 +296,11 @@ export interface EditorContextType {
     compositeCssFilter: string;
     originalImageUrl: string | null; // For comparison
     imgRef: React.RefObject<HTMLImageElement>;
-    setInitialImage: (file: File | null) => void;
+    setInitialImage: (file: File | null) => Promise<void>;
     hasRestoredSession: boolean;
+    // Fix: Add missing properties to EditorContextType
+    isEditingSessionActive: boolean;
+    setIsEditingSessionActive: React.Dispatch<React.SetStateAction<boolean>>;
 
     // Layer Actions
     updateLayer: (layerId: string, updates: Partial<Layer>) => void;
@@ -419,6 +429,7 @@ export interface EditorContextType {
     handleGenerateProfessionalPortrait: (applyToAll: boolean) => void;
     handleRestorePhoto: (colorize: boolean) => void;
     handleApplyUpscale: (factor: number, preserveFace: boolean) => void;
+    handleApplySuperResolution: (factor: number, intensity: number, preserveFace: boolean) => void;
     handleUnblurImage: (sharpenLevel: number, denoiseLevel: number, model: string) => void;
     handleApplySharpen: (intensity: number) => void;
     handleApplyNewAspectRatio: () => void;

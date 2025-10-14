@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
 import TipBox from '../common/TipBox';
+import StylePreview from '../common/StylePreview';
 
 const styles = [
     { name: 'Desenho Animado', prompt: 'Transforme a imagem em um estilo de desenho animado vibrante. Aplique contornos pretos grossos e definidos para delinear as formas. Use uma paleta de cores primárias saturadas e vibrantes. Exagere levemente as características principais para um efeito expressivo e divertido, semelhante a um desenho animado moderno.', bg: 'bg-gradient-to-br from-yellow-400 to-orange-500' },
@@ -22,12 +23,26 @@ const styles = [
     { name: 'Esboço Carvão', prompt: 'Close-up em estilo de esboço a carvão preto e branco, com linhas expressivas e sombreamento dramático de uma única fonte de luz.', bg: 'bg-gradient-to-br from-gray-300 to-gray-600' },
     { name: 'Modelo 3D', prompt: 'Renderização de modelo 3D, com iluminação de estúdio de três pontos e texturas suaves e fotorrealistas.', bg: 'bg-gradient-to-br from-slate-400 to-slate-600' },
     { name: 'Steampunk', prompt: 'Estilo Steampunk, com engrenagens de latão, vapor, estética vitoriana e iluminação quente de lâmpadas de filamento.', bg: 'bg-gradient-to-br from-orange-600 to-amber-800' },
-    { name: 'Pintura a Óleo', prompt: 'Pintura a óleo, com pinceladas texturizadas e visíveis, cores ricas e vibrantes e iluminação dramática.', bg: 'bg-gradient-to-br from-amber-500 to-rose-700' }
+    { name: 'Pintura a Óleo', prompt: 'Pintura a óleo, com pinceladas texturizadas e visíveis, cores ricas e vibrantes e iluminação dramática.', bg: 'bg-gradient-to-br from-amber-500 to-rose-700' },
+    { name: 'Pop Art', prompt: 'Estilo pop art inspirado em Andy Warhol, com cores ousadas e contrastantes, serigrafia e repetição de padrões.', bg: 'bg-gradient-to-br from-yellow-300 to-pink-500' },
+    { name: 'Surrealismo', prompt: 'Cena de sonho surrealista no estilo de Salvador Dalí, com objetos derretendo, paisagens ilógicas e uma atmosfera misteriosa.', bg: 'bg-gradient-to-br from-sky-400 to-yellow-600' },
+    { name: 'Arte de Rua', prompt: 'Estilo de arte de rua (graffiti), usando texturas de tinta spray, estênceis e cores vibrantes, com um fundo de parede de tijolos.', bg: 'bg-gradient-to-br from-red-600 to-gray-700' },
+    { name: 'Mosaico', prompt: 'Transforme a imagem em um mosaico romano antigo, composto por pequenos ladrilhos de cerâmica coloridos, com linhas de argamassa visíveis.', bg: 'bg-gradient-to-br from-stone-500 to-teal-700' },
+    { name: 'Fantasia Sombria', prompt: 'Estilo de fantasia sombria e atmosférica, com iluminação de baixo contraste, paleta de cores dessaturada e detalhes góticos.', bg: 'bg-gradient-to-br from-indigo-900 to-gray-800' },
+    { name: 'Ukiyo-e', prompt: 'Estilo de xilogravura japonesa Ukiyo-e, com linhas fortes, áreas de cor chapada e uma composição inspirada na natureza.', bg: 'bg-gradient-to-br from-red-300 to-cyan-200' },
+    { name: 'Cubismo', prompt: 'Reconstrua a imagem no estilo cubista de Picasso, com formas fragmentadas, múltiplos pontos de vista e uma paleta de cores terrosas.', bg: 'bg-gradient-to-br from-amber-700 to-gray-600' },
+    { name: 'Pontilhismo', prompt: 'Estilo de pintura pontilhista, usando pequenos pontos distintos de cor para formar a imagem, com uma paleta de cores vibrante.', bg: 'bg-gradient-to-br from-green-400 to-yellow-300' },
+    { name: 'Vaporwave', prompt: 'Estética Vaporwave, com tons de rosa e ciano, elementos de glitch, e motivos nostálgicos dos anos 80, como estátuas romanas e grades de neon.', bg: 'bg-gradient-to-br from-pink-500 to-cyan-400' },
+    { name: 'Low Poly', prompt: 'Transforme a imagem em um estilo de arte low poly, usando uma malha de polígonos geométricos com cores chapadas e gradientes sutis.', bg: 'bg-gradient-to-br from-blue-500 to-purple-600' }
 ];
 
 const StylePanel: React.FC = () => {
-    const { isLoading, handleApplyStyle, isGif } = useEditor();
+    const { isLoading, isGif, generateAIPreview, isPreviewLoading, previewState } = useEditor();
     const [applyToAll, setApplyToAll] = useState(true);
+
+    const handleStyleClick = (style: typeof styles[0]) => {
+        generateAIPreview({ name: style.name, prompt: style.prompt, bg: style.bg }, applyToAll);
+    };
 
     return (
         <div className="w-full flex flex-col gap-4 animate-fade-in">
@@ -35,26 +50,30 @@ const StylePanel: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-300">Estilos Artísticos com IA</h3>
                 <p className="text-sm text-gray-400 -mt-1">Transforme sua foto com um clique.</p>
             </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {styles.map(style => (
-                    <button
-                        key={style.name}
-                        onClick={() => handleApplyStyle(style.prompt, applyToAll)}
-                        disabled={isLoading}
-                        className="group relative aspect-square rounded-lg text-center font-semibold text-white transition-transform duration-200 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:transform-none flex flex-col items-center justify-center p-2 overflow-hidden shadow-lg"
-                    >
-                        <div className={`absolute inset-0 ${style.bg} transition-transform duration-300 group-hover:scale-110`}></div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent group-hover:from-black/50 transition-colors"></div>
-                        <span className="relative z-10 drop-shadow-md text-sm">{style.name}</span>
-                    </button>
-                ))}
-            </div>
-                <TipBox>
-                A IA reinterpreta sua imagem no estilo escolhido. Os resultados podem variar drasticamente, então experimente diferentes estilos para obter o visual perfeito!
-            </TipBox>
 
-            {isGif && <ApplyToAllToggle checked={applyToAll} onChange={setApplyToAll} />}
+            <StylePreview />
+            
+            <div className={`transition-opacity duration-300 ${isPreviewLoading || previewState ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {styles.map(style => (
+                        <button
+                            key={style.name}
+                            onClick={() => handleStyleClick(style)}
+                            disabled={isLoading || isPreviewLoading}
+                            className="group relative aspect-square rounded-lg text-center font-semibold text-white transition-transform duration-200 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:transform-none flex flex-col items-center justify-center p-2 overflow-hidden shadow-lg"
+                        >
+                            <div className={`absolute inset-0 ${style.bg} transition-transform duration-300 group-hover:scale-110`}></div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent group-hover:from-black/50 transition-colors"></div>
+                            <span className="relative z-10 drop-shadow-md text-sm">{style.name}</span>
+                        </button>
+                    ))}
+                </div>
+                <TipBox>
+                    Clique em um estilo para ver uma prévia. A IA reinterpreta sua imagem no estilo escolhido, então os resultados podem variar. Experimente para obter o visual perfeito!
+                </TipBox>
+
+                {isGif && <div className="mt-4"><ApplyToAllToggle checked={applyToAll} onChange={setApplyToAll} /></div>}
+            </div>
         </div>
     );
 };

@@ -123,7 +123,7 @@ const PortraitsPanel: React.FC = () => {
                     Mudar Estilo de Cabelo
                 </h4>
                 <p className="text-sm text-gray-400 text-center -mt-2">Experimente novos penteados com a ajuda da IA.</p>
-                <div className="grid grid-cols-3 gap-2 w-full">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 w-full">
                     {hairstyles.map(style => (
                         <button
                             key={style.name}

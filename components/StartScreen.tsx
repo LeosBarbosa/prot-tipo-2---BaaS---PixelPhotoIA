@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { UploadIcon } from './icons';
 
 interface StartScreenProps {
@@ -13,28 +13,34 @@ interface StartScreenProps {
 
 const StartScreen: React.FC<StartScreenProps> = ({ onFileSelect, onCancel }) => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   
-  const handleFileSelection = (files: FileList | null) => {
+  const handleFileSelection = useCallback((files: FileList | null) => {
     if (files && files[0]) {
       onFileSelect(files[0]);
     }
-  };
+  }, [onFileSelect]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     handleFileSelection(e.target.files);
-  };
+  }, [handleFileSelection]);
 
-  const handleDrop = (e: React.DragEvent<HTMLElement>) => {
+  const handleDrop = useCallback((e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingOver(false);
     handleFileSelection(e.dataTransfer.files);
+  }, [handleFileSelection]);
+
+  const handleClick = () => {
+    inputRef.current?.click();
   };
 
   return (
     <div className="w-full max-w-3xl mx-auto text-center flex flex-col items-center justify-center p-4">
-      <label
-        htmlFor="file-upload"
+      <button
+        type="button"
+        onClick={handleClick}
         className={`relative block w-full p-10 md:p-16 border border-gray-700/80 rounded-3xl cursor-pointer transition-all duration-300 ease-in-out overflow-hidden bg-gray-900/40 hover:border-blue-500/60 group ${ isDraggingOver ? 'border-blue-500 ring-4 ring-blue-500/20' : '' }`}
         onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingOver(true); }}
         onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingOver(true); }}
@@ -52,8 +58,9 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFileSelect, onCancel }) => 
             <p>Ou <span className="text-blue-400 font-semibold">procure em seus arquivos</span></p>
             <p className="text-xs text-gray-500 mt-2">Suporta JPG, PNG, WEBP. Tamanho máximo 25MB.</p>
         </div>
-      </label>
+      </button>
       <input
+        ref={inputRef}
         id="file-upload"
         type="file"
         className="hidden"

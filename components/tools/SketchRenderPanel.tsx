@@ -10,9 +10,12 @@ import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import { BrushIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
+import * as db from '../../utils/db';
+import { dataURLtoFile } from '../../utils/imageUtils';
+import { hashFile, sha256 } from '../../utils/cryptoUtils';
 
 const SketchRenderPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage, setToast, setLoadingMessage } = useEditor();
     const [sketchImage, setSketchImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
@@ -23,6 +26,15 @@ const SketchRenderPanel: React.FC = () => {
             setSketchImage(baseImageFile);
         }
     }, [baseImageFile, sketchImage]);
+
+    useEffect(() => {
+        // Cleanup for object URLs
+        return () => {
+            if (resultImage && resultImage.startsWith('blob:')) {
+                URL.revokeObjectURL(resultImage);
+            }
+        };
+    }, [resultImage]);
 
     const handleFileSelect = (file: File | null) => {
         setSketchImage(file);
@@ -46,16 +58,39 @@ const SketchRenderPanel: React.FC = () => {
         setResultImage(null);
         addPromptToHistory(prompt);
         try {
+            const imageHash = await hashFile(sketchImage);
+            const promptHash = await sha256(`${prompt}:${negativePrompt}`);
+            const cacheKey = `sketchRender:${imageHash}:${promptHash}`;
+
+            setLoadingMessage('Verificando cache...');
+            const cachedBlob = await db.loadImageFromCache(cacheKey);
+            if (cachedBlob) {
+                setResultImage(URL.createObjectURL(cachedBlob));
+                setToast({ message: 'Imagem carregada do cache!', type: 'info' });
+                setIsLoading(false);
+                setLoadingMessage(null);
+                return;
+            }
+
+            setLoadingMessage('Renderizando seu esboço...');
             let fullPrompt = prompt;
             if (negativePrompt.trim()) {
                 fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
             }
             const result = await renderSketch(sketchImage, fullPrompt);
             setResultImage(result);
+
+            try {
+                const resultFile = dataURLtoFile(result, `cache-${cacheKey}.png`);
+                await db.saveImageToCache(cacheKey, resultFile);
+            } catch (cacheError) {
+                console.warn("Falha ao salvar a imagem no cache:", cacheError);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
         } finally {
             setIsLoading(false);
+            setLoadingMessage(null);
         }
     };
 

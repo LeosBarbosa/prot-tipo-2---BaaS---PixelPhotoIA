@@ -66,13 +66,13 @@ const BananimatePanel: React.FC = () => {
         ];
         
         let messageIndex = 0;
+        setLoadingMessage(messages[0]);
         const intervalId = setInterval(() => {
             messageIndex = (messageIndex + 1) % messages.length;
             setLoadingMessage(messages[messageIndex]);
         }, 8000);
 
         try {
-            setLoadingMessage(messages[0]);
             const result = await generateAnimationFromImage(sourceImage, prompt);
             setResultVideoUrl(result);
         } catch (err) {

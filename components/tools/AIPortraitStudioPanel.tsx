@@ -127,19 +127,23 @@ const AIPortraitStudioPanel: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setResultImage(null);
-        if (prompt.trim()) {
-            addPromptToHistory(prompt);
+        
+        let finalPrompt = prompt;
+        if (selectedStyle === 'caricature') {
+            const subStyle = caricatureSubStyles.find(s => s.id === selectedCaricatureSubStyleId);
+            if (subStyle) {
+                finalPrompt = `${subStyle.prompt} Additional details: ${prompt}`;
+            }
         }
+        
+        if (finalPrompt.trim()) {
+            addPromptToHistory(finalPrompt);
+        }
+
         try {
             let result;
-            let finalPrompt = prompt;
-
             switch (selectedStyle) {
                 case 'caricature':
-                    const subStyle = caricatureSubStyles.find(s => s.id === selectedCaricatureSubStyleId);
-                    if (subStyle) {
-                        finalPrompt = `${subStyle.prompt} Additional details: ${prompt}`;
-                    }
                     result = await geminiService.generateCaricature(validImages, finalPrompt);
                     break;
                 case 'pixar':
@@ -231,7 +235,7 @@ const AIPortraitStudioPanel: React.FC = () => {
                 {selectedStyle === 'caricature' && (
                     <div className="animate-fade-in">
                         <h4 className="text-sm font-semibold text-gray-300 mb-2">Sub-estilo de Caricatura</h4>
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                              {caricatureSubStyles.map(subStyle => (
                                 <button key={subStyle.id} onClick={() => setSelectedCaricatureSubStyleId(subStyle.id)} disabled={isLoading} className={`relative group aspect-square rounded-lg overflow-hidden border-2 transition-all ${selectedCaricatureSubStyleId === subStyle.id ? 'border-blue-500 scale-105' : 'border-transparent hover:border-gray-500'}`} title={subStyle.name}>
                                     <img src={subStyle.thumbnail} alt={subStyle.name} className="w-full h-full object-cover" />
@@ -248,14 +252,14 @@ const AIPortraitStudioPanel: React.FC = () => {
                      <div className="relative mt-1">
                         <textarea id="positive-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} onFocus={() => setShowSuggestions(suggestions.length > 0)} placeholder={currentStyleConfig.promptPlaceholder} className="w-full bg-gray-800/50 border border-gray-600 rounded-lg p-2 pr-12 text-base min-h-[80px] resize-none text-gray-300 placeholder-gray-500" disabled={isLoading} rows={3}/>
                         <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="aiPortraitStudio" />
-                        {showSuggestions && (
-                            <PromptSuggestionsDropdown
-                                suggestions={suggestions}
-                                onSelect={handleSelectSuggestion}
-                                searchTerm={prompt}
-                            />
-                        )}
                      </div>
+                     {showSuggestions && (
+                        <PromptSuggestionsDropdown
+                            suggestions={suggestions}
+                            onSelect={handleSelectSuggestion}
+                            searchTerm={prompt}
+                        />
+                     )}
                 </div>
                 
                 <button onClick={handleGenerate} disabled={isGenerateButtonDisabled} className="w-full mt-auto bg-gradient-to-br from-lime-600 to-green-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">

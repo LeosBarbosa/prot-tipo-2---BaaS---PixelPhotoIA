@@ -75,16 +75,24 @@ const LayersPanel: React.FC = () => {
                         <div
                             key={layer.id}
                             onClick={() => setActiveLayerId(layer.id)}
-                            className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${isLayerActive ? 'bg-blue-600/40' : 'hover:bg-white/10'}`}
+                            className={`flex items-center justify-between gap-2 p-2 rounded-md cursor-pointer transition-colors border ${isLayerActive ? 'bg-blue-600/40 border-blue-500' : 'hover:bg-white/10 border-transparent'}`}
                         >
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); toggleLayerVisibility(layer.id); }}
-                                className="text-gray-300 hover:text-white"
-                            >
-                                <EyeIcon className={`w-5 h-5 ${layer.isVisible ? '' : 'opacity-40'}`} />
-                            </button>
-                            <div className={`flex-grow text-sm font-semibold ${layer.isVisible ? 'text-white' : 'text-gray-500 italic'}`}>
-                                {layer.name}
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); toggleLayerVisibility(layer.id); }}
+                                    className="text-gray-300 hover:text-white"
+                                >
+                                    <EyeIcon className={`w-5 h-5 ${layer.isVisible ? '' : 'opacity-40'}`} />
+                                </button>
+                                <div className={`text-sm font-semibold ${layer.isVisible ? 'text-white' : 'text-gray-500 italic'}`}>
+                                    {layer.name}
+                                </div>
+                            </div>
+                            <div className={`flex items-center gap-3 text-xs font-medium ${layer.isVisible ? 'text-gray-400' : 'text-gray-600'}`}>
+                                <span className="uppercase">
+                                    {layer.blendMode.toUpperCase()}
+                                </span>
+                                <span>{layer.opacity}%</span>
                             </div>
                         </div>
                     );

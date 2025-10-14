@@ -4,9 +4,10 @@
 */
 
 import { GoogleGenAI, GenerateContentResponse, Modality, Part, Type } from "@google/genai";
-import { fileToDataURL } from '../utils/imageUtils';
+import { fileToDataURL, dataURLtoFile } from '../utils/imageUtils';
 import { type DetectedObject, type ToolId } from '../types';
 import { smartSearchToolDeclarations } from './smartSearchToolDeclarations';
+import { applyBackgroundColor } from '../utils/imageProcessing';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
@@ -79,15 +80,25 @@ export const validatePromptSpecificity = async (prompt: string, toolContext: str
     }
 
     const validationPrompt = `
-        Analyze the user's prompt for an AI image tool. The user is using the "${toolContext}" tool. The user's prompt is: "${prompt}".
+        Analise o prompt do usuário para uma ferramenta de imagem de IA. O prompt do usuário é: "${prompt}".
 
-        Is this prompt specific and descriptive enough for a high-quality result?
-        - A good prompt contains details about subject, style, lighting, composition, or specific actions.
-        - A generic prompt is short, vague, or lacks clear instructions (e.g., "a car", "make it look better", "add something").
+        Sua tarefa é determinar se o prompt é específico o suficiente para uma imagem interessante e de alta qualidade e fornecer sugestões úteis, se não for.
 
-        Respond ONLY with a JSON object with two fields:
-        1. "isSpecific": a boolean (true if the prompt is good, false if it's too generic).
-        2. "suggestion": a string. If the prompt is generic, provide a short, encouraging suggestion in Brazilian Portuguese on how to improve it (e.g., "Tente adicionar detalhes sobre o estilo, cores e o cenário."). If specific, this can be an empty string.
+        Um bom prompt específico inclui detalhes sobre:
+        - Assunto e Ação: O que está acontecendo?
+        - Estilo Artístico: É uma 'fotografia', 'pintura a óleo', 'arte conceitual de fantasia', 'ilustração cyberpunk'?
+        - Iluminação: 'contraluz dramático', 'luz suave da manhã', 'brilho de neon'.
+        - Composição: 'retrato em close-up', 'vista panorâmica ampla', 'tomada de baixo ângulo'.
+        - Elementos Específicos: 'vestindo uma jaqueta vermelha', 'com uma floresta enevoada ao fundo'.
+
+        Um prompt genérico é curto e vago, como "um cachorro", "uma bela paisagem".
+
+        Com base nisso, responda SOMENTE com um objeto JSON com dois campos:
+        1. "isSpecific": um booleano (true se o prompt for específico, false se for muito genérico).
+        2. "suggestion": uma string em português do Brasil.
+           - Se o prompt for genérico, forneça uma sugestão criativa e encorajadora para melhorá-lo. Por exemplo, se o usuário escreveu "um cachorro", sugira algo como: "Tente adicionar detalhes! Que tal 'Um filhote de golden retriever brincando em um campo de flores, com iluminação suave do pôr do sol, estilo fotografia profissional'?"
+           - Seja específico e dê um exemplo concreto. Mencione estilo, iluminação e composição.
+           - Se o prompt já for específico, pode ser uma string vazia.
     `;
 
     try {
@@ -99,8 +110,8 @@ export const validatePromptSpecificity = async (prompt: string, toolContext: str
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: {
-                        isSpecific: { type: Type.BOOLEAN, description: "Is the prompt specific enough?" },
-                        suggestion: { type: Type.STRING, description: "Suggestion for improvement in Brazilian Portuguese." },
+                        isSpecific: { type: Type.BOOLEAN, description: "O prompt é específico o suficiente?" },
+                        suggestion: { type: Type.STRING, description: "Sugestão de melhoria em português do Brasil." },
                     },
                     required: ['isSpecific', 'suggestion'],
                 }
@@ -110,8 +121,8 @@ export const validatePromptSpecificity = async (prompt: string, toolContext: str
         const jsonResponse = JSON.parse(response.text);
         return jsonResponse;
     } catch (e) {
-        console.error("Prompt validation failed, defaulting to specific.", e);
-        // Falha aberta: se a validação falhar, assume que o prompt é bom para não bloquear o usuário.
+        console.error("A validação do prompt falhou, assumindo como específico.", e);
+        // Falha aberta: se a validação falhar, assuma que o prompt é bom para não bloquear o usuário.
         return { isSpecific: true, suggestion: '' };
     }
 };
@@ -134,7 +145,7 @@ export const generateImageFromText = async (prompt: string, aspectRatio: string)
     return `data:image/png;base64,${base64ImageBytes}`;
 };
 
-export const renderSketch = (sketchImage: File, prompt: string) => singleImageAndTextToImage(sketchImage, prompt);
+export const renderSketch = (sketchImage: File, prompt: string) => singleImageAndTextToImage(sketchImage, `Renderização fotorrealista de um esboço de '${prompt}'. Iluminação de estúdio, alta qualidade, 8k.`);
 
 export const generateCharacter = (prompt: string) => {
     const fullPrompt = `Full body character concept sheet, dynamic pose. ${prompt}. Cinematic lighting, detailed background, 8k, high quality.`;
@@ -144,6 +155,11 @@ export const generateCharacter = (prompt: string) => {
 export const generateLogo = (prompt: string) => {
     const fullPrompt = `Minimalist vector logo, ${prompt}. Simple, clean lines, flat colors, high contrast, suitable for a brand. Centered on a white background.`;
     return generateImageFromText(fullPrompt, '1:1');
+};
+
+export const generateLogoVariation = (sourceImage: File): Promise<string> => {
+    const prompt = "Generate a slight variation of this logo. Keep the same subject and minimalist vector style, but subtly alter the line work, shapes, or composition. Maintain the 1:1 aspect ratio and high contrast on a white background.";
+    return singleImageAndTextToImage(sourceImage, prompt);
 };
 
 export const generate3DModel = (prompt: string) => {
@@ -171,9 +187,9 @@ export const applyTextEffect = (sourceImage: File, prompt: string): Promise<stri
 };
 
 export const convertToVector = (sourceImage: File, stylePrompt?: string): Promise<string> => {
-    let fullPrompt = "Convert this image into a vector graphic. Emphasize clean lines, flat color palettes, and simplified shapes. The result should be scalable and sharp.";
+    let fullPrompt = "Convert this image into a clean vector graphic with a die-cut sticker style. It must have clean lines, flat solid colors, and simplified shapes. The final result must have a thick white border around the main subject, making it look like a vinyl sticker.";
     if (stylePrompt && stylePrompt.trim()) {
-        fullPrompt += ` Additional style instructions: ${stylePrompt}`;
+        fullPrompt += ` Additional style instructions for the sticker's content: ${stylePrompt}`;
     }
     return singleImageAndTextToImage(sourceImage, fullPrompt);
 };
@@ -266,34 +282,54 @@ export const generateInteriorDesign = async (image: File, mask: File, roomType: 
     return generateImageFromParts([imagePart, maskPart, textPart]);
 };
 
-export const fuseImages = async (compositionImage: File, styleImage: File): Promise<string> => {
+export const fuseImages = async (compositionImage: File, styleImages: File[]): Promise<string> => {
     const compositionPart = await fileToPart(compositionImage);
-    const stylePart = await fileToPart(styleImage);
-    const textPart = { text: "Combine the composition of the first image with the style of the second image." };
-    return generateImageFromParts([compositionPart, stylePart, textPart]);
+    const parts: Part[] = [
+        { text: "Imagem 1 (Composição): Utilize a estrutura e os objetos desta imagem como base." },
+        compositionPart,
+    ];
+
+    for (const [index, file] of styleImages.entries()) {
+        parts.push({ text: `Imagem ${index + 2} (Estilo): Aplique o estilo artístico, cores e iluminação desta imagem na Imagem 1.` });
+        parts.push(await fileToPart(file));
+    }
+
+    parts.push({ text: "Instrução: Combine a composição da Imagem 1 com os estilos de todas as outras imagens fornecidas, criando uma fusão criativa e coerente." });
+
+    return generateImageFromParts(parts);
 };
 
-export const outpaintImage = (sourceImage: File, prompt: string, aspectRatio: string): Promise<string> => {
-    const fullPrompt = `Expand this image to a ${aspectRatio} aspect ratio. Fill the new areas with content that logically extends the original image. Extra instructions for the new areas: ${prompt}`;
+export const outpaintImage = (sourceImage: File, userPrompt: string, aspectRatio: string): Promise<string> => {
+    const fullPrompt = `Tarefa: Executar uma Pintura Expansiva (Outpainting) com tecnologia de Rede de Difusão e **coerência contextual perfeita**.
+
+**Instruções de Expansão (Outpainting):**
+1.  **Objetivo:** Expanda a imagem fornecida para a proporção final de ${aspectRatio}.
+2.  **Diretriz Primária:** Preencha as novas áreas geradas com conteúdo que **logicamente e perfeitamente estenda a cena original**.
+3.  **Fidelidade Contextual (Regra Máxima - Nível Imax):** O novo conteúdo DEVE manter **100% de consistência** com a imagem original em todos os aspectos. Isso inclui:
+    * **Estilo e Textura:** Replicar exatamente o tipo de arte (fotografia, ilustração, pintura) e textura.
+    * **Iluminação e Sombras:** Replicar as fontes de luz, a direção, a intensidade e as sombras para que o novo ambiente pareça fisicamente coerente com o original.
+    * **Blending Perfeito:** As novas áreas devem ser **totalmente indistinguíveis** das áreas originais, criando uma transição suave e coesa (pixel por pixel).
+4.  **Instruções Adicionais para o Preenchimento (Prioridade Secundária - Adições/Detalhes):** ${userPrompt}
+5.  **Qualidade Final:** A imagem resultante deve ser **hiper-realista, nítida** e manter a resolução de impressão (4K/8K).`;
     return singleImageAndTextToImage(sourceImage, fullPrompt);
 };
 
 export const generateProductPhoto = (sourceImage: File, prompt: string): Promise<string> => {
-    const fullPrompt = `A foto de um produto com o fundo já removido é fornecida. Coloque este produto em uma nova cena fotorrealista com base na seguinte descrição: ${prompt}. Garanta que o produto se integre perfeitamente à nova cena, com iluminação, sombras e reflexos realistas que correspondam ao ambiente. O foco deve ser destacar o produto de forma atraente.`;
+    const fullPrompt = `A foto de um produto com o fundo já removido é fornecida. Coloque este produto em uma nova cena fotorrealista com base na seguinte descrição: ${prompt}. Garanta que o produto se integre perfeitamente à nova cena, com iluminação dramática, sombras e reflexos realistas que correspondam ao ambiente. O foco deve ser destacar o produto de forma atraente, com alta resolução, foco em micro-detalhes para garantir qualidade de estúdio.`;
     return singleImageAndTextToImage(sourceImage, fullPrompt);
 };
 
 export const restorePhoto = (image: File, colorize: boolean = false) => {
-    let prompt = "Tarefa: Restauração de fotografia de alta fidelidade. Execute as seguintes ações na imagem fornecida: 1. Remoção de Ruído: Remova completamente todo o ruído digital e grão de filme. 2. Remoção de Defeitos: Apague todos os arranhões, poeira, manchas e outros defeitos físicos. 3. Aprimoramento de Detalhes: Aumente a nitidez da imagem, realçando detalhes finos e texturas. 4. Recuperação Facial: Se rostos estiverem visíveis, reconstrua as características faciais com alto realismo e clareza. O resultado deve ser uma fotografia totalmente restaurada e de alta qualidade.";
+    let prompt = "Tarefa: Restauração de Fotografia Mestra. Transforme esta foto antiga ou danificada em uma versão impecável e de alta fidelidade. O objetivo é uma restauração completa que aborde todos os aspectos da degradação da imagem. Corrija todos os defeitos físicos como arranhões, poeira, rasgos e manchas. Elimine completamente o ruído digital e a granulação do filme, resultando em uma imagem limpa. Melhore a nitidez geral e realce os micro-detalhes e texturas que podem ter sido perdidos com o tempo. Se houver rostos, reconstrua e aprimore as características faciais com clareza e realismo excepcionais. O resultado final deve ser uma fotografia perfeitamente restaurada, pronta para impressão em alta qualidade. Aumente a resolução da imagem em 1.5 vezes o tamanho original, melhorando a clareza e os detalhes.";
     if (colorize) {
-        prompt += " 5. Colorização: Se a imagem for em preto e branco ou sépia, aplique cores realistas e historicamente precisas.";
+        prompt += " Além disso, se a imagem for em preto e branco ou sépia, aplique cores realistas e historicamente precisas.";
     }
     prompt += CRITICAL_FACIAL_PRESERVATION_DIRECTIVE;
     return singleImageAndTextToImage(image, prompt);
 };
 export const generateImageVariation = (sourceImage: File, strength: number): Promise<string> => singleImageAndTextToImage(sourceImage, `Generate a variation of this image. The variation strength should be around ${strength}%.`);
 export const applyStyle = (image: File, stylePrompt: string) => singleImageAndTextToImage(image, `Apply the following artistic style to this image: ${stylePrompt}`);
-export const removeBackground = (image: File) => singleImageAndTextToImage(image, `Remove the background of this image, leaving only the main subject with a transparent background.${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`);
+export const removeBackground = (image: File) => singleImageAndTextToImage(image, `Remove the background of this image, leaving only the main subject with a transparent background. Ensure high-quality, precise subject segmentation, preserving fine details like hair and fur.${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`);
 export const generateAdjustedImage = (image: File, adjustmentPrompt: string) => {
     const fullPrompt = `Adjust this image based on the following description: ${adjustmentPrompt}${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
     return singleImageAndTextToImage(image, fullPrompt);
@@ -302,8 +338,19 @@ export const reacenderImage = (image: File, prompt: string) => singleImageAndTex
 export const generateLowPoly = (image: File) => singleImageAndTextToImage(image, "Convert this image into a low-poly art style.");
 export const extractArt = (image: File) => singleImageAndTextToImage(image, "Extract the line art from this image, creating a black and white sketch of the main contours.");
 export const applyDustAndScratch = (image: File) => singleImageAndTextToImage(image, `Apply a vintage film effect to this image, adding realistic dust and scratches.${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`);
-export const denoiseImage = (image: File) => restorePhoto(image);
-export const applyFaceRecovery = (image: File) => restorePhoto(image);
+
+export const denoiseImage = (image: File) => {
+    let prompt = "Tarefa: Redução de Ruído e Denoise Profissional. Remova completamente o ruído e a granulação digital ou de filme da imagem, preservando os detalhes importantes da foto. Aumente a nitidez e o micro-contraste sutilmente. Evite borrões ou aparência de 'pintura a óleo'.";
+    prompt += CRITICAL_FACIAL_PRESERVATION_DIRECTIVE;
+    return singleImageAndTextToImage(image, prompt);
+}
+
+export const applyFaceRecovery = (image: File) => {
+    let prompt = "Tarefa: Recuperação Facial e Aprimoramento. Se rostos estiverem presentes, utilize a IA para reconstruir e aprimore as características faciais com alto realismo e clareza. Foco em olhos, pele e boca. Não altere o resto da imagem. Apenas aprimore as áreas faciais.";
+    prompt += CRITICAL_FACIAL_PRESERVATION_DIRECTIVE;
+    return singleImageAndTextToImage(image, prompt);
+}
+
 export const generateProfessionalPortrait = (image: File): Promise<string> => {
     const promptTemplate = "Close-up de um headshot profissional de [ASSUNTO]. A pessoa está vestindo uma roupa profissional de negócios, com um fundo de escritório desfocado. A iluminação é suave e uniforme, destacando as características faciais da pessoa. A foto deve ser tirada com uma câmera DSLR de alta qualidade, resultando em uma imagem nítida e de alta resolução.";
     return generateImageWithDescription(image, promptTemplate);
@@ -316,29 +363,24 @@ export const applyGenerativeSharpening = (image: File, intensity: number): Promi
     return singleImageAndTextToImage(image, prompt);
 };
 
-export const generativeEdit = async (image: File, prompt: string, mode: 'fill' | 'remove' | 'compose', options: { maskImage?: File, secondImage?: File }): Promise<string> => {
-    const imagePart = await fileToPart(image);
-    const parts: Part[] = [];
-    let textPrompt = '';
+export const enhanceResolutionAndSharpness = (image: File, factor: number, intensity: number, preserveFace: boolean) => {
+    const prompt = `Upscale this image by a factor of ${factor}x, and simultaneously apply generative sharpening at an intensity of ${intensity}%. The goal is to significantly improve both the resolution (making it larger and clearer) and the perceived sharpness and detail of the image. The final image should be crisp and high-quality. ${preserveFace ? `Pay special attention to preserving and enhancing facial details realistically. ${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}` : ''}`;
+    return singleImageAndTextToImage(image, prompt);
+};
 
-    if (mode === 'compose' && options.secondImage) {
-        const secondImagePart = await fileToPart(options.secondImage);
-        textPrompt = `Componha as imagens fornecidas com base neste prompt: ${prompt}. A primeira imagem é a base.`;
-        parts.push(imagePart, secondImagePart, { text: textPrompt });
-    } else if ((mode === 'fill' || mode === 'remove') && options.maskImage) {
-        const maskPart = await fileToPart(options.maskImage);
-        
-        if (mode === 'remove') {
-            textPrompt = `Preencha a área mascarada para que se misture de forma realista com o fundo, removendo efetivamente o objeto.`;
-        } else { // mode === 'fill'
-            textPrompt = `Preencha a área mascarada com: ${prompt}. Misture-o perfeitamente com o resto da imagem.`;
-        }
-        
-        parts.push(imagePart, maskPart, { text: textPrompt });
-    } else {
-        throw new Error("Parâmetros inválidos para edição generativa.");
+export const generativeEdit = async (image: File, prompt: string, options: { maskImage?: File, secondImage?: File }): Promise<string> => {
+    const parts: Part[] = [{ text: "Esta é a imagem base para edição:" }, await fileToPart(image)];
+
+    if (options.secondImage) {
+        parts.push({ text: "Esta é uma segunda imagem para usar na composição:" }, await fileToPart(options.secondImage));
     }
-    
+
+    if (options.maskImage) {
+        parts.push({ text: "Esta é a máscara que define a área de edição:" }, await fileToPart(options.maskImage));
+    }
+
+    parts.push({ text: `Instruções de edição: ${prompt}` });
+
     return generateImageFromParts(parts);
 };
 
@@ -435,11 +477,34 @@ export const applyDisneyPixarStyle = (image: File, prompt: string): Promise<stri
 export const generate3DMiniature = (image: File, prompt:string): Promise<string> => singleImageAndTextToImage(image, `Turn the person in this photo into a 3D toy miniature. Additional instructions: ${prompt}.${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`);
 export const generate90sYearbookPortrait = (image: File, prompt: string): Promise<string> => singleImageAndTextToImage(image, `Transform this photo into a 90s yearbook portrait. It should have the characteristic soft focus, studio lighting, and background of that era. Additional instructions: ${prompt}.${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`);
 
-export const generateStyledPortrait = async (personImage: File, styleImage: File, prompt: string, negativePrompt: string): Promise<string> => {
+export const generateStyledPortrait = async (personImage: File, styleImages: File[], prompt: string, negativePrompt: string): Promise<string> => {
     const personPart = await fileToPart(personImage);
-    const stylePart = await fileToPart(styleImage);
-    const textPrompt = `Apply the style (clothing, background, lighting) from the second image to the person in the first image. Additional instructions: ${prompt}. Avoid the following: ${negativePrompt}.${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
-    return generateImageFromParts([personPart, stylePart, { text: textPrompt }]);
+    const parts: Part[] = [
+        { text: "Imagem 1 (Pessoa): O rosto e a identidade desta pessoa devem ser preservados em 100%." },
+        personPart,
+    ];
+    
+    // Adiciona todas as imagens de estilo (suporte a múltiplas imagens)
+    for (const [index, file] of styleImages.entries()) {
+        const stylePart = await fileToPart(file);
+        parts.push({ text: `Imagem ${index + 2} (Estilo ${index + 1}): Aplique o cenário, a iluminação e as roupas desta imagem na Pessoa (Imagem 1).` });
+        parts.push(stylePart);
+    }
+
+    let textPrompt = `Instrução principal: Aplique o estilo (roupa, fundo, iluminação) de TODAS as imagens de estilo na pessoa da Imagem 1, garantindo que o rosto e cabelo não sejam alterados.`;
+    
+    // Adiciona o prompt e o prompt negativo para modificações adicionais
+    if (prompt) {
+        textPrompt += ` Instruções de refinamento: ${prompt}.`;
+    }
+    if (negativePrompt) {
+        textPrompt += ` Evite o seguinte: ${negativePrompt}.`;
+    }
+
+    textPrompt += `${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`; // Prioriza a preservação facial
+    parts.push({ text: textPrompt });
+    
+    return generateImageFromParts(parts);
 };
 
 export const generateStudioPortrait = (personImage: File, mainPrompt: string, negativePrompt: string): Promise<string> => {
@@ -512,70 +577,172 @@ export const virtualTryOn = async (personImage: File, clothingImage: File, shoeI
 
 2.  **Ajuste Corporal Dinâmico:** Aplique a 'Peça de Roupa' na 'Pessoa' ('userPhoto'). O algoritmo deve **detectar a silhueta e as proporções do corpo** na 'userPhoto' e **ajustar (escalar, distorcer suavemente)** a 'Peça de Roupa' para que se encaixe de forma natural e realista ao corpo da 'Pessoa'.
 
-3.  **Harmonização de Iluminação e Sombra:** Analise as **condições de iluminação e sombreamento** presentes na 'userPhoto' original. A 'Peça de Roupa' aplicada deve ser renderizada com efeitos de luz e sombra que **correspondam de forma realista** ao ambiente e à iluminação da 'userPhoto', integrando-a de maneira coesa.
+3.  **Harmonização de Iluminação e Sombra:** Analise as **condições de iluminação e sombreamento** presentes na 'userPhoto' original. A 'Peça de Roupa' aplicada deve ser renderizada com efeitos de luz e sombra que **correspondam de forma realisticamente** ao ambiente e à iluminação da 'userPhoto', integrando-a de maneira coesa.
 
-4.  **Preservação de Proporções:** O ajuste da roupa deve respeitar as **proporções originais do corpo** da 'Pessoa'. Evite alongamentos, encolhimentos ou distorções irreais do corpo sob a nova vestimenta.
+4.  **Preservação de Proporções:** O ajuste da roupa deve respeitar as **proporções originais do corpo** da 'Pessoa' ('userPhoto'). Evite alongamentos, encolhimentos ou distorções irreais do corpo sob a nova vestimenta.
 
-**REGRAS CRÍTICAS DE PRESERVAÇÃO (NÃO ALTERAR):**
+5.  **Regra de Preservação Facial e de Fundo:** O **rosto e a identidade da pessoa** na 'userPhoto' devem ser integralmente preservados. Além disso, o **fundo original da 'userPhoto' deve ser mantido**. A intervenção da IA deve ser estritamente limitada às regiões do corpo onde a vestimenta (e calçado) será aplicada.
 
--   **MANUTENÇÃO FACIAL E DE IDENTIDADE:** O **rosto, cabelo, tom de pele e corpo da 'Pessoa' devem ser integralmente preservados**, sem alterações, distorções ou substituições. A identidade da pessoa **NÃO PODE** ser alterada. ${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE.replace('\n\n', '\n')}
-
--   **PRESERVAÇÃO DO FUNDO:** O cenário de fundo da 'userPhoto' original deve ser **100% PRESERVADO**. Nenhum elemento do fundo pode ser alterado, removido ou adicionado.
+**Saída:** Uma imagem única, fotorrealista e coesa, exibindo a 'Pessoa' usando a nova 'Peça de Roupa' (e 'Calçado') no ambiente original.
 `;
 
     parts.push({ text: finalInstruction });
-
-    // 3. Call the generation service
+    
+    // 3. Generate the image
     return generateImageFromParts(parts);
 };
 
-export const suggestCreativeEdits = async (image: File): Promise<{ message: string; acceptLabel: string; toolId: ToolId } | null> => {
+export const suggestCreativeEdits = async (image: File): Promise<{ message: string, acceptLabel: string, toolId: ToolId, args?: any } | null> => {
+    const imagePart = await fileToPart(image);
+    const prompt = `
+    Analyze the provided image and suggest a single, creative, and interesting, actionable edit that could be performed on it using one of the available AI tools.
+    The suggestion should be inspiring and clearly state what the user can do.
+    
+    Available tool IDs for suggestions: 'outpainting', 'style', 'relight', 'generativeEdit', 'photoRestoration', 'unblur'.
+
+    Based on the image content, choose the MOST relevant and exciting tool. For example:
+    - If it's a beautiful landscape but feels cropped, suggest 'outpainting'.
+    - If it's a simple photo, suggest applying an interesting 'style' like 'Estilo de anime dos anos 90'.
+    - If the lighting is flat, suggest 'relight' with a specific instruction like 'luz quente e dourada do final da tarde'.
+    - If there's an obvious element to add/change, suggest 'generativeEdit' with a prompt like 'adicione um pequeno barco no lago'.
+    - If it's an old or noisy photo, suggest 'photoRestoration'.
+    - If it's blurry, suggest 'unblur'.
+
+    Respond ONLY with a JSON object with four fields:
+    1. "toolId": A string with the ID of the suggested tool (must be one of the available IDs).
+    2. "message": A short, engaging message in Brazilian Portuguese suggesting the edit (e.g., "Que tal transformar esta foto em uma pintura a óleo?").
+    3. "acceptLabel": A short call-to-action button label in Brazilian Portuguese (e.g., "Aplicar Estilo").
+    4. "args": An object containing specific arguments for the tool.
+        - For 'style', provide { "stylePrompt": "a creative style prompt in Portuguese" }.
+        - For 'relight', provide { "relightPrompt": "a descriptive lighting prompt in Portuguese" }.
+        - For 'generativeEdit', provide { "prompt": "a prompt describing the change in Portuguese" }.
+        - For 'photoRestoration', you can provide { "colorize": true } if the image is black and white.
+        - For other tools, it can be an empty object {}.
+    `;
+
     try {
-        const imagePart = await fileToPart(image);
-        const prompt = `
-            Analise a imagem fornecida. Com base em seu conteúdo (ex: retrato, paisagem, objeto, foto antiga), sugira UMA edição criativa que pode ser realizada. Sua sugestão deve corresponder a uma das seguintes ferramentas:
-
-            - 'style': Para aplicar um estilo artístico (ex: pintura a óleo, aquarela, anime).
-            - 'magicMontage': Para edições complexas e criativas descritas por texto (ex: adicionar elementos, mudar cenário).
-            - 'portraits': Para retratos, sugira uma melhoria como 'retrato profissional'.
-            - 'lowPoly': Para transformar a imagem em arte geométrica.
-            - 'photoRestoration': Se a imagem parecer antiga, danificada ou de baixa qualidade, sugira restaurá-la.
-
-            Responda APENAS com um objeto JSON com três campos:
-            1. "message": Uma sugestão curta e envolvente em português do Brasil (ex: 'Detectamos um retrato. Que tal transformá-lo em uma foto de perfil profissional?').
-            2. "acceptLabel": O texto para o botão de aceitar (ex: 'Criar Retrato').
-            3. "toolId": O ID da ferramenta correspondente da lista acima ('style', 'magicMontage', 'portraits', 'lowPoly', 'photoRestoration').
-        `;
-        const textPart = { text: prompt };
-
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: { parts: [imagePart, textPart] },
+            contents: { parts: [imagePart, { text: prompt }] },
             config: {
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: {
-                        message: { type: Type.STRING },
-                        acceptLabel: { type: Type.STRING },
-                        toolId: { type: Type.STRING },
+                        toolId: { type: Type.STRING, description: "The ID of the suggested tool." },
+                        message: { type: Type.STRING, description: "The suggestion message in Brazilian Portuguese." },
+                        acceptLabel: { type: Type.STRING, description: "The button label in Brazilian Portuguese." },
+                        args: { 
+                            type: Type.OBJECT, 
+                            description: "Optional arguments for the tool.",
+                            properties: {
+                                stylePrompt: { type: Type.STRING },
+                                relightPrompt: { type: Type.STRING },
+                                prompt: { type: Type.STRING },
+                                colorize: { type: Type.BOOLEAN },
+                            }
+                        },
                     },
-                    required: ['message', 'acceptLabel', 'toolId'],
-                },
-            },
+                    required: ['toolId', 'message', 'acceptLabel'],
+                }
+            }
         });
-
-        handleGenAIResponse(response);
+        
         const jsonResponse = JSON.parse(response.text);
         
         // Basic validation
-        const validToolIds = ['style', 'magicMontage', 'portraits', 'lowPoly', 'photoRestoration'];
-        if (validToolIds.includes(jsonResponse.toolId)) {
+        const validTools: ToolId[] = ['outpainting', 'style', 'relight', 'generativeEdit', 'photoRestoration', 'unblur'];
+        if (validTools.includes(jsonResponse.toolId)) {
             return jsonResponse;
         }
         return null;
+
     } catch (e) {
-        console.error("Failed to generate creative suggestions:", e);
+        console.error("Creative suggestion generation failed", e);
         return null;
     }
+};
+
+interface PngCreatorOptions {
+    background?: {
+        type: 'color' | 'prompt';
+        value: string;
+    };
+    enhance?: boolean;
+}
+
+export const createTransparentPng = async (
+    sourceImage: File,
+    options: PngCreatorOptions = {}
+): Promise<string> => {
+    // Phase 1: Segmentation
+    const transparentDataUrl = await removeBackground(sourceImage);
+
+    let currentFile = dataURLtoFile(transparentDataUrl, 'transparent.png');
+    let currentUrl = transparentDataUrl;
+
+    // Phase 2: Background (Conditional)
+    if (options.background) {
+        if (options.background.type === 'color') {
+            currentUrl = await applyBackgroundColor(currentUrl, options.background.value);
+            currentFile = dataURLtoFile(currentUrl, 'with-bg.png');
+        } else if (options.background.type === 'prompt' && options.background.value.trim()) {
+            // Use generateProductPhoto as it's designed to place a transparent subject into a new scene
+            currentUrl = await generateProductPhoto(currentFile, options.background.value);
+            currentFile = dataURLtoFile(currentUrl, 'with-ai-bg.png');
+        }
+    }
+
+    // Phase 3: Enhance (Conditional)
+    if (options.enhance) {
+        // Use upscaleImage as a general enhancement
+        currentUrl = await upscaleImage(currentFile, 2, true); // 2x factor is a safe default
+    }
+
+    return currentUrl;
+};
+
+export const generateSuperheroFusion = async (
+    personImage: File,
+    heroImage: File,
+    complementaryPrompt?: string,
+    negativePrompt?: string
+): Promise<string> => {
+    const personPart = await fileToPart(personImage);
+    const heroPart = await fileToPart(heroImage);
+
+    let finalPrompt = `
+**Sua Tarefa é Fundir Duas Imagens.**
+
+**Imagem 1:** A foto do usuário.
+**Imagem 2:** A foto de referência do herói.
+
+**REGRA NÚMERO UM (Prioridade Máxima):** Preserve PERFEITAMENTE o rosto da pessoa da **Imagem 1**. A identidade, características faciais e expressão da pessoa não devem ser alteradas. O resultado DEVE ser reconhecível como a pessoa da Imagem 1.
+
+**Instruções de Fusão:**
+1.  **Traje e Pose:** Pegue o traje completo e a pose do herói da **Imagem 2** e aplique-os no corpo da pessoa da **Imagem 1**.
+2.  **Cenário:** Coloque a pessoa no mesmo cenário, com a mesma iluminação e atmosfera da **Imagem 2**.
+
+**Resultado Final:** Uma imagem realista que mostra a pessoa da **Imagem 1** como se ela fosse o super-herói da **Imagem 2**.
+`;
+
+    if (complementaryPrompt?.trim()) {
+        finalPrompt += `\n**Instruções Adicionais:** ${complementaryPrompt}`;
+    }
+
+    if (negativePrompt?.trim()) {
+        finalPrompt += `\n**Elementos a Evitar:** ${negativePrompt}`;
+    }
+
+    const textPart = { text: finalPrompt };
+
+    const parts: Part[] = [
+        { text: "Imagem 1 (Foto do Usuário): O rosto desta pessoa deve ser preservado." },
+        personPart,
+        { text: "Imagem 2 (Foto de Referência do Herói): Use o traje, a pose e o cenário desta imagem." },
+        heroPart,
+        textPart,
+    ];
+
+    return generateImageFromParts(parts);
 };

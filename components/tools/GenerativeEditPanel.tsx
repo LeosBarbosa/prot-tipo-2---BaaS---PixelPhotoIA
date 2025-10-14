@@ -3,14 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { BrushIcon, SparkleIcon } from '../icons';
-import PromptEnhancer from './common/PromptEnhancer';
 import TipBox from '../common/TipBox';
 import { validatePromptSpecificity } from '../../services/geminiService';
-import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
-import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 
 const GenerativeEditPanel: React.FC = () => {
     const {
@@ -38,21 +36,12 @@ const GenerativeEditPanel: React.FC = () => {
     type SelectionMode = 'brush' | 'magic';
     const [selectionMode, setSelectionMode] = useState<SelectionMode>('brush');
     const [magicObjectPrompt, setMagicObjectPrompt] = useState('');
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const suggestions = usePromptSuggestions(prompt, 'generativeEdit');
+    const [negativePrompt, setNegativePrompt] = useState('');
+
 
     const activeLayer = layers.find(l => l.id === activeLayerId);
     const isImageLayerActive = activeLayer?.type === 'image';
     
-    useEffect(() => {
-        setShowSuggestions(suggestions.length > 0);
-    }, [suggestions]);
-
-    const handleSelectSuggestion = (suggestion: string) => {
-        setPrompt(suggestion);
-        setShowSuggestions(false);
-    };
-
     const handleValidatedGenerate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (isGenerateDisabled) return;
@@ -159,27 +148,16 @@ const GenerativeEditPanel: React.FC = () => {
 
             {maskDataUrl ? (
                  <div className="animate-fade-in flex flex-col gap-4">
-                    <div className="relative">
-                        <textarea
-                            id="gen-fill-prompt"
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                            onFocus={() => setShowSuggestions(suggestions.length > 0)}
-                            placeholder="Ex: um chapéu de pirata, remover a pessoa..."
-                            className="flex-grow bg-gray-800 border border-gray-600 text-gray-200 rounded-lg p-4 pr-12 focus:ring-2 focus:ring-blue-500 focus:outline-none transition w-full disabled:cursor-not-allowed disabled:opacity-60 text-base min-h-[100px]"
-                            disabled={isLoading}
-                            rows={4}
-                        />
-                        <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="generativeEdit" />
-                        {showSuggestions && (
-                            <PromptSuggestionsDropdown
-                                suggestions={suggestions}
-                                onSelect={handleSelectSuggestion}
-                                searchTerm={prompt}
-                            />
-                        )}
-                    </div>
+                    <CollapsiblePromptPanel
+                        title="Descrição da Edição"
+                        prompt={prompt}
+                        setPrompt={setPrompt}
+                        negativePrompt={negativePrompt}
+                        onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
+                        isLoading={isLoading}
+                        toolId="generativeEdit"
+                        promptPlaceholder="Ex: um chapéu de pirata, remover a pessoa..."
+                    />
                     <div className="flex gap-2">
                         <button
                             type="button"
@@ -191,11 +169,11 @@ const GenerativeEditPanel: React.FC = () => {
                         </button>
                         <button
                             type="submit"
-                            className="w-full bg-gradient-to-br from-fuchsia-600 to-purple-500 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:cursor-not-allowed"
+                            className="w-full bg-gradient-to-br from-fuchsia-600 to-purple-500 text-white font-bold py-3 px-4 rounded-lg transition-transform flex items-center justify-center gap-2 disabled:from-gray-600 disabled:cursor-not-allowed active:scale-95"
                             disabled={isGenerateDisabled}
                         >
-                            <BrushIcon className="w-5 h-5" />
-                            Gerar
+                            <BrushIcon className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
+                            {isLoading ? 'Gerando...' : 'Gerar'}
                         </button>
                     </div>
                 </div>

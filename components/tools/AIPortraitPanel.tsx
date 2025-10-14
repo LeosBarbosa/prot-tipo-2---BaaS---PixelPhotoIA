@@ -4,14 +4,14 @@
 */
 
 import React, { useState } from 'react';
-import { useLoadingError } from '../../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import { generateProfessionalPortrait } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import { FaceSmileIcon } from '../icons';
 
 const AIPortraitPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading } = useLoadingError();
+    const { isLoading, error, setError, setIsLoading } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
 

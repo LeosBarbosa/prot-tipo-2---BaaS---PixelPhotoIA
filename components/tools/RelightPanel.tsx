@@ -3,14 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { SunIcon } from '../icons';
 import TipBox from '../common/TipBox';
 import { validatePromptSpecificity } from '../../services/geminiService';
-import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
-import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
-import PromptEnhancer from './common/PromptEnhancer';
+import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 
 const lightingPresets = [
     { name: 'Hora Dourada', prompt: 'luz quente e dourada do final da tarde, com sombras longas e suaves' },
@@ -23,21 +21,12 @@ const lightingPresets = [
 const RelightPanel: React.FC = () => {
     const { handleRelight, isLoading, setToast, addPromptToHistory } = useEditor();
     const [customPrompt, setCustomPrompt] = useState('');
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const suggestions = usePromptSuggestions(customPrompt, 'relight');
-    
-    useEffect(() => {
-        setShowSuggestions(suggestions.length > 0);
-    }, [suggestions]);
-
-    const handleSelectSuggestion = (suggestion: string) => {
-        setCustomPrompt(suggestion);
-        setShowSuggestions(false);
-    };
+    const [negativePrompt, setNegativePrompt] = useState('');
 
     const handleApply = async (promptToApply: string) => {
         if (!promptToApply.trim()) return;
 
+        addPromptToHistory(promptToApply);
         const { isSpecific, suggestion } = await validatePromptSpecificity(promptToApply, 'Reacender');
         if (!isSpecific) {
             setToast({ message: suggestion, type: 'info' });
@@ -48,7 +37,6 @@ const RelightPanel: React.FC = () => {
 
     const handleApplyCustom = () => {
         if (customPrompt.trim()) {
-            addPromptToHistory(customPrompt);
             handleApply(customPrompt);
         }
     };
@@ -77,29 +65,17 @@ const RelightPanel: React.FC = () => {
 
             <div className="border-t border-gray-700/50 my-2"></div>
             
-            <div className="relative">
-                <label className="block text-sm font-medium text-gray-300 mb-1">Iluminação Personalizada</label>
-                <div className="relative">
-                    <textarea
-                        value={customPrompt}
-                        onChange={(e) => setCustomPrompt(e.target.value)}
-                        onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                        onFocus={() => setShowSuggestions(suggestions.length > 0)}
-                        placeholder="Ex: luz de vela vinda de baixo, criando sombras longas..."
-                        className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]"
-                        disabled={isLoading}
-                        rows={4}
-                    />
-                     <PromptEnhancer prompt={customPrompt} setPrompt={setCustomPrompt} toolId="relight" />
-                </div>
-                {showSuggestions && (
-                    <PromptSuggestionsDropdown
-                        suggestions={suggestions}
-                        onSelect={handleSelectSuggestion}
-                        searchTerm={customPrompt}
-                    />
-                )}
-            </div>
+            <CollapsiblePromptPanel
+                title="Iluminação Personalizada"
+                prompt={customPrompt}
+                setPrompt={setCustomPrompt}
+                negativePrompt={negativePrompt}
+                onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
+                isLoading={isLoading}
+                toolId="relight"
+                promptPlaceholder="Ex: luz de vela vinda de baixo, criando sombras longas..."
+                promptHelperText="Seja descritivo sobre a fonte de luz, sua cor, direção e intensidade."
+            />
 
              <TipBox>
                 Seja descritivo sobre a fonte de luz (sol, neon, vela), sua cor, direção e intensidade para criar o clima perfeito.

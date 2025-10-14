@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import { useEditor } from '../context/EditorContext';
 import { type DetectedObject } from '../types';
@@ -15,9 +15,7 @@ const gcd = (a: number, b: number): number => {
 
 const ImageViewer: React.FC = () => {
     const {
-        activeTool,
         activeTab,
-        // FIX: Property 'currentImage' does not exist on type 'EditorContextType'. Replaced with 'baseImageFile'.
         baseImageFile,
         currentImageUrl,
         originalImageUrl,
@@ -28,6 +26,9 @@ const ImageViewer: React.FC = () => {
         panOffset,
         handleWheel,
         handlePanStart,
+        handleTouchStart,
+        handleTouchMove,
+        handleTouchEnd,
         isPanModeActive,
         isCurrentlyPanning,
         crop,
@@ -50,87 +51,130 @@ const ImageViewer: React.FC = () => {
         setTextToolState,
         isInlineComparisonActive,
         texturePreview,
+        brushSize,
     } = useEditor();
 
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const textOverlayRef = useRef<HTMLDivElement>(null);
     const imageContainerRef = useRef<HTMLDivElement>(null);
     const [cropDimensions, setCropDimensions] = useState<string | null>(null);
+    const [brushPreview, setBrushPreview] = useState<{ x: number; y: number; size: number } | null>(null);
+    const [isHoveringObject, setIsHoveringObject] = useState(false);
+    const [textBbox, setTextBbox] = useState({ width: 0, height: 0, x: 0, y: 0 });
 
     const cssFilter = hasLocalAdjustments ? buildFilterString(localFilters) : 'none';
-    const pixelFontSize = imgRef.current ? (textToolState.fontSize / 100) * imgRef.current.clientWidth : 30;
-
     const displayedImageUrl = currentImageUrl;
-
 
     // Reset crop when image changes
     useEffect(() => {
         setCompletedCrop(undefined);
         setCrop(undefined);
-    // FIX: Using 'baseImageFile' as dependency instead of the non-existent 'currentImage'.
     }, [baseImageFile, setCompletedCrop, setCrop]);
+    
+    const getTextBoundingBox = useCallback((ctx: CanvasRenderingContext2D, image: HTMLImageElement) => {
+        const { content, fontFamily, fontSize, align, bold, italic, position } = textToolState;
+        const pixelFontSize = (fontSize / 100) * image.clientWidth;
+        ctx.font = `${italic ? 'italic' : ''} ${bold ? 'bold' : ''} ${pixelFontSize}px ${fontFamily}`;
+        ctx.textAlign = align;
 
-    // Effect to draw bounding boxes
+        const lines = content.split('\n');
+        const lineHeight = pixelFontSize * 1.2;
+        
+        let maxWidth = 0;
+        lines.forEach(line => {
+            const metrics = ctx.measureText(line || ' ');
+            if (metrics.width > maxWidth) maxWidth = metrics.width;
+        });
+
+        const totalHeight = lines.length * lineHeight;
+        const canvasX = (position.x / 100) * image.clientWidth;
+        
+        let x;
+        if (align === 'center') x = canvasX - maxWidth / 2;
+        else if (align === 'right') x = canvasX - maxWidth;
+        else x = canvasX;
+        
+        const y = (position.y / 100) * image.clientHeight;
+
+        return { x, y, width: maxWidth, height: totalHeight };
+    }, [textToolState]);
+
+
+    // Effect to draw bounding boxes or text on the overlay canvas
     useEffect(() => {
         const canvas = overlayCanvasRef.current;
         const image = imgRef.current;
         const ctx = canvas?.getContext('2d');
-        if (!ctx || !canvas) return;
+        if (!ctx || !canvas || !image) return;
 
-        const resizeObserver = new ResizeObserver(() => {
-            if (!image) return;
-            canvas.width = image.clientWidth;
-            canvas.height = image.clientHeight;
-            drawBoxes();
-        });
-
-        if (image) {
-            resizeObserver.observe(image);
-        }
-
-        const drawBoxes = () => {
-            if (!image || !ctx) return;
+        const drawOnCanvas = () => {
+            if (canvas.width !== image.clientWidth || canvas.height !== image.clientHeight) {
+                canvas.width = image.clientWidth;
+                canvas.height = image.clientHeight;
+            }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (!detectedObjects) return;
-            
-            const scaleX = image.clientWidth / image.naturalWidth;
-            const scaleY = image.clientHeight / image.naturalHeight;
+            if (detectedObjects) {
+                const scaleX = image.clientWidth / image.naturalWidth;
+                const scaleY = image.clientHeight / image.naturalHeight;
 
-            detectedObjects.forEach(obj => {
-                const isHighlighted = obj === highlightedObject;
-                const { box } = obj;
-                const x = box.x_min * image.naturalWidth * scaleX;
-                const y = box.y_min * image.naturalHeight * scaleY;
-                const width = (box.x_max - box.x_min) * image.naturalWidth * scaleX;
-                const height = (box.y_max - box.y_min) * image.naturalHeight * scaleY;
+                detectedObjects.forEach(obj => {
+                    const isHighlighted = obj === highlightedObject;
+                    const { box } = obj;
+                    const x = box.x_min * image.naturalWidth * scaleX;
+                    const y = box.y_min * image.naturalHeight * scaleY;
+                    const width = (box.x_max - box.x_min) * image.naturalWidth * scaleX;
+                    const height = (box.y_max - box.y_min) * image.naturalHeight * scaleY;
 
-                ctx.strokeStyle = isHighlighted ? '#3B82F6' : 'rgba(255, 255, 255, 0.7)';
-                ctx.lineWidth = isHighlighted ? 3 : 2;
-                ctx.strokeRect(x, y, width, height);
+                    ctx.strokeStyle = isHighlighted ? '#3B82F6' : 'rgba(255, 255, 255, 0.9)';
+                    ctx.lineWidth = isHighlighted ? 4 : 2;
+                    ctx.setLineDash(isHighlighted ? [] : [6, 4]);
+                    ctx.strokeRect(x, y, width, height);
+                    ctx.setLineDash([]);
+                    
+                    const labelText = obj.label;
+                    ctx.font = 'bold 14px sans-serif';
+                    const textMetrics = ctx.measureText(labelText);
+                    ctx.fillStyle = isHighlighted ? '#3B82F6' : 'rgba(0, 0, 0, 0.7)';
+                    ctx.fillRect(x, y - 18, textMetrics.width + 8, 18);
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillText(labelText, x + 4, y - 4);
+                });
+            } else if (activeTab === 'text') {
+                const { content, fontFamily, fontSize, color, align, bold, italic } = textToolState;
+                const pixelFontSize = (fontSize / 100) * image.clientWidth;
+
+                const bbox = getTextBoundingBox(ctx, image);
+                setTextBbox(bbox);
+
+                ctx.fillStyle = color;
+                ctx.font = `${italic ? 'italic' : ''} ${bold ? 'bold' : ''} ${pixelFontSize}px ${fontFamily}`;
+                ctx.textAlign = align;
+
+                const lines = content.split('\n');
+                const lineHeight = pixelFontSize * 1.2;
+
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 2;
                 
-                const labelText = obj.label;
-                ctx.font = 'bold 14px sans-serif';
-                const textMetrics = ctx.measureText(labelText);
-                const textWidth = textMetrics.width;
-                const textHeight = 14;
-                
-                ctx.fillStyle = isHighlighted ? '#3B82F6' : 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect(x, y - textHeight - 4, textWidth + 8, textHeight + 4);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillText(labelText, x + 4, y - 4);
-            });
-        };
-        
-        drawBoxes();
-        
-        return () => {
-            if (image) {
-                resizeObserver.unobserve(image);
+                lines.forEach((line, index) => {
+                    const currentY = bbox.y + ((index + 1) * lineHeight) - (lineHeight * 0.2);
+                    ctx.strokeText(line || ' ', bbox.x + (align === 'center' ? bbox.width / 2 : align === 'right' ? bbox.width : 0) , currentY);
+                    ctx.fillText(line || ' ', bbox.x + (align === 'center' ? bbox.width / 2 : align === 'right' ? bbox.width : 0) , currentY);
+                });
             }
+        };
+
+        const resizeObserver = new ResizeObserver(drawOnCanvas);
+        if (image) resizeObserver.observe(image);
+        drawOnCanvas();
+
+        return () => {
+            if (image) resizeObserver.unobserve(image);
         }
 
-    }, [detectedObjects, highlightedObject, imgRef, currentImageUrl]);
+    }, [detectedObjects, highlightedObject, imgRef, currentImageUrl, activeTab, textToolState, getTextBoundingBox]);
+
 
     // Effect to handle text dragging
     useEffect(() => {
@@ -208,13 +252,133 @@ const ImageViewer: React.FC = () => {
         }
     };
 
+    const handleMouseMoveForBrush = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!isDrawingOnCanvas || isPanModeActive || isCurrentlyPanning) {
+            if (brushPreview) setBrushPreview(null);
+            return;
+        }
+        const image = imgRef.current;
+        if (!image) {
+            setBrushPreview(null);
+            return;
+        }
+
+        const containerRect = e.currentTarget.getBoundingClientRect();
+        const imageRect = image.getBoundingClientRect();
+
+        const scale = imageRect.width / image.naturalWidth;
+        const previewSize = brushSize * scale;
+
+        const x = e.clientX - containerRect.left;
+        const y = e.clientY - containerRect.top;
+        
+        if (
+            e.clientX >= imageRect.left &&
+            e.clientX <= imageRect.right &&
+            e.clientY >= imageRect.top &&
+            e.clientY <= imageRect.bottom
+        ) {
+            setBrushPreview({ x, y, size: previewSize });
+        } else {
+            setBrushPreview(null);
+        }
+    };
+
+    const handleMouseLeaveForBrush = () => {
+        setBrushPreview(null);
+    };
+
+    const cursorStyle = useMemo(() => {
+        if (isPanModeActive) return isCurrentlyPanning ? 'grabbing' : 'grab';
+        if (isDrawingOnCanvas) return 'none'; // Hide cursor when brush preview is active
+        return 'default';
+    }, [isPanModeActive, isCurrentlyPanning, isDrawingOnCanvas]);
+
+
+    const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (imageContainerRef.current) {
+            const rect = imageContainerRef.current.getBoundingClientRect();
+            handleTouchMove(e, rect);
+        }
+    };
+
+    const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = overlayCanvasRef.current;
+        const image = imgRef.current;
+        if (!canvas || !image || !detectedObjects || detectedObjects.length === 0) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        const scaleX = image.naturalWidth / image.clientWidth;
+        const scaleY = image.naturalHeight / image.clientHeight;
+        const naturalClickX = clickX * scaleX;
+        const naturalClickY = clickY * scaleY;
+
+        for (let i = detectedObjects.length - 1; i >= 0; i--) {
+            const obj = detectedObjects[i];
+            const { box } = obj;
+            const box_x_min = box.x_min * image.naturalWidth;
+            const box_y_min = box.y_min * image.naturalHeight;
+            const box_x_max = box.x_max * image.naturalWidth;
+            const box_y_max = box.y_max * image.naturalHeight;
+
+            if (naturalClickX >= box_x_min && naturalClickX <= box_x_max && naturalClickY >= box_y_min && naturalClickY <= box_y_max) {
+                handleSelectObject(obj);
+                return;
+            }
+        }
+    };
+
+    const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = overlayCanvasRef.current;
+        const image = imgRef.current;
+        if (!canvas || !image || !detectedObjects || detectedObjects.length === 0) {
+            setIsHoveringObject(false);
+            setHighlightedObject(null);
+            return;
+        }
+
+        const rect = canvas.getBoundingClientRect();
+        const moveX = e.clientX - rect.left;
+        const moveY = e.clientY - rect.top;
+        const scaleX = image.naturalWidth / image.clientWidth;
+        const scaleY = image.naturalHeight / image.clientHeight;
+        const naturalMoveX = moveX * scaleX;
+        const naturalMoveY = moveY * scaleY;
+
+        let hovering = false;
+        let objectToHighlight: DetectedObject | null = null;
+        for (let i = detectedObjects.length - 1; i >= 0; i--) {
+            const obj = detectedObjects[i];
+            const { box } = obj;
+            const box_x_min = box.x_min * image.naturalWidth;
+            const box_y_min = box.y_min * image.naturalHeight;
+            const box_x_max = box.x_max * image.naturalWidth;
+            const box_y_max = box.y_max * image.naturalHeight;
+            if (naturalMoveX >= box_x_min && naturalMoveX <= box_x_max && naturalMoveY >= box_y_min && naturalMoveY <= box_y_max) {
+                hovering = true;
+                objectToHighlight = obj;
+                break;
+            }
+        }
+        setHighlightedObject(objectToHighlight);
+        setIsHoveringObject(hovering);
+    };
+
     return (
         <div
             ref={imageContainerRef}
             className="relative w-full h-full flex items-center justify-center overflow-hidden"
             onWheel={handleWheel}
             onMouseDown={handlePanStart}
-            style={{ cursor: isPanModeActive ? (isCurrentlyPanning ? 'grabbing' : 'grab') : 'default' }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{ cursor: cursorStyle }}
+            onMouseMove={handleMouseMoveForBrush}
+            onMouseLeave={handleMouseLeaveForBrush}
         >
             {generatedVideoUrl && (
                 <div className="w-full h-full flex items-center justify-center z-10">
@@ -224,9 +388,10 @@ const ImageViewer: React.FC = () => {
             
             {!generatedVideoUrl && currentImageUrl && (
                  <div
-                    className="relative transition-transform duration-200"
+                    className="relative"
                     style={{
                         transform: `scale(${zoom}) translate(${panOffset.x / zoom}px, ${panOffset.y / zoom}px)`,
+                        willChange: 'transform',
                         width: '100%',
                         height: '100%',
                         display: 'flex',
@@ -254,6 +419,7 @@ const ImageViewer: React.FC = () => {
                                 ref={imgRef}
                                 src={displayedImageUrl!}
                                 alt="Imagem do Editor"
+                                decoding="async"
                                 className="max-w-full max-h-full object-contain block animate-fade-in"
                                 style={{ 
                                     filter: cssFilter,
@@ -285,7 +451,6 @@ const ImageViewer: React.FC = () => {
                             style={{
                                 backgroundImage: `url(${texturePreview.url})`,
                                 backgroundSize: 'cover',
-                                // FIX: Removed invalid 'source-over' check. The blendMode type already ensures valid CSS values.
                                 mixBlendMode: texturePreview.blendMode,
                                 opacity: texturePreview.opacity,
                             }}
@@ -302,46 +467,52 @@ const ImageViewer: React.FC = () => {
                             onMouseMove={draw}
                             onMouseLeave={stopDrawing}
                             className="absolute top-0 left-0 w-full h-full opacity-50"
-                            style={{ cursor: 'crosshair', pointerEvents: isLoading ? 'none' : 'auto' }}
+                            style={{ pointerEvents: isLoading ? 'none' : 'auto' }}
                         />
                     )}
 
-                    {detectedObjects && !showComparisonSlider && (
-                        <canvas
-                            ref={overlayCanvasRef}
-                            className="absolute top-0 left-0 w-full h-full pointer-events-none z-10"
-                        />
-                    )}
+                    {/* Unified overlay for boxes and text */}
+                    <canvas
+                        ref={overlayCanvasRef}
+                        className="absolute top-0 left-0 w-full h-full z-10 pointer-events-auto"
+                        style={{
+                            cursor: isHoveringObject ? 'pointer' : isTextToolActive ? 'grab' : 'default',
+                            pointerEvents: (detectedObjects || isTextToolActive) && !showComparisonSlider ? 'auto' : 'none'
+                        }}
+                        onClick={handleCanvasClick}
+                        onMouseMove={handleCanvasMouseMove}
+                        onMouseLeave={() => { setIsHoveringObject(false); if(activeTab !== 'text') setHighlightedObject(null); }}
+                    />
 
+                    {/* Invisible drag handle for text */}
                     {isTextToolActive && !showComparisonSlider && (
                          <div
                             ref={textOverlayRef}
-                            className="absolute z-20 select-none p-2"
+                            className="absolute z-20 select-none"
                             style={{
-                                top: `${textToolState.position.y}%`,
-                                left: `${textToolState.position.x}%`,
-                                transform: `translate(-${textToolState.align === 'center' ? '50' : textToolState.align === 'right' ? '100' : '0'}%, 0%)`,
-                                fontFamily: textToolState.fontFamily,
-                                fontSize: `${pixelFontSize}px`,
-                                color: textToolState.color,
-                                textAlign: textToolState.align,
-                                fontWeight: textToolState.bold ? 'bold' : 'normal',
-                                fontStyle: textToolState.italic ? 'italic' : 'normal',
+                                top: `${textBbox.y}px`,
+                                left: `${textBbox.x}px`,
+                                width: `${textBbox.width}px`,
+                                height: `${textBbox.height}px`,
                                 cursor: 'grab',
-                                textShadow: `
-                                    -1px -1px 0 #000,  
-                                     1px -1px 0 #000,
-                                    -1px  1px 0 #000,
-                                     1px  1px 0 #000
-                                `
                             }}
-                        >
-                            {textToolState.content.split('\n').map((line, index) => (
-                                <span key={index} style={{ display: 'block' }}>{line || ' '}</span>
-                            ))}
-                        </div>
+                        />
                     )}
                 </div>
+            )}
+             {brushPreview && (
+                <div
+                    className="absolute rounded-full border-2 border-dashed border-white bg-white/20 pointer-events-none"
+                    style={{
+                        left: `${brushPreview.x}px`,
+                        top: `${brushPreview.y}px`,
+                        width: `${brushPreview.size}px`,
+                        height: `${brushPreview.size}px`,
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 20,
+                    }}
+                    aria-hidden="true"
+                />
             )}
         </div>
     );

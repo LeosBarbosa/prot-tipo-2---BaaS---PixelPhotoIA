@@ -41,6 +41,7 @@ export const editingTabs: TabConfig[] = [
     { id: 'text', name: 'Adicionar Texto', icon: React.createElement(TextToolIcon, { className: "w-6 h-6" }) },
     { id: 'photoRestoration', name: 'Restauração de Foto', icon: React.createElement(SparkleIcon, { className: "w-6 h-6" }) },
     { id: 'upscale', name: 'Melhorar Resolução', icon: React.createElement(ArrowUpOnSquareIcon, { className: "w-6 h-6" }) },
+    { id: 'superResolution', name: 'Super Resolução IA', icon: React.createElement(SparkleIcon, { className: "w-6 h-6" }), tag: 'new' },
     { id: 'unblur', name: 'Remover Desfoque', icon: React.createElement(UnblurIcon, { className: "w-6 h-6" }) },
     { id: 'sharpen', name: 'Nitidez', icon: React.createElement(SharpenIcon, { className: "w-6 h-6" }), tag: 'new' },
     { id: 'relight', name: 'Reacender', icon: React.createElement(SunIcon, { className: "w-6 h-6" }) },

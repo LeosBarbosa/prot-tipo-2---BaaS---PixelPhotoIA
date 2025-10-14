@@ -37,6 +37,12 @@ export const HomeIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+export const ShieldCheckIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286Zm0 13.036h.008v.008h-.008v-.008Z" />
+  </svg>
+);
+
 export const BuildingIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" />
@@ -89,6 +95,16 @@ export const FireIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 // Fim dos ícones descritivos para ferramentas
+
+export const DoubleExposureIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    {/* User Profile */}
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 19.5a7.5 7.5 0 0015 0" />
+    {/* Landscape overlay */}
+    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159" opacity="0.6"/>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12.75a.375.375 0 11-.75 0 .375.375 0 01.75 0z" opacity="0.6" />
+  </svg>
+);
 
 export const UploadIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -446,7 +462,20 @@ export const PatternIcon: React.FC<{ className?: string }> = ({ className }) => 
 
 export const PngIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19.5h6M12 21v-3.75m-3 3.75h6m3-8.25v-1.5m-3 3v-1.5m0 0h-6m-3-1.5v-1.5m3 3h-6m-3-3h6m3 3v-1.5m-3-3h-6m-3 3h6m3-3v-1.5" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4h16v16H4zM4.008 4.008L19.992 19.992M4.008 19.992L19.992 4.008" />
+    <rect x="0" y="0" width="4" height="4" fill="#808080" />
+    <rect x="4" y="4" width="4" height="4" fill="#808080" />
+    <rect x="8" y="8" width="4" height="4" fill="#808080" />
+    <rect x="12" y="12" width="4" height="4" fill="#808080" />
+    <rect x="16" y="16" width="4" height="4" fill="#808080" />
+    <rect x="0" y="8" width="4" height="4" fill="#808080" />
+    <rect x="8" y="0" width="4" height="4" fill="#808080" />
+    <rect x="16" y="8" width="4" height="4" fill="#808080" />
+    <rect x="8" y="16" width="4" height="4" fill="#808080" />
+    <rect x="4" y="12" width="4" height="4" fill="#808080" />
+    <rect x="12" y="4" width="4" height="4" fill="#808080" />
+    <rect x="0" y="16" width="4" height="4" fill="#808080" />
+    <rect x="16" y="0" width="4" height="4" fill="#808080" />
   </svg>
 );
 

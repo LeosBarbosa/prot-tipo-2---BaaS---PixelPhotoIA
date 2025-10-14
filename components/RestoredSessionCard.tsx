@@ -8,12 +8,10 @@ import { useEditor } from '../context/EditorContext';
 import { SparkleIcon } from './icons';
 
 const RestoredSessionCard: React.FC = () => {
-    // FIX: Property 'handleUploadNew' does not exist on type 'EditorContextType'. Replaced with 'handleTriggerUpload'.
-    const { handleTriggerUpload, setActiveTool, currentImageUrl } = useEditor();
+    const { handleTriggerUpload, setIsEditingSessionActive, currentImageUrl } = useEditor();
 
     const handleContinue = () => {
-        // Just open the editor view by selecting a default tool
-        setActiveTool('adjust');
+        setIsEditingSessionActive(true);
     };
 
     return (

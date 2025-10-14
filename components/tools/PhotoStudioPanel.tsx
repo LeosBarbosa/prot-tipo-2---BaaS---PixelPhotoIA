@@ -7,8 +7,7 @@ import { useEditor } from '../../context/EditorContext';
 import * as geminiService from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { CameraIcon, DownloadIcon, BrushIcon } from '../icons';
-import { dataURLtoFile } from '../../utils/imageUtils';
+import { CameraIcon } from '../icons';
 import TipBox from '../common/TipBox';
 
 const PromptField: React.FC<{
@@ -271,7 +270,7 @@ const presets: Preset[] = [
 ];
 
 const PhotoStudioPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, baseImageFile, setInitialImage, setActiveTool } = useEditor();
+    const { isLoading, error, setError, setIsLoading, baseImageFile, setInitialImage } = useEditor();
     
     const [personImage, setPersonImage] = useState<File | null>(null);
     const [location, setLocation] = useState('');
@@ -340,23 +339,6 @@ ${details}
         }
     };
 
-    const handleDownload = () => {
-        if (!resultImage) return;
-        const link = document.createElement('a');
-        link.href = resultImage;
-        link.download = `photo-studio-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const handleUseInEditor = () => {
-        if (!resultImage) return;
-        const file = dataURLtoFile(resultImage, `photo-studio-${Date.now()}.png`);
-        setInitialImage(file);
-        setActiveTool('adjust');
-    };
-
     const isGenerateButtonDisabled = isLoading || !personImage || !(location || clothing || lighting || pose || photoStyle);
 
     return (
@@ -371,7 +353,7 @@ ${details}
                 
                 <div>
                     <h4 className="text-sm font-semibold text-gray-300 mb-2 text-center">Inspirações</h4>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {presets.map(preset => (
                             <button
                                 key={preset.name}
@@ -409,17 +391,12 @@ ${details}
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center p-4">
-                <ResultViewer isLoading={isLoading} error={error} resultImage={resultImage} loadingMessage="Preparando seu ensaio fotográfico..."/>
-                 {resultImage && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Baixar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                             <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
+                <ResultViewer
+                    isLoading={isLoading}
+                    error={error}
+                    resultImage={resultImage}
+                    loadingMessage="Preparando seu ensaio fotográfico..."
+                />
             </main>
         </div>
     );

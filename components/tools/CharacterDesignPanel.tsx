@@ -28,12 +28,14 @@ const CharacterDesignPanel: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setResultImage(null);
-        addPromptToHistory(details);
+        
+        let fullPrompt = `Estilo: ${style}. Classe: ${charClass}. Detalhes: ${details}`;
+        if (negativePrompt.trim()) {
+            fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
+        }
+        addPromptToHistory(fullPrompt);
+
         try {
-            let fullPrompt = `Estilo: ${style}. Classe: ${charClass}. Detalhes: ${details}`;
-            if (negativePrompt.trim()) {
-                fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
-            }
             const result = await generateCharacter(fullPrompt);
             setResultImage(result);
         } catch (err) {

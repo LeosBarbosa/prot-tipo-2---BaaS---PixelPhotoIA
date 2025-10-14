@@ -35,7 +35,7 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message, progressStatus
         <p
           key={message}
           id="loading-message"
-          className="mt-4 text-lg font-semibold text-gray-200 animate-fade-in-text"
+          className="mt-4 text-lg font-semibold text-gray-200 animate-fade-in-text animate-pulse"
         >
           {message}
         </p>

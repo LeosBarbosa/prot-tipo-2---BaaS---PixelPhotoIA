@@ -130,8 +130,8 @@ const ObjectRemoverPanel: React.FC = () => {
                     className="w-full bg-gradient-to-br from-red-600 to-orange-500 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:cursor-not-allowed"
                     disabled={isRemoveDisabled}
                 >
-                    <EraserIcon className="w-5 h-5" />
-                    Remover
+                    <EraserIcon className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
+                    {isLoading ? 'Removendo...' : 'Remover'}
                 </button>
             </div>
         </div>

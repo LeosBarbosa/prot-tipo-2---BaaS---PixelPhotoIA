@@ -8,12 +8,18 @@ import { useEditor } from '../../context/EditorContext';
 import { generateMagicMontage, validatePromptSpecificity } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { MagicWandIcon, DownloadIcon, BrushIcon, LayersIcon, FireIcon, GtaIcon, UserIcon, LineArtIcon, SunIcon, TextToolIcon, ClockIcon } from '../icons';
+import { MagicWandIcon, LayersIcon, FireIcon, GtaIcon, UserIcon, LineArtIcon, SunIcon, TextToolIcon, ClockIcon, CameraIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import { dataURLtoFile } from '../../utils/imageUtils';
 import TipBox from '../common/TipBox';
 
 const presets = [
+    {
+        name: "Retrato Cinematográfico (P&B)",
+        prompt: "CLOSE-UP CINEMATOGRÁFICO: Retrato dramático e ultrarrealista em preto e branco com iluminação cinematográfica de alto contraste lateral, projetando sombras profundas e marcadas para acentuar os contornos faciais e as texturas. O sujeito deve usar óculos de sol redondos e reflexivos, mantendo um olhar confiante direcionado para cima, para um vazio escuro. Os óculos devem refletir o horizonte imponente de uma cidade. A atmosfera é misteriosa com um fundo preto minimalista. Detalhes em 8K. Mantenha a estrutura facial exata do sujeito, a textura do cabelo e a foto original.",
+        negativePrompt: "desfocado, anatomia distorcida, estilo de desenho animado, baixa resolução, superexposição, subexposição, cores.",
+        icon: <CameraIcon className="w-5 h-5" />
+    },
     {
         name: "Com Deadpool & Wolverine",
         prompt: "Foto cinematográfica hiper-realista de um jovem (da imagem enviada) tirando uma foto dos bastidores com Deadpool e Wolverine (Hugh Jackman) no set de filmagem de \"Deadpool & Wolverine\". Deadpool em traje completo vermelho e preto fazendo uma pose engraçada de sinal da paz, Hugh Jackman como Wolverine vestindo seu icônico traje amarelo e preto com garras de adamantium estendidas, ambos ao lado do homem. Fundo de set de filmagem com câmeras, equipamentos de iluminação, equipe e adereços visíveis. Ultra-detalhado, iluminação natural, alto realismo, fotografia cinematográfica 8K.",
@@ -91,7 +97,6 @@ const MagicMontagePanel: React.FC = () => {
         setLoadingMessage,
         baseImageFile,
         setInitialImage,
-        setActiveTool,
         setToast,
         addPromptToHistory,
     } = useEditor();
@@ -161,32 +166,15 @@ const MagicMontagePanel: React.FC = () => {
             setLoadingMessage(null);
         }
     };
-
-    const handleDownload = () => {
-        if (!resultImage) return;
-        const link = document.createElement('a');
-        link.href = resultImage;
-        link.download = `montagem-magica-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const handleUseInEditor = () => {
-        if (!resultImage) return;
-        const file = dataURLtoFile(resultImage, `montagem-magica-${Date.now()}.png`);
-        setInitialImage(file);
-        setActiveTool('adjust');
-    };
-
-    const handleCreateVariation = () => {
+    
+    const handleIterate = () => {
         if (!resultImage) return;
 
-        const newSourceFile = dataURLtoFile(resultImage, `variation-base-${Date.now()}.png`);
+        const newSourceFile = dataURLtoFile(resultImage, `iteration-${Date.now()}.png`);
         
         setSourceImage(newSourceFile);
         setSecondImage(null);
-        setResultImage(null);
+        setResultImage(null); // Clear the result to show the new source image
         setPrompt('');
         setNegativePrompt('');
         
@@ -207,28 +195,14 @@ const MagicMontagePanel: React.FC = () => {
                     resultImage={resultImage}
                     loadingMessage="Realizando a mágica..."
                 />
-                {resultImage && !isLoading && (
+                 {resultImage && !isLoading && (
                     <div className="mt-4 flex flex-wrap justify-center gap-3 animate-fade-in">
                         <button
-                            onClick={handleDownload}
-                            className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm"
-                        >
-                            <DownloadIcon className="w-5 h-5" />
-                            Baixar Imagem
-                        </button>
-                        <button
-                            onClick={handleCreateVariation}
+                            onClick={handleIterate}
                             className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm"
                         >
                             <LayersIcon className="w-5 h-5" />
-                            Criar Variação
-                        </button>
-                        <button
-                            onClick={handleUseInEditor}
-                            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm"
-                        >
-                             <BrushIcon className="w-5 h-5" />
-                            Usar no Editor
+                            Iterar sobre o Resultado
                         </button>
                     </div>
                 )}
@@ -291,8 +265,8 @@ const MagicMontagePanel: React.FC = () => {
                     disabled={isLoading || !sourceImage || !prompt.trim()}
                     className="w-full mt-auto bg-gradient-to-br from-purple-600 to-indigo-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <MagicWandIcon className="w-5 h-5" />
-                    Gerar Montagem
+                    <MagicWandIcon className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
+                    {isLoading ? 'Gerando...' : 'Gerar Montagem'}
                 </button>
             </aside>
         </div>

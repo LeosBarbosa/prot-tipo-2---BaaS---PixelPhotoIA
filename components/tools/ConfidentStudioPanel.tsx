@@ -8,8 +8,7 @@ import { useEditor } from '../../context/EditorContext';
 import * as geminiService from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { UserIcon, DownloadIcon, BrushIcon } from '../icons';
-import { dataURLtoFile } from '../../utils/imageUtils';
+import { UserIcon } from '../icons';
 import TipBox from '../common/TipBox';
 
 const ConfidentStudioPanel: React.FC = () => {
@@ -20,7 +19,6 @@ const ConfidentStudioPanel: React.FC = () => {
         setIsLoading, 
         baseImageFile,
         setInitialImage, 
-        setActiveTool 
     } = useEditor();
     
     const [personImage, setPersonImage] = useState<File | null>(null);
@@ -62,23 +60,6 @@ const ConfidentStudioPanel: React.FC = () => {
         }
     };
 
-    const handleDownload = () => {
-        if (!resultImage) return;
-        const link = document.createElement('a');
-        link.href = resultImage;
-        link.download = `retrato-estudio-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const handleUseInEditor = () => {
-        if (!resultImage) return;
-        const file = dataURLtoFile(resultImage, `retrato-estudio-${Date.now()}.png`);
-        setInitialImage(file);
-        setActiveTool('adjust');
-    };
-
     const isGenerateButtonDisabled = isLoading || !personImage;
 
     return (
@@ -106,17 +87,12 @@ const ConfidentStudioPanel: React.FC = () => {
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center p-4">
-                <ResultViewer isLoading={isLoading} error={error} resultImage={resultImage} loadingMessage="Montando o estúdio..."/>
-                {resultImage && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Baixar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
+                <ResultViewer
+                    isLoading={isLoading}
+                    error={error}
+                    resultImage={resultImage}
+                    loadingMessage="Montando o estúdio..."
+                />
             </main>
         </div>
     );

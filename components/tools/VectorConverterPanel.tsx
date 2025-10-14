@@ -54,8 +54,8 @@ const VectorConverterPanel: React.FC = () => {
         <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6">
             <aside className="w-full md:w-96 flex-shrink-0 bg-gray-900/30 rounded-lg p-4 flex flex-col gap-4 border border-gray-700/50">
                 <div className="text-center">
-                    <h3 className="text-lg font-semibold text-gray-200">Conversor de Vetor</h3>
-                    <p className="text-sm text-gray-400 mt-1">Converta imagens para um estilo de arte vetorial.</p>
+                    <h3 className="text-lg font-semibold text-gray-200">Vetor Estilo Adesivo</h3>
+                    <p className="text-sm text-gray-400 mt-1">Cria um vetor com contorno de adesivo.</p>
                 </div>
                 <ImageDropzone
                     imageFile={sourceImage}
@@ -63,7 +63,7 @@ const VectorConverterPanel: React.FC = () => {
                     label="Imagem Original"
                 />
                  <CollapsibleToolPanel
-                    title="Estilo do Vetor (Opcional)"
+                    title="Detalhes do Estilo (Opcional)"
                     icon={<VectorIcon className="w-5 h-5" />}
                     isExpanded={isOptionsExpanded}
                     onExpandToggle={() => setIsOptionsExpanded(!isOptionsExpanded)}
@@ -73,14 +73,14 @@ const VectorConverterPanel: React.FC = () => {
                             <textarea
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
-                                placeholder="Ex: estilo de adesivo, cores vibrantes, arte de linha minimalista..."
+                                placeholder="Ex: cores vibrantes, arte de linha minimalista, sem sombras..."
                                 className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]"
                                 disabled={isLoading}
                                 rows={4}
                             />
                             <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="vectorConverter" />
                         </div>
-                         <p className="mt-1 text-xs text-gray-500 px-1">Dê instruções sobre o peso da linha, paleta de cores (ex: chapada, gradiente) e nível de detalhe.</p>
+                         <p className="mt-1 text-xs text-gray-500 px-1">Dê instruções sobre a paleta de cores ou nível de detalhe do conteúdo do adesivo.</p>
                     </div>
                 </CollapsibleToolPanel>
                 <button
@@ -89,7 +89,7 @@ const VectorConverterPanel: React.FC = () => {
                     className="w-full mt-auto bg-gradient-to-br from-orange-600 to-red-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                     <VectorIcon className="w-5 h-5" />
-                    Converter para Vetor
+                    Criar Adesivo Vetorizado
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex items-center justify-center p-4">
@@ -97,7 +97,7 @@ const VectorConverterPanel: React.FC = () => {
                     isLoading={isLoading}
                     error={error}
                     resultImage={resultImage}
-                    loadingMessage="Vetorizando sua imagem..."
+                    loadingMessage="Criando seu adesivo vetorizado..."
                 />
             </main>
         </div>

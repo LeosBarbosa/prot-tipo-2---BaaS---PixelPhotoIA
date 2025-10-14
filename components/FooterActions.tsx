@@ -38,7 +38,7 @@ const FooterActions: React.FC = React.memo(() => {
                 </button>
                  <button 
                     onClick={() => setIsSaveWorkflowModalOpen(true)}
-                    disabled={toolHistory.length === 0}
+                    disabled={toolHistory.length < 2}
                     className="p-2 rounded-md bg-gray-700/60 hover:bg-gray-600/80 text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Salvar como Fluxo de Trabalho"
                     aria-label="Salvar como Fluxo de Trabalho"

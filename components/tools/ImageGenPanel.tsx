@@ -107,10 +107,10 @@ const ImageGenPanel: React.FC = () => {
                 <button
                     onClick={handleGenerate}
                     disabled={isLoading || !prompt.trim()}
-                    className="w-full mt-auto bg-gradient-to-br from-purple-600 to-indigo-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
+                    className="w-full mt-auto bg-gradient-to-br from-purple-600 to-indigo-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg active:scale-95"
                 >
-                    <PhotoIcon className="w-6 h-6" />
-                    Gerar Imagem
+                    <PhotoIcon className={`w-6 h-6 ${isLoading ? 'animate-pulse' : ''}`} />
+                    {isLoading ? 'Gerando...' : 'Gerar Imagem'}
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex items-center justify-center p-4">

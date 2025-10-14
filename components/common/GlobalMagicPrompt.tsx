@@ -49,7 +49,7 @@ const GlobalMagicPrompt: React.FC = () => {
           disabled={isLoading || !prompt.trim()}
           className="w-full bg-gradient-to-br from-purple-600 to-indigo-500 text-white font-bold py-2 px-4 rounded-lg transition-all text-sm flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
         >
-          Executar
+          <span className={isLoading ? 'animate-pulse' : ''}>{isLoading ? 'Executando...' : 'Executar'}</span>
         </button>
       </div>
     </div>
