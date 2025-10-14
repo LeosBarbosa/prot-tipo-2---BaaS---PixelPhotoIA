@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
+// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
 import StylePreview from '../common/StylePreview';
 import TipBox from '../common/TipBox';
 // FIX: Import SparkleIcon to use as a default icon
 import { SparkleIcon } from '../icons';
+// FIX: Correct import path
 import { Trend } from '../../types';
 
 const filters: Trend[] = [

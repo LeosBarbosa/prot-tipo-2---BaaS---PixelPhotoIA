@@ -35,7 +35,12 @@ const FaceSwapPanel: React.FC = () => {
         if (!detectedObjects) {
             setSelectedFace(null);
         } else {
-            setSelectedFace(highlightedObject);
+            // FIX: The logic here was potentially problematic. Sync local selection with context highlight.
+            if (highlightedObject && detectedObjects.includes(highlightedObject)) {
+                setSelectedFace(highlightedObject);
+            } else {
+                setSelectedFace(null);
+            }
         }
     }, [detectedObjects, highlightedObject]);
 
@@ -51,7 +56,7 @@ const FaceSwapPanel: React.FC = () => {
 
     const onSwap = () => {
         if (sourceImage && selectedFace) {
-            // O `highlightedObject` no contexto já está sincronizado com `selectedFace`.
+            // O `handleSelectObject` já terá definido a máscara e o objeto correto no contexto.
             // A chamada `handleFaceSwap` lerá o objeto correto do contexto.
             handleFaceSwap(sourceImage, userPrompt);
         } else {

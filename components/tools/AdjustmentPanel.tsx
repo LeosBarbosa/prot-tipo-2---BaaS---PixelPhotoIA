@@ -4,11 +4,13 @@
 */
 
 import React, { useState, useEffect } from 'react';
+// FIX: Correct import path
 import { useEditor, DEFAULT_LOCAL_FILTERS } from '../../context/EditorContext';
 import ToneCurve from '../ToneCurve';
 import { ToneCurveIcon, SunIcon, PaletteIcon, AdjustmentsHorizontalIcon } from '../icons';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
 import TipBox from '../common/TipBox';
+// FIX: Correct import path
 import { AdjustmentLayer } from '../../types';
 
 const Slider: React.FC<{

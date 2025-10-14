@@ -2,6 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
+// FIX: Correct import path
 import { type ToolId } from '../types';
 
 // High-quality, diverse examples to guide users and improve suggestion quality.

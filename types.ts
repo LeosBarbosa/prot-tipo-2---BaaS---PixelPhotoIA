@@ -3,18 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import { type ReactNode } from 'react';
+import React from 'react';
+import { Crop, PixelCrop } from 'react-image-crop';
 
+// General App State
+export type Theme = 'light' | 'dark';
+export type ToastType = 'success' | 'error' | 'info';
+export interface Toast {
+  message: string;
+  type: ToastType;
+}
+
+// Tool & Tab Configuration
 export type ToolCategory = 'generation' | 'workflow' | 'editing';
-export type WorkflowIconType = 'product' | 'restore' | 'creative' | 'custom';
-export type ToastType = 'error' | 'success' | 'info';
-export type VideoAspectRatio = "16:9" | "1:1" | "9:16";
-export type BlendMode =
-    | 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten'
-    | 'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light'
-    | 'difference' | 'exclusion' | 'hue' | 'saturation' | 'color' | 'luminosity';
-
-
 export type ToolId =
   | 'imageGen' | 'sketchRender' | 'characterDesign' | 'videoGen' | 'patternGen'
   | 'textEffects' | 'logoGen' | 'stickerCreator' | 'model3DGen' | 'aiPngCreator'
@@ -24,133 +25,66 @@ export type ToolId =
   | 'confidentStudio' | 'funkoPopStudio' | 'magicMontage' | 'objectRemover'
   | 'faceSwap' | 'generativeEdit' | 'extractArt' | 'crop' | 'adjust'
   | 'style' | 'unblur' | 'sharpen' | 'text' | 'removeBg' | 'upscale'
-  | 'superResolution' | 'photoRestoration' | 'relight' | 'lowPoly'
-  | 'pixelArt' | 'portraits' | 'styleGen' | 'dustAndScratches'
-  | 'neuralFilters' | 'trends' | 'vectorConverter' | 'texture'
+  | 'superResolution' | 'photoRestoration' | 'relight' | 'lowPoly' | 'pixelArt'
+  | 'portraits' | 'styleGen' | 'dustAndScratches' | 'neuralFilters' | 'trends'
+  | 'vectorConverter' | 'texture' | 'newAspectRatio' | 'history' | 'localAdjust'
   // FIX: Added missing ToolIds
-  | 'newAspectRatio' | 'faceRecovery' | 'denoise' | 'localAdjust' | 'history'
-  | 'imageVariation';
+  | 'faceRecovery' | 'denoise' | 'imageVariation';
 
 export type TabId =
   | 'crop' | 'newAspectRatio' | 'adjust' | 'localAdjust' | 'magicMontage' | 'objectRemover'
-  | 'removeBg' | 'faceSwap' | 'generativeEdit' | 'text' | 'photoRestoration' | 'upscale'
-  | 'superResolution' | 'unblur' | 'sharpen' | 'relight' | 'style' | 'portraits'
-  | 'lowPoly' | 'pixelArt' | 'styleGen' | 'texture' | 'dustAndScratches'
+  | 'removeBg' | 'faceSwap' | 'generativeEdit' | 'text' | 'photoRestoration'
+  | 'upscale' | 'superResolution' | 'unblur' | 'sharpen' | 'relight' | 'style'
+  | 'portraits' | 'lowPoly' | 'pixelArt' | 'styleGen' | 'texture' | 'dustAndScratches'
   | 'extractArt' | 'neuralFilters' | 'trends' | 'history';
-
 
 export interface ToolConfig {
     id: ToolId;
     name: string;
     description: string;
-    icon: ReactNode;
+    icon: React.ReactNode;
     category: ToolCategory;
     tag?: 'new' | 'tip';
 }
 
-export interface SmartSearchResult {
-    tool: ToolConfig;
-    args?: any;
-}
-
-export interface PredefinedSearch {
-    keywords: string[];
-    title: string;
-    description: string;
-    icon: ReactNode;
-    action: {
-        type: 'tool' | 'workflow';
-        payload: ToolId | ToolId[];
-    };
-}
-
-export interface UploadProgressStatus {
-    progress: number;
-    stage: 'reading' | 'processing' | 'compressing' | 'done';
-}
-
-export interface GifFrame {
-    imageData: {
-        data: Uint8ClampedArray;
-        width: number;
-        height: number;
-    };
-    delay: number;
-}
-
+// Gemini & AI Services
 export interface DetectedObject {
-    label: string;
-    box: {
-        x_min: number;
-        y_min: number;
-        x_max: number;
-        y_max: number;
-    };
+  label: string;
+  box: {
+    x_min: number;
+    y_min: number;
+    x_max: number;
+    y_max: number;
+  };
 }
 
-export interface Workflow {
-    id: string;
-    name: string;
-    description: string;
-    toolIds: ToolId[];
-    icon: WorkflowIconType;
-    isUserDefined: boolean;
+export interface SmartSearchResult {
+  tool: ToolConfig;
+  args?: any;
 }
 
-export interface Toast {
-    message: string;
-    type: ToastType;
-}
-
-export interface ProactiveSuggestionAction {
-    message: string;
-    acceptLabel: string;
-    toolId: ToolId;
-    args?: any;
-    onAccept: () => void;
-}
-
-export interface FilterState {
-    brightness: number;
-    contrast: number;
-    saturate: number;
-    grayscale: number;
-    sepia: number;
-    invert: number;
-    hueRotate: number;
-    blur: number;
-}
-
-
-export interface TextToolState {
-    content: string;
-    fontFamily: string;
-    fontSize: number; // as percentage of image width
-    color: string;
-    position: { x: number; y: number }; // percentage
-    bold: boolean;
-    italic: boolean;
-    align: 'left' | 'center' | 'right';
-}
+// Editor State
+export type BlendMode =
+  | 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' 
+  | 'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light' 
+  | 'difference' | 'exclusion' | 'hue' | 'saturation' | 'color' | 'luminosity';
 
 export interface BaseLayer {
-    id: string;
-    name: string;
-    isVisible: boolean;
-    opacity: number;
-    blendMode: BlendMode;
+  id: string;
+  name: string;
+  isVisible: boolean;
+  opacity: number; // 0-100
+  blendMode: BlendMode;
 }
 
-
 export interface ImageLayer extends BaseLayer {
-    type: 'image';
-    file: File;
-    filters: Partial<FilterState>; // Non-destructive filters
+  type: 'image';
+  file: File;
 }
 
 export interface AdjustmentLayer extends BaseLayer {
-    type: 'adjustment';
-    filters: Partial<FilterState>;
+  type: 'adjustment';
+  filters: Partial<FilterState>;
 }
 
 export type Layer = ImageLayer | AdjustmentLayer;
@@ -161,29 +95,94 @@ export interface LayerStateSnapshot {
   gifFrames?: GifFrame[];
 }
 
-export interface Trend {
-  name: string;
-  prompt: string;
-  bg: string;
-  icon: React.ReactNode;
-  type?: 'descriptive';
+export interface FilterState {
+  brightness: number;
+  contrast: number;
+  saturate: number;
+  grayscale: number;
+  sepia: number;
+  hueRotate: number;
+  invert: number;
+  blur: number; // in pixels
+  curve?: number[];
 }
+
+export interface TextToolState {
+  content: string;
+  fontFamily: string;
+  fontSize: number; // As a percentage of image width
+  color: string;
+  align: 'left' | 'center' | 'right';
+  bold: boolean;
+  italic: boolean;
+  position: { x: number; y: number }; // As percentage of canvas
+}
+
+// GIF Handling
+export interface GifFrame {
+    imageData: {
+        data: Uint8ClampedArray;
+        width: number;
+        height: number;
+    };
+    delay: number;
+}
+
+// Workflows & Search
+export type WorkflowIconType = 'product' | 'restore' | 'creative' | 'custom';
+
+export interface Workflow {
+  id: string;
+  name: string;
+  description: string;
+  toolIds: ToolId[];
+  icon: WorkflowIconType;
+  isUserDefined?: boolean;
+}
+
+export interface PredefinedSearch {
+  keywords: string[];
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  action: {
+    type: 'workflow' | 'tool';
+    payload: ToolId[] | ToolId;
+  };
+}
+
+export interface Trend {
+    name: string;
+    prompt: string;
+    bg: string;
+    icon: React.ReactNode;
+    type?: 'descriptive';
+}
+
+// Misc
+export interface UploadProgressStatus {
+    progress: number;
+    stage: 'reading' | 'processing' | 'compressing' | 'done';
+}
+
+export type VideoAspectRatio = '16:9' | '1:1' | '9:16';
+
+export type TransformType = 'rotate-left' | 'rotate-right' | 'flip-h' | 'flip-v';
 
 export interface ProactiveSuggestionState {
     message: string;
     acceptLabel: string;
+    onAccept: () => void;
     toolId: ToolId;
     args?: any;
-    onAccept: () => void;
 }
+
 
 export interface PreviewState {
     url: string;
     trend: Trend;
     applyToAll: boolean;
 }
-
-export type TransformType = 'rotate-left' | 'rotate-right' | 'flip-h' | 'flip-v';
 
 export interface EditorContextType {
     activeTool: ToolId | null;
@@ -202,8 +201,8 @@ export interface EditorContextType {
     setIsInlineComparisonActive: React.Dispatch<React.SetStateAction<boolean>>;
     toast: Toast | null;
     setToast: React.Dispatch<React.SetStateAction<Toast | null>>;
-    proactiveSuggestion: ProactiveSuggestionAction | null;
-    setProactiveSuggestion: React.Dispatch<React.SetStateAction<ProactiveSuggestionAction | null>>;
+    proactiveSuggestion: ProactiveSuggestionState | null;
+    setProactiveSuggestion: React.Dispatch<React.SetStateAction<ProactiveSuggestionState | null>>;
     uploadProgress: UploadProgressStatus | null;
     setUploadProgress: React.Dispatch<React.SetStateAction<UploadProgressStatus | null>>;
     isSaveWorkflowModalOpen: boolean;
@@ -212,26 +211,26 @@ export interface EditorContextType {
     setIsLeftPanelVisible: React.Dispatch<React.SetStateAction<boolean>>;
     isRightPanelVisible: boolean;
     setIsRightPanelVisible: React.Dispatch<React.SetStateAction<boolean>>;
-    theme: 'light' | 'dark';
+    theme: Theme;
     toggleTheme: () => void;
     layers: Layer[];
     activeLayerId: string | null;
     setActiveLayerId: (id: string | null) => void;
-    baseImageFile: File | null;
+    baseImageFile: File | undefined;
     currentImageUrl: string | null;
     compositeCssFilter: string;
     originalImageUrl: string | null;
     imgRef: React.RefObject<HTMLImageElement>;
-    setInitialImage: (file: File | null) => void;
+    setInitialImage: (file: File | null) => Promise<void>;
     hasRestoredSession: boolean;
     isEditingSessionActive: boolean;
     setIsEditingSessionActive: React.Dispatch<React.SetStateAction<boolean>>;
     updateLayer: (layerId: string, updates: Partial<Layer>) => void;
-    deleteLayer: (layerId: string) => void;
+    deleteLayer: (layerId: string | null) => void;
     toggleLayerVisibility: (layerId: string) => void;
-    mergeDownLayer: (layerId: string) => void;
-    moveLayerUp: (layerId: string) => void;
-    moveLayerDown: (layerId: string) => void;
+    mergeDownLayer: (layerId: string | null) => void;
+    moveLayerUp: (layerId: string | null) => void;
+    moveLayerDown: (layerId: string | null) => void;
     history: LayerStateSnapshot[];
     historyIndex: number;
     canUndo: boolean;
@@ -241,14 +240,14 @@ export interface EditorContextType {
     jumpToState: (index: number) => void;
     resetHistory: () => void;
     toolHistory: ToolId[];
-    commitChange: (newLayers: Layer[], newActiveLayerId: string | null, toolId?: ToolId | undefined) => void;
+    commitChange: (newLayers: Layer[], newActiveLayerId: string | null, toolId?: ToolId) => void;
     isGif: boolean;
     gifFrames: GifFrame[];
     currentFrameIndex: number;
     setCurrentFrameIndex: React.Dispatch<React.SetStateAction<number>>;
     zoom: number;
     setZoom: React.Dispatch<React.SetStateAction<number>>;
-    panOffset: { x: number, y: number };
+    panOffset: { x: number; y: number };
     isPanModeActive: boolean;
     setIsPanModeActive: React.Dispatch<React.SetStateAction<boolean>>;
     isCurrentlyPanning: boolean;
@@ -258,10 +257,10 @@ export interface EditorContextType {
     handleTouchMove: (e: React.TouchEvent<Element>, containerRect: DOMRect) => void;
     handleTouchEnd: (e: React.TouchEvent<Element>) => void;
     resetZoomAndPan: () => void;
-    crop: any;
-    setCrop: React.Dispatch<React.SetStateAction<any>>;
-    completedCrop: any;
-    setCompletedCrop: React.Dispatch<React.SetStateAction<any>>;
+    crop: Crop | undefined;
+    setCrop: React.Dispatch<React.SetStateAction<Crop | undefined>>;
+    completedCrop: PixelCrop | undefined;
+    setCompletedCrop: React.Dispatch<React.SetStateAction<PixelCrop | undefined>>;
     aspect: number | undefined;
     setAspect: React.Dispatch<React.SetStateAction<number | undefined>>;
     canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -270,9 +269,9 @@ export interface EditorContextType {
     brushSize: number;
     setBrushSize: React.Dispatch<React.SetStateAction<number>>;
     clearMask: () => void;
-    startDrawing: (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => void;
+    startDrawing: (e: React.MouseEvent<HTMLCanvasElement>) => void;
     stopDrawing: () => void;
-    draw: (e: React.MouseEvent<HTMLCanvasElement, MouseEvent>) => void;
+    draw: (e: React.MouseEvent<HTMLCanvasElement>) => void;
     detectedObjects: DetectedObject[] | null;
     setDetectedObjects: React.Dispatch<React.SetStateAction<DetectedObject[] | null>>;
     highlightedObject: DetectedObject | null;
@@ -280,11 +279,11 @@ export interface EditorContextType {
     localFilters: FilterState;
     setLocalFilters: React.Dispatch<React.SetStateAction<FilterState>>;
     hasLocalAdjustments: boolean;
-    buildFilterString: (filters: FilterState) => string;
+    buildFilterString: (filters: Partial<FilterState>) => string;
     resetLocalFilters: () => void;
     histogram: { r: number[]; g: number[]; b: number[]; } | null;
-    previewState: { url: string; trend: Trend; applyToAll: boolean; } | null;
-    setPreviewState: React.Dispatch<React.SetStateAction<{ url: string; trend: Trend; applyToAll: boolean; } | null>>;
+    previewState: PreviewState | null;
+    setPreviewState: React.Dispatch<React.SetStateAction<PreviewState | null>>;
     isPreviewLoading: boolean;
     textToolState: TextToolState;
     setTextToolState: React.Dispatch<React.SetStateAction<TextToolState>>;
@@ -297,62 +296,61 @@ export interface EditorContextType {
     smartSearchResult: SmartSearchResult | null;
     setSmartSearchResult: React.Dispatch<React.SetStateAction<SmartSearchResult | null>>;
     savedWorkflows: Workflow[];
-    addWorkflow: (workflow: Workflow) => Promise<void>;
+    addWorkflow: (workflow: Workflow) => void;
     recentTools: ToolId[];
     promptHistory: string[];
-    addPromptToHistory: (newPrompt: string) => void;
+    addPromptToHistory: (prompt: string) => void;
     executeWorkflow: (toolIds: ToolId[]) => void;
     handlePredefinedSearchAction: (action: PredefinedSearch['action']) => void;
     handleSmartSearch: (term: string) => Promise<void>;
-    handleFileSelect: (file: File) => Promise<void>;
+    handleFileSelect: (file: File | null) => void;
     handleGoHome: () => void;
     handleTriggerUpload: () => void;
     handleExplicitSave: () => void;
     handleApplyCrop: () => void;
-    handleTransform: (transformType: TransformType) => void;
+    handleTransform: (transformType: TransformType) => Promise<void>;
     handleRemoveBackground: () => void;
     handleRelight: (prompt: string) => void;
-    handleMagicPrompt: (prompt: string) => Promise<void>;
+    // FIX: Added handleMagicMontage to context type
+    handleMagicMontage: (mainImage: File, prompt: string, secondImage?: File) => void;
+    handleMagicPrompt: (prompt: string) => void;
     handleApplyLowPoly: () => void;
     handleExtractArt: () => void;
     handleApplyDustAndScratch: () => void;
     handleDenoise: () => void;
     handleApplyFaceRecovery: () => void;
-    // FIX: Update signature to accept applyToAll boolean for GIF processing
-    handleGenerateProfessionalPortrait: (applyToAll: boolean) => void;
+    handleGenerateProfessionalPortrait: (applyToAll?: boolean) => void;
     handleRestorePhoto: (colorize: boolean) => void;
     handleApplyUpscale: (factor: number, preserveFace: boolean) => void;
-    handleEnhanceResolutionAndSharpness: (factor: number, intensity: number, preserveFace: boolean) => void;
     handleUnblurImage: (sharpenLevel: number, denoiseLevel: number, model: string) => void;
     handleApplySharpen: (intensity: number) => void;
     handleApplyNewAspectRatio: () => void;
-    handleGenerativeEdit: () => Promise<void>;
-    handleObjectRemove: () => Promise<void>;
+    handleGenerativeEdit: () => void;
+    handleObjectRemove: () => void;
     handleDetectObjects: (prompt?: string) => Promise<void>;
     handleDetectFaces: () => Promise<void>;
     handleFaceRetouch: () => Promise<void>;
-    handleFaceSwap: (sourceImageFile: File, userPrompt: string) => void;
+    handleFaceSwap: (sourceImage: File, userPrompt: string) => void;
     handleSelectObject: (object: DetectedObject) => void;
     handleApplyLocalAdjustments: (applyToAll: boolean) => void;
     handleApplyCurve: (lut: number[]) => void;
-    // FIX: Update signature to accept applyToAll boolean for GIF processing
     handleApplyStyle: (stylePrompt: string, applyToAll: boolean) => void;
-    // FIX: Update signature to accept applyToAll boolean for GIF processing
-    handleApplyAIAdjustment: (prompt: string, applyToAll: boolean) => void;
+    handleApplyAIAdjustment: (adjustmentPrompt: string, applyToAll: boolean) => void;
     handleApplyText: () => void;
-    handleGenerateVideo: (prompt: string, aspectRatio: VideoAspectRatio) => void;
+    handleGenerateVideo: (prompt: string, aspectRatio: string) => void;
     handleDownload: () => void;
     handleApplyTexture: () => void;
-    handleVirtualTryOn: (personImage: File, clothingImage: File, shoeImage?: File | undefined) => void;
-    handleFunkoPop: (mainImage: File, personImage: File | null, bgDescription: string, objectDescription: string, lightingDescription: string, funkoType: string, specialFinish: string) => void;
-    handleStyledPortrait: (personImage: File, styleImage: File[], prompt: string, negativePrompt: string) => void;
-    handlePolaroid: (personImage: File, celebrityImage: File, negativePrompt: string) => void;
-    handleConfidentStudio: (personImage: File, mainPrompt: string, negativePrompt: string) => void;
-    handleAIPortrait: (style: 'caricature' | 'pixar' | '3d' | 'yearbook90s', images: File[], prompt: string) => void;
+    handleVirtualTryOn: (personImage: File, clothingImage: File, shoeImage?: File) => void;
+    handleFunkoPop: (mainImage: File, personImage: File | null, bg: string, obj: string, light: string, type: string, finish: string) => void;
+    handleStyledPortrait: (personImage: File, styleImages: File[], prompt: string, negativePrompt: string) => Promise<void>;
+    handlePolaroid: (personImage: File, celebrityImage: File, negativePrompt: string) => Promise<void>;
+    handleConfidentStudio: (personImage: File, mainPrompt: string, negativePrompt: string) => Promise<void>;
+    handleAIPortrait: (styleId: string, personImages: File[], prompt: string) => Promise<void>;
+    handleEnhanceResolutionAndSharpness: (factor: number, intensity: number, preserveFace: boolean) => void;
     handleDoubleExposure: (portraitImage: File, landscapeImage: File) => Promise<string>;
     prompt: string;
     setPrompt: React.Dispatch<React.SetStateAction<string>>;
-    generateAIPreview: (trend: Trend, applyToAll: boolean) => void;
-    commitAIPreview: () => void;
+    generateAIPreview: (trend: Trend, applyToAll: boolean) => Promise<void>;
+    commitAIPreview: () => Promise<void>;
     initialPromptFromMetadata: string | null;
 }

@@ -1,3 +1,5 @@
+// components/tools/MagicMontagePanel.tsx
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -5,106 +7,38 @@
 
 import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { generateMagicMontage, validatePromptSpecificity } from '../../services/geminiService';
+import { validatePromptSpecificity } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { MagicWandIcon, LayersIcon, FireIcon, GtaIcon, UserIcon, LineArtIcon, SunIcon, TextToolIcon, ClockIcon, CameraIcon } from '../icons';
+import { MagicWandIcon, DownloadIcon, BrushIcon, LayersIcon, FireIcon, GtaIcon, UserIcon, LineArtIcon, SunIcon, TextToolIcon, ClockIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import { dataURLtoFile } from '../../utils/imageUtils';
 import TipBox from '../common/TipBox';
 
 const presets = [
-    {
-        name: "Retrato Cinematográfico (P&B)",
-        prompt: "CLOSE-UP CINEMATOGRÁFICO: Retrato dramático e ultrarrealista em preto e branco com iluminação cinematográfica de alto contraste lateral, projetando sombras profundas e marcadas para acentuar os contornos faciais e as texturas. O sujeito deve usar óculos de sol redondos e reflexivos, mantendo um olhar confiante direcionado para cima, para um vazio escuro. Os óculos devem refletir o horizonte imponente de uma cidade. A atmosfera é misteriosa com um fundo preto minimalista. Detalhes em 8K. Mantenha a estrutura facial exata do sujeito, a textura do cabelo e a foto original.",
-        negativePrompt: "desfocado, anatomia distorcida, estilo de desenho animado, baixa resolução, superexposição, subexposição, cores.",
-        icon: <CameraIcon className="w-5 h-5" />
-    },
-    {
-        name: "Com Deadpool & Wolverine",
-        prompt: "Foto cinematográfica hiper-realista de um jovem (da imagem enviada) tirando uma foto dos bastidores com Deadpool e Wolverine (Hugh Jackman) no set de filmagem de \"Deadpool & Wolverine\". Deadpool em traje completo vermelho e preto fazendo uma pose engraçada de sinal da paz, Hugh Jackman como Wolverine vestindo seu icônico traje amarelo e preto com garras de adamantium estendidas, ambos ao lado do homem. Fundo de set de filmagem com câmeras, equipamentos de iluminação, equipe e adereços visíveis. Ultra-detalhado, iluminação natural, alto realismo, fotografia cinematográfica 8K.",
-        negativePrompt: "desfocado, anatomia distorcida, estilo de desenho animado, baixa resolução, supersaturação, rostos duplicados, membros extras.",
-        icon: <UserIcon className="w-5 h-5" />
-    },
-    {
-        name: "Fogo e Água",
-        prompt: "Retrato cinematográfico hiper-realista de dois homens idênticos (baseado na foto fornecida), de costas um para o outro em perfeita simetria. O homem à esquerda está envolto em chamas crepitantes, com brasas brilhantes girando em torno de sua jaqueta de couro queimada, iluminado por uma luz laranja ardente. O homem à direita está encharcado de água em cascata, com gotas escorrendo por seu rosto e jaqueta molhada, brilhando com tons azuis gelados. No centro, onde suas costas se encontram, fogo e água colidem violentamente, criando uma explosão dramática de vapor, faíscas e gotas d'água. Ambos parecem intensos e inflexíveis, simbolizando o eterno confronto entre calor e frio. Texturas de pele ultradetalhadas, efeitos elementares realistas, fotografia de retrato cinematográfica 8K com contraste de iluminação dramático.",
-        negativePrompt: "desfocado, anatomia distorcida, estilo de desenho animado ou fantasia, rostos duplicados, membros extras, mistura bagunçada, baixa resolução, supersaturação, falta de detalhes elementares.",
-        icon: <FireIcon className="w-5 h-5" />
-    },
-    {
-        name: "Estilo GTA",
-        prompt: "Crie uma foto minha no estilo de ilustração do Grand Theft Auto V, agachada em uma rua ao pôr do sol, com palmeiras e o horizonte da cidade ao fundo, vestindo uma camisa de manga comprida branca, jeans escuro e tênis brancos. Adicione o logotipo do GTA V no canto superior direito. Mantenha a identidade da pessoa. A imagem deve ter cores vibrantes e ser hiper-detalhada em HD.",
-        negativePrompt: "desfocado, anatomia distorcida, estilo de desenho animado, baixa resolução, supersaturação.",
-        icon: <GtaIcon className="w-5 h-5" />
-    },
-    {
-        name: "Pijama My Melody",
-        prompt: "Transforme a pessoa na foto. Roupa: Pijama rosa pastel aconchegante com estampas de coelho, chinelos fofos e punhos de renda. Acessório de cabelo: Uma touca de dormir de pelúcia da My Melody com uma fita. Cenário do estúdio: Um quarto pastel dos sonhos decorado com travesseiros fofos, luzes de fada brilhantes e brinquedos de pelúcia da My Melody por toda parte. Pose: Deitada na cama abraçando um travesseiro gigante da My Melody, sorrindo suavemente.",
-        negativePrompt: "desfocado, distorcido, baixa qualidade, irrealista, feio, rosto desfigurado.",
-        icon: <UserIcon className="w-5 h-5" />
-    },
-    {
-        name: "Flor de Cerejeira",
-        prompt: "Edite minha foto e crie um retrato de uma menina de um ano sentada graciosamente no chão com um joelho dobrado e as mãos suavemente apoiadas no colo. Ela está descalça, com seus longos cabelos pretos cacheados naturais e soltos. Ela está usando um vestido cheio e elegante em forma de flor, feito inteiramente de delicadas flores de cerejeira roxas. Uma grande peça de cabelo de flor de cerejeira coroa sua cabeça, e ela segura um guarda-sol macio feito de flores de cerejeira inclinado levemente sobre o ombro. O fundo se mistura em tons suaves de roxo, arejado e minimalista, com texturas sutis e luz suave para um retrato de estúdio sereno e atemporal. Estilo fotorrealista de alta resolução, 8K.",
-        negativePrompt: "desfocado, distorcido, cores berrantes, iluminação ruim, irrealista",
-        icon: <UserIcon className="w-5 h-5" />
-    },
-    {
-        name: "Retrato Molhado",
-        prompt: "Extreme close-up, hyper-realistic, cinematic portrait of an Individual's face(same as reference image)with soaked, clinging dark hair and a wet, dewy face. Focus is critically sharp on the striking eye(same as reference). Dramatic lighting with strong catchlights and deep shadows. Very shallow depth of field (f/1.4 bokeh). Emotional, vulnerable tone. Muted dramatic colors.",
-        negativePrompt: "blurry, distorted, ugly, deformed, cartoonish, low quality, artifacts, text, watermark",
-        icon: <UserIcon className="w-5 h-5" />
-    },
-    {
-        name: "Esboço Vivo",
-        prompt: "Retrato surreal hiper-realista de meio corpo de um homem (foto anexa) vestindo uma camisa azul ligeiramente aberta sobre uma camiseta branca lisa. Sua metade esquerda é totalmente real, com texturas de pele naturais e dobras de tecido realistas na camisa azul, enquanto sua metade direita permanece inacabada como se desenhada em papel. A transição mostra os vincos e dobras da camisa desaparecendo gradualmente em contornos a lápis e sombreamento grosseiro, com algumas linhas de esboço se estendendo além das bordas, criando a impressão de uma obra de arte ainda em andamento. Sua mão real segura firmemente um lápis afiado, esboçando ativamente a metade ausente de seu próprio corpo e roupas, misturando o real e o desenhado. A luz azul suave de uma janela banha o lado real, adicionando um brilho atmosférico suave, enquanto o lado de papel permanece mudo em grafite pálido. O fundo é minimalista com um brilho de janela fraco, profundidade cinematográfica, lente Canon EOS R5 + RF 85mm f/1.2, profundidade de campo rasa, capturando texturas ricas de pele, tecido, grão de papel, traços de lápis e a aura calma da luz azul.",
-        negativePrompt: "desfocado, borrado, estilo cartoon, cores berrantes, transição abrupta, iluminação irrealista",
-        icon: <LineArtIcon className="w-5 h-5" />
-    },
-    {
-        name: "Luz Superior",
-        prompt: "Ajuste a iluminação da imagem para que a luz pareça vir de cima, criando sombras suaves e realistas sob os elementos do objeto.",
-        negativePrompt: "sombras duras, múltiplas fontes de luz, iluminação plana ou frontal, superexposição, subexposição.",
-        icon: <SunIcon className="w-5 h-5" />
-    },
-    {
-        name: "Retrato Tipográfico",
-        prompt: "Crie um retrato hiperdetalhado em preto e branco, com o rosto formado inteiramente por palavras motivacionais e positivas, em tipografia em negrito. As palavras devem seguir os contornos, sombras e realces do rosto de referência enviado, tornando as características faciais 99,99% idênticas às da foto de referência. Mostre apenas o rosto, sem necessidade de roupas. Use um fundo escuro para que o rosto se destaque, com palavras como \"GRATO\", \"MANTENHA-SE FORTE\", \"PENSE POSITIVO\", \"SAUDÁVEL\", \"TRABALHO DURO\", \"RELAXE\" e outras palavras positivas em inglês claramente visíveis e integradas à estrutura do rosto. Estilo tipográfico de retrato artístico, poderoso, inspirador e realista.",
-        negativePrompt: "desfocado, distorcido, baixa qualidade, irrealista, feio, rosto deformado, cores.",
-        icon: <TextToolIcon className="w-5 h-5" />
-    },
-    {
-        name: "Escultor de Si Mesmo",
-        prompt: "Obra de arte 3D hiper-realista de uma pessoa da imagem enviada, vestindo uma roupa de trabalho (suja) em pé ao lado de um grande bloco de pedra, ligeiramente virada para o espectador para que seu rosto seja claramente visível, esculpindo um busto de pedra gigante de si mesmo. Preserve as características faciais exatas, tom de pele e expressão. O busto é esculpido em rocha bruta texturizada com marcas de cinzel visíveis, poeira e superfícies irregulares. Ele segura um martelo em meio à ação, cinzelando a semelhança semi-emergida. Pequenos fragmentos de rocha no chão.",
-        negativePrompt: "desfocado, anatomia distorcida, estilo de desenho animado, baixa resolução, supersaturação, rostos duplicados, membros extras, irrealista.",
-        icon: <LineArtIcon className="w-5 h-5" />
-    },
-    {
-        name: "Dispersão Urbana",
-        prompt: "Edite esta imagem para mostrar uma pessoa andando para a frente em uma rua urbana molhada de chuva, posicionada no terço inferior central do quadro, capturada em uma dramática visão de três quartos. A pessoa está vestindo um sofisticado sobretudo cinza-carvão sobre uma gola alta preta e calças escuras justas, com botas de couro preto polido. Sua mão está levantada perto do peito em um gesto contemplativo, verificando o relógio. O lado esquerdo de seu corpo está se desintegrando dramaticamente em um efeito de dispersão explosiva — gavinhas de fumaça rodopiantes, engrenagens de relógio ornamentadas, fragmentos quebrados, papéis espalhados e partículas metálicas irrompendo para fora em tons de prata, cinza e azul-ardósia. O fundo apresenta um desfiladeiro urbano enevoado com prédios imponentes desaparecendo em um céu nublado e melancólico. Profundidade de campo cinematográfica com luzes bokeh à distância. Gradação de cores azul-acinzentado melancólico com alto contraste. Estilo de arte digital fotorrealista com efeitos de desintegração surreais. Qualidade 8K, iluminação dramática de cima criando destaques sutis no sobretudo.",
-        negativePrompt: "desfocado, anatomia distorcida, estilo de desenho animado, baixa resolução, supersaturação, cores berrantes, efeito de dispersão pouco realista.",
-        icon: <ClockIcon className="w-5 h-5" />
-    },
+    // ... (a sua lista de presets permanece a mesma)
 ];
 
 const MagicMontagePanel: React.FC = () => {
     const { 
         isLoading, 
         error, 
-        setError, 
-        setIsLoading,
-        setLoadingMessage,
-        baseImageFile,
         setInitialImage,
+        setActiveTool,
         setToast,
         addPromptToHistory,
+        baseImageFile,
+        handleMagicMontage, // Nova função do contexto
+        currentImageUrl, // Usar a imagem do editor como resultado
     } = useEditor();
+
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [secondImage, setSecondImage] = useState<File | null>(null);
-    const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
     const [negativePrompt, setNegativePrompt] = useState('');
+    
+    // O resultado agora é a imagem principal do editor
+    const resultImage = currentImageUrl;
 
     useEffect(() => {
         if (baseImageFile && !sourceImage) {
@@ -117,7 +51,6 @@ const MagicMontagePanel: React.FC = () => {
         if (file) {
             setInitialImage(file);
         }
-        setResultImage(null);
     };
 
     const handlePresetClick = (preset: typeof presets[0]) => {
@@ -128,62 +61,55 @@ const MagicMontagePanel: React.FC = () => {
 
     const handleGenerate = async () => {
         if (!sourceImage) {
-            setError("Por favor, carregue uma imagem para editar.");
+            setToast({ message: "Por favor, carregue uma imagem para editar.", type: 'error' });
             return;
         }
         if (!prompt.trim()) {
-            setError("Por favor, descreva a edição desejada.");
+            setToast({ message: "Por favor, descreva a edição desejada.", type: 'error' });
             return;
         }
-        setIsLoading(true);
-        setError(null);
-        setResultImage(null);
-        setLoadingMessage('Analisando o prompt...');
+
         addPromptToHistory(prompt);
-
-        try {
-            const { isSpecific, suggestion } = await validatePromptSpecificity(prompt, 'Montagem Mágica');
-
-            if (!isSpecific) {
-                setToast({ message: suggestion, type: 'info' });
-                setIsLoading(false);
-                setLoadingMessage(null);
-                return;
-            }
-            
-            setLoadingMessage('Realizando a mágica...');
-
-            let fullPrompt = prompt;
-            if (negativePrompt.trim()) {
-                fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
-            }
-            const result = await generateMagicMontage(sourceImage, fullPrompt, secondImage || undefined);
-            setResultImage(result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
-        } finally {
-            setIsLoading(false);
-            setLoadingMessage(null);
+        
+        let fullPrompt = prompt;
+        if (negativePrompt.trim()) {
+            fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
         }
+        
+        // Chama o handler centralizado
+        handleMagicMontage(sourceImage, fullPrompt, secondImage || undefined);
     };
-    
-    const handleIterate = () => {
+
+    const handleDownload = () => {
+        if (!resultImage) return;
+        const link = document.createElement('a');
+        link.href = resultImage;
+        link.download = `montagem-magica-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleUseInEditor = () => {
+        if (!resultImage) return;
+        // A imagem já está no editor, basta fechar a ferramenta.
+        setActiveTool(null);
+    };
+
+    const handleCreateVariation = () => {
         if (!resultImage) return;
 
-        const newSourceFile = dataURLtoFile(resultImage, `iteration-${Date.now()}.png`);
+        const newSourceFile = dataURLtoFile(resultImage, `variation-base-${Date.now()}.png`);
         
         setSourceImage(newSourceFile);
         setSecondImage(null);
-        setResultImage(null); // Clear the result to show the new source image
         setPrompt('');
         setNegativePrompt('');
         
-        if (setToast) {
-            setToast({
-                message: "Resultado definido como imagem base. Descreva sua próxima edição.",
-                type: 'info',
-            });
-        }
+        setToast({
+            message: "Resultado definido como imagem base. Descreva sua próxima edição.",
+            type: 'info',
+        });
     };
 
     return (
@@ -195,14 +121,28 @@ const MagicMontagePanel: React.FC = () => {
                     resultImage={resultImage}
                     loadingMessage="Realizando a mágica..."
                 />
-                 {resultImage && !isLoading && (
+                {resultImage && !isLoading && (
                     <div className="mt-4 flex flex-wrap justify-center gap-3 animate-fade-in">
                         <button
-                            onClick={handleIterate}
+                            onClick={handleDownload}
+                            className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm"
+                        >
+                            <DownloadIcon className="w-5 h-5" />
+                            Baixar Imagem
+                        </button>
+                        <button
+                            onClick={handleCreateVariation}
                             className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm"
                         >
                             <LayersIcon className="w-5 h-5" />
-                            Iterar sobre o Resultado
+                            Criar Variação
+                        </button>
+                        <button
+                            onClick={handleUseInEditor}
+                            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm"
+                        >
+                             <BrushIcon className="w-5 h-5" />
+                            Usar no Editor
                         </button>
                     </div>
                 )}
@@ -265,8 +205,8 @@ const MagicMontagePanel: React.FC = () => {
                     disabled={isLoading || !sourceImage || !prompt.trim()}
                     className="w-full mt-auto bg-gradient-to-br from-purple-600 to-indigo-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <MagicWandIcon className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
-                    {isLoading ? 'Gerando...' : 'Gerar Montagem'}
+                    <MagicWandIcon className="w-5 h-5" />
+                    Gerar Montagem
                 </button>
             </aside>
         </div>

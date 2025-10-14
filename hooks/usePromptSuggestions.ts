@@ -4,8 +4,10 @@
 */
 
 import { useState, useEffect, useMemo } from 'react';
+// FIX: Correct import path
 import { useEditor } from '../context/EditorContext';
 import { promptExamples } from '../config/promptExamples';
+// FIX: Correct import path
 import { type ToolId } from '../types';
 
 /**

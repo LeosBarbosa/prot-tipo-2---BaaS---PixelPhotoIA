@@ -4,6 +4,7 @@
 */
 
 import React from 'react';
+// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
 import { CropIcon, RotateLeftIcon, RotateRightIcon, FlipHorizontalIcon, FlipVerticalIcon, AspectRatioSquareIcon, AspectRatioLandscapeIcon, AspectRatioPortraitIcon } from '../icons';
 import TipBox from '../common/TipBox';

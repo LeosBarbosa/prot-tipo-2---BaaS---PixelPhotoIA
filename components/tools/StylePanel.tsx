@@ -4,13 +4,15 @@
 */
 
 import React, { useState } from 'react';
+// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
 import TipBox from '../common/TipBox';
 import StylePreview from '../common/StylePreview';
 import { PaletteIcon } from '../icons';
+import { Trend } from '../../types';
 
-const styles = [
+const styles: Trend[] = [
     // FIX: Added icon to each style to satisfy the Trend type
     { name: 'Desenho Animado', prompt: 'Transforme a imagem em um estilo de desenho animado vibrante. Aplique contornos pretos grossos e definidos para delinear as formas. Use uma paleta de cores primárias saturadas e vibrantes. Exagere levemente as características principais para um efeito expressivo e divertido, semelhante a um desenho animado moderno.', bg: 'bg-gradient-to-br from-yellow-400 to-orange-500', icon: <PaletteIcon className="w-6 h-6" /> },
     { name: 'Anime', prompt: 'Estilo de anime dos anos 90, cores vibrantes, linhas nítidas, iluminação de cena dramática.', bg: 'bg-gradient-to-br from-pink-400 to-purple-500', icon: <PaletteIcon className="w-6 h-6" /> },
@@ -36,10 +38,9 @@ const StylePanel: React.FC = () => {
     const { isLoading, handleApplyStyle, isGif, generateAIPreview, isPreviewLoading, previewState } = useEditor();
     const [applyToAll, setApplyToAll] = useState(true);
 
-    const handleStyleClick = (style: typeof styles[0]) => {
-        // The Trend type requires an icon property
-        const trend = { ...style, icon: <PaletteIcon className="w-6 h-6" /> };
-        generateAIPreview(trend, applyToAll);
+    const handleStyleClick = (style: Trend) => {
+        // FIX: The style object already conforms to the Trend type, so it can be passed directly.
+        generateAIPreview(style, applyToAll);
     };
 
     return (

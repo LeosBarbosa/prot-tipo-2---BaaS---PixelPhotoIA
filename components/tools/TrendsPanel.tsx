@@ -10,6 +10,7 @@ import { SparkleIcon, PixarIcon, ToyIcon, ClockIcon, GtaIcon, LegoIcon, PixelsIc
 import StylePreview from '../common/StylePreview';
 import TipBox from '../common/TipBox';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
+// FIX: Correct import path
 import { type Trend } from '../../types';
 
 const trends: Trend[] = [

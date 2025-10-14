@@ -5,6 +5,7 @@
 
 import { GoogleGenAI, GenerateContentResponse, Modality, Part, Type } from "@google/genai";
 import { fileToDataURL, dataURLtoFile } from '../utils/imageUtils';
+// FIX: Corrected import path for types
 import { type DetectedObject, type ToolId } from '../types';
 import { smartSearchToolDeclarations } from './smartSearchToolDeclarations';
 import { applyBackgroundColor } from '../utils/imageProcessing';

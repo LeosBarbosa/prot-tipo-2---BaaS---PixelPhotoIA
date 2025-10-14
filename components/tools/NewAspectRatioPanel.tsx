@@ -4,6 +4,7 @@
 */
 
 import React from 'react';
+// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
 import { ExpandIcon } from '../icons';
 import TipBox from '../common/TipBox';

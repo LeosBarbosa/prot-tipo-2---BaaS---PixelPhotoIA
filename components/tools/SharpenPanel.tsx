@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
+// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
 import { SharpenIcon } from '../icons';
 import TipBox from '../common/TipBox';

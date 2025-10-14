@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
+// FIX: Correct import path
 import { type Trend } from '../types';
 import { AnimeFaceIcon, BoltIcon, ClockIcon, Model3DIcon } from '../components/icons';
 

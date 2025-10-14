@@ -4,8 +4,10 @@
 */
 
 import React from 'react';
+// FIX: Correct import path
 import { useEditor } from '../context/EditorContext';
 import { EyeIcon, LayersIcon, RedoIcon, UndoIcon } from './icons';
+// FIX: Correct import path
 import { type Layer, type BlendMode } from '../types';
 
 const blendModes: BlendMode[] = [

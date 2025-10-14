@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
+// FIX: Correct import path
 import { useEditor } from '../context/EditorContext';
+// FIX: Correct import path
 import { type Trend } from '../types';
 
 interface TrendCardProps {

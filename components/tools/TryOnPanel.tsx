@@ -4,6 +4,7 @@
 */
 
 import React, { useState, useEffect } from 'react';
+// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';

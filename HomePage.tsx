@@ -6,22 +6,25 @@
 */
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { useEditor } from '../context/EditorContext';
-import { tools, toolToTabMap } from '../config/tools';
-import { type ToolConfig, type ToolCategory, type PredefinedSearch, type ToolId, type TabId } from '../types';
-import SearchModule from './SearchModule';
-import RecentTools from './RecentTools';
-import SavedWorkflows from './SavedWorkflows';
-import SmartSearchResultCard from './SmartSearchResultCard';
-import Spinner from './Spinner';
-import { GenerationIcon, WorkflowIcon, EditingIcon } from './icons';
-import { predefinedSearches } from '../config/predefinedSearches';
-import PredefinedSearchCard from './PredefinedSearchCard';
-import PromptSuggestions from './PromptSuggestions';
-import StartScreen from './StartScreen';
-import { quickStyles } from '../config/trends';
-import TrendCard from './TrendCard';
-import RestoredSessionCard from './RestoredSessionCard';
+// FIX: Correct import path
+import { useEditor } from './context/EditorContext';
+// FIX: Correct import path
+import { tools, toolToTabMap } from './config/tools';
+// FIX: Correct import path
+import { type ToolConfig, type ToolCategory, type PredefinedSearch, type ToolId, type TabId } from './types';
+import SearchModule from './components/SearchModule';
+import RecentTools from './components/RecentTools';
+import SavedWorkflows from './components/SavedWorkflows';
+import SmartSearchResultCard from './components/SmartSearchResultCard';
+import Spinner from './components/Spinner';
+import { GenerationIcon, WorkflowIcon, EditingIcon } from './components/icons';
+import { predefinedSearches } from './config/predefinedSearches';
+import PredefinedSearchCard from './components/PredefinedSearchCard';
+import PromptSuggestions from './components/PromptSuggestions';
+import StartScreen from './components/StartScreen';
+import { quickStyles } from './config/trends';
+import TrendCard from './components/TrendCard';
+import RestoredSessionCard from './components/RestoredSessionCard';
 
 const categoryConfig: Record<ToolCategory, { title: string; description: string; icon: React.ReactElement<{ className?: string }> }> = {
     generation: { 
@@ -43,27 +46,26 @@ const categoryConfig: Record<ToolCategory, { title: string; description: string;
 
 const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
     // FIX: Add setIsEditingSessionActive to destructuring
-    const { setActiveTool, baseImageFile, setToast, setActiveTab, setIsEditingSessionActive } = useEditor()!;
+    const { setActiveTool, baseImageFile, setToast, setActiveTab, setIsEditingSessionActive } = useEditor();
     
     const handleClick = () => {
-        if (tool.category === 'editing') {
+        if (tool.category === 'editing' || tool.category === 'workflow') {
             if (baseImageFile) {
                 // Image exists, switch to editing view and the correct tab
                 setIsEditingSessionActive(true);
                 const tabId = toolToTabMap[tool.id as ToolId];
-                // FIX: Check if tabId is valid before setting
                 if (tabId) {
                     setActiveTab(tabId);
                 } else {
-                    // Fallback or handle error if tool has no corresponding tab
-                    setActiveTool(tool.id); // Or open as a modal if that's the desired behavior
+                    // It's a workflow or a tool without a dedicated tab, so it opens as a modal tool
+                    setActiveTool(tool.id);
                 }
             } else {
                 // No image, prompt user to upload one. The uploader is already visible.
                 setToast({ message: `Primeiro, carregue uma imagem para usar a ferramenta '${tool.name}'.`, type: 'info' });
             }
         } else {
-            // It's a generation or workflow tool, open it in a modal
+            // It's a generation tool, open it in a modal
             setActiveTool(tool.id);
         }
     };
@@ -87,7 +89,7 @@ const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
 const PAGE_SIZE = 9; // Carregar 9 ferramentas de cada vez
 
 const HomePage: React.FC = () => {
-    const { handleSmartSearch, isSmartSearching, smartSearchResult, setSmartSearchResult, setActiveTool, handleFileSelect, hasRestoredSession } = useEditor()!;
+    const { handleSmartSearch, isSmartSearching, smartSearchResult, setSmartSearchResult, setActiveTool, handleFileSelect, hasRestoredSession } = useEditor();
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<ToolCategory>('generation');
     const [predefinedResult, setPredefinedResult] = useState<PredefinedSearch | null>(null);
@@ -217,7 +219,7 @@ const HomePage: React.FC = () => {
                 ) : (
                     <>
                         <StartScreen onFileSelect={handleFileSelect} />
-                        <div className="text-center my-12 relative">
+                         <div className="text-center my-12 relative">
                             <hr className="border-t border-gray-700" />
                             <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-4 text-gray-500 font-bold uppercase">OU</span>
                         </div>

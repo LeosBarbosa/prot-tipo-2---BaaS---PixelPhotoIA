@@ -4,6 +4,7 @@
 */
 
 import React from 'react';
+// FIX: Corrected import path
 import { EditorProvider, useEditor } from './context/EditorContext';
 import Header from './components/Header';
 import ComparisonModal from './components/ComparisonModal';

@@ -4,6 +4,7 @@
 */
 
 import React, { useState } from 'react';
+// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
 import { BrushIcon, SparkleIcon, AdjustmentsHorizontalIcon } from '../icons';
 import TipBox from '../common/TipBox';

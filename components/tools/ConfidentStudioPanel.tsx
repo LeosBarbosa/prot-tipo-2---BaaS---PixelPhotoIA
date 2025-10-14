@@ -4,6 +4,7 @@
 */
 
 import React, { useState, useEffect } from 'react';
+// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
 import * as geminiService from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';

@@ -4,7 +4,6 @@
 */
 
 import React, { useState, useEffect } from 'react';
-// FIX: import from ../../context/EditorContext
 import { useEditor } from '../../context/EditorContext';
 import { generateProductPhoto } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
@@ -100,34 +99,34 @@ const ProductPhotographyPanel: React.FC = () => {
             <aside className="w-full md:w-96 flex-shrink-0 bg-gray-900/30 rounded-lg p-4 flex flex-col gap-4 border border-gray-700/50">
                 <div className="text-center">
                     <h3 className="text-lg font-semibold text-gray-200">Fotografia de Produto AI</h3>
-                    <p className="text-sm text-gray-400 mt-1">Crie fotos de produtos com qualidade de estúdio.</p>
+                    <p className="text-sm text-gray-400 mt-1">Gere fotos de produtos com qualidade de estúdio.</p>
                 </div>
                 <ImageDropzone 
                     imageFile={sourceImage}
                     onFileSelect={handleFileSelect}
-                    label="Imagem do Produto"
+                    label="Imagem do Produto (PNG)"
                 />
                 
                 <CollapsiblePromptPanel
-                  title="Descrição do Cenário"
-                  prompt={prompt}
-                  setPrompt={setPrompt}
-                  negativePrompt={negativePrompt}
-                  onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
-                  isLoading={isLoading}
-                  toolId="productPhotography"
-                  promptPlaceholder="Ex: em uma mesa de mármore com uma planta desfocada ao fundo..."
-                  promptHelperText="Seja descritivo sobre o ambiente, superfície, iluminação e fundo."
-                  negativePromptHelperText="Ex: reflexos indesejados, outras marcas."
+                    title="Descrição do Cenário"
+                    prompt={prompt}
+                    setPrompt={setPrompt}
+                    negativePrompt={negativePrompt}
+                    onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
+                    isLoading={isLoading}
+                    toolId="productPhotography"
+                    promptPlaceholder="Ex: em uma mesa de mármore com uma orquídea ao lado..."
+                    promptHelperText='Seja descritivo sobre o fundo, iluminação e atmosfera.'
+                    negativePromptHelperText="Ex: pessoas, reflexos indesejados."
                 />
-                
+
                 <button
                     onClick={handleGenerate}
                     disabled={isLoading || !sourceImage || !prompt.trim()}
                     className="w-full mt-auto bg-gradient-to-br from-yellow-600 to-orange-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                     <SparkleIcon className="w-5 h-5" />
-                    Gerar Foto
+                    Gerar Foto do Produto
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex items-center justify-center p-4">

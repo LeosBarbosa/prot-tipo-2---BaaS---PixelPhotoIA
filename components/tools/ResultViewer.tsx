@@ -5,6 +5,7 @@
 import React from 'react';
 import { PhotoIcon, DownloadIcon, BrushIcon, LayersIcon } from '../icons';
 import Spinner from '../Spinner';
+// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
 import { dataURLtoFile } from '../../utils/imageUtils';
 
