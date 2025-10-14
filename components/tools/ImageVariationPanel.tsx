@@ -4,12 +4,14 @@
 */
 
 import React, { useState, useEffect } from 'react';
+// FIX: import from ../../context/EditorContext
 import { useEditor } from '../../context/EditorContext';
 import { generateImageVariation } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import { LayersIcon, SparkleIcon } from '../icons';
 import Spinner from '../Spinner';
 import { dataURLtoFile } from '../../utils/imageUtils';
+// FIX: import from ../../types
 import { type Layer } from '../../types';
 
 
@@ -89,7 +91,7 @@ const ImageVariationPanel: React.FC = () => {
         
         commitChange(newLayers, activeLayerId, 'imageVariation');
         setToast({ message: 'Variação aplicada!', type: 'success' });
-        setActiveTool('adjust');
+        setActiveTool(null);
     };
 
     return (

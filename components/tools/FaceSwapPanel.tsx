@@ -4,10 +4,12 @@
 */
 
 import React, { useState, useEffect } from 'react';
+// FIX: import from ../../context/EditorContext
 import { useEditor } from '../../context/EditorContext';
 import { SparkleIcon, SwapIcon } from '../icons';
 import ImageDropzone from './common/ImageDropzone';
 import TipBox from '../common/TipBox';
+// FIX: import from ../../types
 import { type DetectedObject } from '../../types';
 
 const FaceSwapPanel: React.FC = () => {
@@ -20,6 +22,8 @@ const FaceSwapPanel: React.FC = () => {
         baseImageFile,
         setToast,
         setHighlightedObject,
+        // FIX: `selectedObject` does not exist, use `highlightedObject` instead
+        highlightedObject,
     } = useEditor();
 
     const [sourceImage, setSourceImage] = useState<File | null>(null);
@@ -30,8 +34,10 @@ const FaceSwapPanel: React.FC = () => {
     useEffect(() => {
         if (!detectedObjects) {
             setSelectedFace(null);
+        } else {
+            setSelectedFace(highlightedObject);
         }
-    }, [detectedObjects]);
+    }, [detectedObjects, highlightedObject]);
 
     const handleFaceClick = (face: DetectedObject) => {
         setSelectedFace(face); // Persiste a seleção localmente

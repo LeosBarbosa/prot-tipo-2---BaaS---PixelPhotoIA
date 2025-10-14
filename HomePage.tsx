@@ -8,7 +8,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useEditor } from '../context/EditorContext';
 import { tools, toolToTabMap } from '../config/tools';
-import { type ToolConfig, type ToolCategory, type PredefinedSearch, type ToolId, TabId } from '../types';
+import { type ToolConfig, type ToolCategory, type PredefinedSearch, type ToolId, type TabId } from '../types';
 import SearchModule from './SearchModule';
 import RecentTools from './RecentTools';
 import SavedWorkflows from './SavedWorkflows';
@@ -42,16 +42,21 @@ const categoryConfig: Record<ToolCategory, { title: string; description: string;
 };
 
 const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
-    const { setActiveTool, baseImageFile, setToast, setActiveTab } = useEditor()!;
+    // FIX: Add setIsEditingSessionActive to destructuring
+    const { setActiveTool, baseImageFile, setToast, setActiveTab, setIsEditingSessionActive } = useEditor()!;
     
     const handleClick = () => {
         if (tool.category === 'editing') {
             if (baseImageFile) {
                 // Image exists, switch to editing view and the correct tab
-                setActiveTool(null);
-                const tabId = toolToTabMap[tool.id];
+                setIsEditingSessionActive(true);
+                const tabId = toolToTabMap[tool.id as ToolId];
+                // FIX: Check if tabId is valid before setting
                 if (tabId) {
                     setActiveTab(tabId);
+                } else {
+                    // Fallback or handle error if tool has no corresponding tab
+                    setActiveTool(tool.id); // Or open as a modal if that's the desired behavior
                 }
             } else {
                 // No image, prompt user to upload one. The uploader is already visible.
@@ -184,7 +189,7 @@ const HomePage: React.FC = () => {
     }, [displayedTools.length, filteredTools]);
 
     // Callback ref do Intersection Observer para o último elemento
-    const lastToolElementRef = useCallback(node => {
+    const lastToolElementRef = useCallback((node: any) => {
         if (isLoadingMore) return;
         if (observer.current) observer.current.disconnect();
         observer.current = new IntersectionObserver(entries => {

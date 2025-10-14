@@ -4,6 +4,7 @@
 */
 
 import React from 'react';
+// FIX: import from ../context/EditorContext
 import { useEditor } from '../context/EditorContext';
 import { HandIcon, ZoomInIcon, ZoomOutIcon } from './icons';
 

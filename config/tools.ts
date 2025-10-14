@@ -32,6 +32,7 @@ import {
     ShieldCheckIcon,
     DoubleExposureIcon,
 } from '../components/icons';
+// FIX: import from ../types
 import { type ToolId, type ToolConfig, type ToolCategory, type TabId } from '../types';
 
 export const tools: ToolConfig[] = [
@@ -408,7 +409,7 @@ export const toolToTabMap: Partial<Record<ToolId, TabId>> = {
     removeBg: 'removeBg',
     style: 'style',
     portraits: 'portraits',
-    // Fix: 'faceRecovery' was not a valid ToolId. It has been added to types.ts.
+    // FIX: 'faceRecovery' was not a valid ToolId. It has been added to types.ts. Now mapping it.
     faceRecovery: 'photoRestoration',
     styleGen: 'styleGen',
     adjust: 'adjust',
@@ -429,7 +430,7 @@ export const toolToTabMap: Partial<Record<ToolId, TabId>> = {
     text: 'text',
     lowPoly: 'lowPoly',
     pixelArt: 'pixelArt',
-    // Fix: 'denoise' was not a valid ToolId. It has been added to types.ts.
+    // FIX: 'denoise' was not a valid ToolId. It has been added to types.ts. Now mapping it.
     denoise: 'photoRestoration',
     faceSwap: 'faceSwap',
     localAdjust: 'localAdjust',

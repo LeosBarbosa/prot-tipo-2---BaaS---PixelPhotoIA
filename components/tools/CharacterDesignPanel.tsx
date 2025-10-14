@@ -4,6 +4,7 @@
 */
 
 import React, { useState } from 'react';
+// FIX: import from ../../context/EditorContext
 import { useEditor } from '../../context/EditorContext';
 import { generateCharacter } from '../../services/geminiService';
 import ResultViewer from './common/ResultViewer';

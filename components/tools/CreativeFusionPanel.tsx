@@ -4,6 +4,7 @@
 */
 
 import React, { useState, useEffect } from 'react';
+// FIX: import from ../../context/EditorContext
 import { useEditor } from '../../context/EditorContext';
 import { fuseImages } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';

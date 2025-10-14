@@ -4,6 +4,7 @@
 */
 
 import React from 'react';
+// FIX: import from ../context/EditorContext
 import { useEditor } from '../context/EditorContext';
 import { CloseIcon } from './icons';
 
@@ -13,7 +14,7 @@ interface ToolModalProps {
 }
 
 const ToolModal: React.FC<ToolModalProps> = ({ title, children }) => {
-    const { setActiveTool } = useEditor()!;
+    const { setActiveTool } = useEditor();
 
     return (
         <div 

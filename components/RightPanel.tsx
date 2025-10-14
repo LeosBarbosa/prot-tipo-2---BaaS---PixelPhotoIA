@@ -8,6 +8,7 @@ import GlobalMagicPrompt from './common/GlobalMagicPrompt';
 import FooterActions from './FooterActions';
 import LayersPanel from './LayersPanel';
 import Spinner from './Spinner';
+// FIX: import from ../types
 import { type ToolId, type ToolConfig } from '../types';
 
 interface PanelProps {

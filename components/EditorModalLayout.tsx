@@ -4,35 +4,29 @@
 */
 
 import React, { useMemo, useEffect, useRef } from 'react';
+// FIX: Correct import path for useEditor
 import { useEditor } from '../context/EditorContext';
 import ImageViewer from './ImageViewer';
 import FloatingControls from './FloatingControls';
-// FIX: Import ToolConfig
-import { type TabId, type ToolId, type ToolConfig } from '../types';
+import { type TabId, type ToolConfig } from '../types';
 import GifTimeline from './common/GifTimeline';
 import LeftPanel from './LeftPanel';
 import RightPanel from './RightPanel';
-// import { editingTabs } from '../config/tabs'; // This is no longer needed
 import MobileBottomNav from './MobileBottomNav';
-// FIX: Import tools array
 import { toolToTabMap, tools } from '../config/tools';
+import { panelComponents } from '../config/toolComponentMap';
 
-interface EditorModalLayoutProps {
-    editingPanelComponents: Partial<Record<TabId, React.LazyExoticComponent<React.FC<{}>>>>;
-}
-
-
-const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelComponents }) => {
+const EditorModalLayout: React.FC = () => {
     const { activeTool, isGif, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, activeTab, setActiveTab, setToast, isPanModeActive } = useEditor();
     
-    // Quando a ferramenta inicial da página inicial muda, atualize a aba ativa
+    // When the tool from the homepage changes, update the active tab
     useEffect(() => {
         if (activeTool) {
-            const initialTab = toolToTabMap[activeTool] ?? 'adjust'; // Padrão para 'adjust' se não mapeado
+            const initialTab = toolToTabMap[activeTool] ?? 'adjust'; // Default to 'adjust' if not mapped
             setActiveTab(initialTab);
         }
         
-        // Mostra uma dica na primeira vez que um usuário móvel abre o editor
+        // Show a hint the first time a mobile user opens the editor
         const firstTimeMobile = localStorage.getItem('hasSeenSwipeHint') !== 'true';
         if (window.innerWidth < 1024 && firstTimeMobile) {
             setToast({ message: 'Use a barra inferior para navegar entre ferramentas e opções.', type: 'info' });
@@ -40,7 +34,6 @@ const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelCompo
         }
     }, [activeTool, setActiveTab, setToast]);
 
-    // FIX: Use `tools` which contains the full ToolConfig including the 'category' property.
     const activeToolConfig = useMemo(() => tools.find(tool => tool.id === activeTab), [activeTab]);
 
     const showBackdrop = isLeftPanelVisible || isRightPanelVisible;
@@ -54,7 +47,6 @@ const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelCompo
         }
         const target = e.target as HTMLElement;
         // Ignore swipes if the touch starts on an interactive element or inside a scrollable panel.
-        // This prevents swipe-to-close from interfering with scrolling or button clicks.
         if (target.closest('button, a, input, [role="button"], .scrollbar-thin, .ReactCrop__crop-selection, .ReactCrop__drag-handle')) {
             touchStartRef.current = null;
             return;
@@ -134,8 +126,7 @@ const EditorModalLayout: React.FC<EditorModalLayoutProps> = ({ editingPanelCompo
 
             {/* Right Panel */}
             <aside className={`fixed lg:relative right-0 z-40 h-full w-full max-w-sm lg:w-96 flex-shrink-0 transition-transform duration-300 ease-in-out ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
-                {/* FIX: Use `activeToolConfig` and `editingPanelComponents` which are now correctly defined/passed. */}
-                <RightPanel activeToolConfig={activeToolConfig} panelComponents={editingPanelComponents} />
+                <RightPanel activeToolConfig={activeToolConfig as ToolConfig | undefined} panelComponents={panelComponents} />
             </aside>
 
             <MobileBottomNav />

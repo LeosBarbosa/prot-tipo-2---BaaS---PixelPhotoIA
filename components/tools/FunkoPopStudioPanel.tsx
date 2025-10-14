@@ -18,10 +18,10 @@ const FunkoPopStudioPanel: React.FC = () => {
     const { 
         isLoading, 
         error, 
-        setError, 
-        setIsLoading, 
         baseImageFile,
-        setInitialImage, 
+        setInitialImage,
+        currentImageUrl,
+        handleFunkoPop,
     } = useEditor();
     
     const [mainImage, setMainImage] = useState<File | null>(null);
@@ -29,7 +29,6 @@ const FunkoPopStudioPanel: React.FC = () => {
     const [bgDescription, setBgDescription] = useState('');
     const [objectDescription, setObjectDescription] = useState('');
     const [lightingDescription, setLightingDescription] = useState('estúdio suave com luz difusa e sombras sutis');
-    const [resultImage, setResultImage] = useState<string | null>(null);
     
     const [isOptionalExpanded, setIsOptionalExpanded] = useState(false);
     const [funkoType, setFunkoType] = useState('Padrão');
@@ -47,56 +46,19 @@ const FunkoPopStudioPanel: React.FC = () => {
         if (file) {
             setInitialImage(file);
         }
-        setResultImage(null);
     };
 
     const handleGenerate = async () => {
-        if (!mainImage) {
-            setError("Por favor, carregue a imagem principal.");
-            return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-        setResultImage(null);
-        
-        try {
-            const mainPrompt = `Instruções principais:\n- Todos os elementos (pessoa, fundo e objetos) devem ser meticulosamente representados no estilo Funko Pop, mantendo a fidelidade das cores originais (paleta RGB), expressões faciais (sorriso, olhos, etc.) e proporções do rosto e pele (textura e tons) da imagem original. Utilizar técnicas de modelagem 3D para garantir um acabamento realista.\n- Não alterar a identidade ou características principais da pessoa retratada (cabelo, marcas faciais, etc.). Detalhes como óculos ou tatuagens devem ser mantidos e estilizados no formato Funko.\n- O resultado deve parecer um colecionável Funko Pop autêntico e realista, como se tivesse acabado de sair da caixa.`;
-
-            let adjustments = "Ajustes opcionais:\n";
-            if (bgDescription.trim()) {
-                adjustments += `1. [FUNDO OPCIONAL] → Substituir ou recriar o cenário no estilo Funko Pop, detalhando elementos característicos, baseado em '${bgDescription}'.\n`;
-            } else {
-                adjustments += `1. [FUNDO OPCIONAL] → Manter o fundo da imagem original, mas recriá-lo no estilo Funko Pop.\n`;
-            }
-            if (personImage) {
-                adjustments += `2. [PESSOA OPCIONAL] → Adicionar no cenário a pessoa da imagem de referência secundária, também no estilo Funko Pop, mantendo coerência estética (escala, iluminação e estilo visual).\n`;
-            }
-            if (objectDescription.trim()) {
-                adjustments += `3. [OBJETO OPCIONAL] → Incluir no ambiente um objeto no estilo Funko Pop, adicionando detalhes relevantes, como '${objectDescription}'.\n`;
-            }
-
-            let styleAndLighting = `Estilo visual: versão Funko Pop estilizada, com acabamento 3D colecionável de alta qualidade, cabeça maior em relação ao corpo (proporção 1:2), olhos característicos (grandes e redondos com brilho), e design detalhado (texturas, relevos e cores vibrantes).\nIluminação: ${lightingDescription.trim()}.`;
-
-            if (funkoType !== 'Padrão') {
-                styleAndLighting += `\nTipo: A imagem deve representar um Funko Pop do tipo '${funkoType}', o que significa que deve incluir elementos adicionais como cenários, veículos ou outros personagens para criar uma cena completa.`;
-            }
-
-            if (specialFinish !== 'Nenhum') {
-                styleAndLighting += `\nAcabamento Especial: O boneco deve ter um acabamento especial do tipo '${specialFinish}'. Por exemplo, se for 'Metálico', use uma pintura com reflexos metálicos; se for 'Aveludado', adicione uma textura de pelúcia; se for 'Brilhante', adicione partículas de glitter.`;
-            }
-
-            const rules = `Regras obrigatórias:\n- A transformação deve sempre manter o estilo Funko Pop em todos os elementos, garantindo a consistência visual e a harmonia da cena.\n- Fundo, pessoa e objeto devem ser integrados como parte de uma única cena Funko, criando uma composição equilibrada e atraente.\n- O rosto e cor da pele da pessoa principal devem se manter reconhecíveis no estilo Funko, permitindo a fácil identificação da pessoa retratada.`;
-
-            const fullPrompt = `Quero transformar a imagem principal enviada em uma versão estilizada Funko Pop.\n\n${mainPrompt}\n\n${adjustments}\n${styleAndLighting}\n\n${rules}`;
-
-            const result = await geminiService.generateMagicMontage(mainImage, fullPrompt, personImage || undefined);
-            setResultImage(result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
-        } finally {
-            setIsLoading(false);
-        }
+        if (!mainImage) return;
+        handleFunkoPop(
+            mainImage, 
+            personImage, 
+            bgDescription, 
+            objectDescription, 
+            lightingDescription, 
+            funkoType, 
+            specialFinish
+        );
     };
 
     const isGenerateButtonDisabled = isLoading || !mainImage;
@@ -162,7 +124,7 @@ const FunkoPopStudioPanel: React.FC = () => {
                 <ResultViewer
                     isLoading={isLoading}
                     error={error}
-                    resultImage={resultImage}
+                    resultImage={currentImageUrl}
                     loadingMessage="Criando seu colecionável..."
                 />
             </main>

@@ -27,15 +27,15 @@ const PolaroidPanel: React.FC = () => {
         isLoading, 
         error, 
         setError, 
-        setIsLoading, 
         baseImageFile,
-        setInitialImage, 
+        setInitialImage,
+        handlePolaroid,
+        currentImageUrl,
     } = useEditor();
     
     const [personImage, setPersonImage] = useState<File | null>(null);
     const [celebrityImage, setCelebrityImage] = useState<File | null>(null);
     const [negativePrompt, setNegativePrompt] = useState('');
-    const [resultImage, setResultImage] = useState<string | null>(null);
 
     useEffect(() => {
         if (baseImageFile && !personImage) {
@@ -48,7 +48,6 @@ const PolaroidPanel: React.FC = () => {
         if (file) {
             setInitialImage(file);
         }
-        setResultImage(null);
     };
 
     const handleArtistSelect = async (artist: Artist) => {
@@ -68,18 +67,7 @@ const PolaroidPanel: React.FC = () => {
             setError("Por favor, carregue a sua foto e a foto do artista.");
             return;
         }
-
-        setIsLoading(true);
-        setError(null);
-        setResultImage(null);
-        try {
-            const result = await geminiService.generatePolaroidWithCelebrity(personImage, celebrityImage, negativePrompt);
-            setResultImage(result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
-        } finally {
-            setIsLoading(false);
-        }
+        handlePolaroid(personImage, celebrityImage, negativePrompt);
     };
 
     const isGenerateButtonDisabled = isLoading || !personImage || !celebrityImage;
@@ -132,7 +120,7 @@ const PolaroidPanel: React.FC = () => {
                 <ResultViewer
                     isLoading={isLoading}
                     error={error}
-                    resultImage={resultImage}
+                    resultImage={currentImageUrl}
                     loadingMessage="Revelando sua foto..."
                 />
             </main>

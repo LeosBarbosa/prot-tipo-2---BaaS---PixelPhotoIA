@@ -4,6 +4,7 @@
 */
 
 import { type PixelCrop } from 'react-image-crop';
+// FIX: import from ../types
 import { type UploadProgressStatus, type GifFrame } from '../types';
 
 /**

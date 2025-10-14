@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
+// FIX: import from ../types
 import { type TabId } from '../types';
 
 import {

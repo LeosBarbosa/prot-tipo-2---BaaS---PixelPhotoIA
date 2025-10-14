@@ -4,6 +4,7 @@
 */
 
 import React from 'react';
+// FIX: import from ../context/EditorContext
 import { useEditor } from '../context/EditorContext';
 import { EyeIcon, SplitScreenIcon, WorkflowIcon } from './icons';
 
@@ -17,7 +18,7 @@ const FooterActions: React.FC = React.memo(() => {
         setIsInlineComparisonActive,
         toolHistory,
         setIsSaveWorkflowModalOpen,
-    } = useEditor()!;
+    } = useEditor();
     
     const isCompareDisabled = !originalImageUrl || originalImageUrl === currentImageUrl;
 

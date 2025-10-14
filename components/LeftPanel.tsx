@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useMemo, useEffect } from 'react';
+// FIX: import from ../types
 import { type TabId, type ToolCategory, type ToolConfig } from '../types';
+// FIX: import from ../context/EditorContext
 import { useEditor } from '../context/EditorContext';
 import { tools } from '../config/tools';
 import { ChevronDownIcon, GenerationIcon, WorkflowIcon, EditingIcon, SearchIcon } from './icons';
@@ -91,7 +93,7 @@ const LeftPanel: React.FC = React.memo(() => {
             return;
         }
         
-        setActiveTab(tool.id);
+        setActiveTab(tool.id as TabId);
 
         if (window.innerWidth < 1024) {
             setIsLeftPanelVisible(false);

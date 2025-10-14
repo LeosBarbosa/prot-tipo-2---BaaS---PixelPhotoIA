@@ -88,13 +88,12 @@ const caricatureSubStyles: CaricatureSubStyle[] = [
 ];
 
 const AIPortraitStudioPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage, setActiveTool } = useEditor();
+    const { isLoading, error, addPromptToHistory, baseImageFile, setInitialImage, setActiveTool, handleAIPortrait, currentImageUrl } = useEditor();
 
     const [personImages, setPersonImages] = useState<(File | null)[]>([null]);
     const [selectedStyle, setSelectedStyle] = useState<StyleId>('caricature');
     const [selectedCaricatureSubStyleId, setSelectedCaricatureSubStyleId] = useState<string>(caricatureSubStyles[0].id);
     const [prompt, setPrompt] = useState('');
-    const [resultImage, setResultImage] = useState<string | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const suggestions = usePromptSuggestions(prompt, 'aiPortraitStudio');
 
@@ -119,15 +118,8 @@ const AIPortraitStudioPanel: React.FC = () => {
 
     const handleGenerate = async () => {
         const validImages = personImages.filter((img): img is File => img !== null);
-        if (validImages.length === 0) {
-            setError("Por favor, carregue pelo menos uma imagem.");
-            return;
-        }
+        if (validImages.length === 0) return;
 
-        setIsLoading(true);
-        setError(null);
-        setResultImage(null);
-        
         let finalPrompt = prompt;
         if (selectedStyle === 'caricature') {
             const subStyle = caricatureSubStyles.find(s => s.id === selectedCaricatureSubStyleId);
@@ -140,30 +132,7 @@ const AIPortraitStudioPanel: React.FC = () => {
             addPromptToHistory(finalPrompt);
         }
 
-        try {
-            let result;
-            switch (selectedStyle) {
-                case 'caricature':
-                    result = await geminiService.generateCaricature(validImages, finalPrompt);
-                    break;
-                case 'pixar':
-                    result = await geminiService.applyDisneyPixarStyle(validImages[0], prompt);
-                    break;
-                case '3d':
-                    result = await geminiService.generate3DMiniature(validImages[0], prompt);
-                    break;
-                case 'yearbook90s':
-                    result = await geminiService.generate90sYearbookPortrait(validImages[0], prompt);
-                    break;
-                default:
-                    throw new Error("Estilo selecionado inválido.");
-            }
-            setResultImage(result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
-        } finally {
-            setIsLoading(false);
-        }
+        handleAIPortrait(selectedStyle, validImages, finalPrompt);
     };
     
     const handleImageChange = (index: number, file: File | null) => {
@@ -173,7 +142,6 @@ const AIPortraitStudioPanel: React.FC = () => {
         if (index === 0 && file) {
             setInitialImage(file);
         }
-        setResultImage(null);
     };
 
     const addImageSlot = () => {
@@ -181,9 +149,9 @@ const AIPortraitStudioPanel: React.FC = () => {
     };
 
     const handleDownload = () => {
-        if (!resultImage) return;
+        if (!currentImageUrl) return;
         const link = document.createElement('a');
-        link.href = resultImage;
+        link.href = currentImageUrl;
         link.download = `ai-portrait-${Date.now()}.png`;
         document.body.appendChild(link);
         link.click();
@@ -191,9 +159,8 @@ const AIPortraitStudioPanel: React.FC = () => {
     };
 
     const handleUseInEditor = () => {
-        if (!resultImage) return;
-        const file = dataURLtoFile(resultImage, `ai-portrait-${Date.now()}.png`);
-        setInitialImage(file);
+        if (!currentImageUrl) return;
+        // The image is already in the editor context, just switch to an editing tool
         setActiveTool('adjust');
     };
 
@@ -240,7 +207,7 @@ const AIPortraitStudioPanel: React.FC = () => {
                                 <button key={subStyle.id} onClick={() => setSelectedCaricatureSubStyleId(subStyle.id)} disabled={isLoading} className={`relative group aspect-square rounded-lg overflow-hidden border-2 transition-all ${selectedCaricatureSubStyleId === subStyle.id ? 'border-blue-500 scale-105' : 'border-transparent hover:border-gray-500'}`} title={subStyle.name}>
                                     <img src={subStyle.thumbnail} alt={subStyle.name} className="w-full h-full object-cover" />
                                     <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-                                    <p className="absolute bottom-1 left-0 right-0 text-white text-[10px] font-bold text-center drop-shadow-md">{subStyle.name}</p>
+                                    <p className="absolute bottom-1 left-0 right-0 text-white text-[10px] font-bold text-center drop-shadow-md p-1 bg-black/20">{subStyle.name}</p>
                                 </button>
                             ))}
                         </div>
@@ -268,8 +235,8 @@ const AIPortraitStudioPanel: React.FC = () => {
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center p-4">
-                <ResultViewer isLoading={isLoading} error={error} resultImage={resultImage} loadingMessage="Criando seu retrato..."/>
-                {resultImage && !isLoading && (
+                <ResultViewer isLoading={isLoading} error={error} resultImage={currentImageUrl} loadingMessage="Criando seu retrato..."/>
+                {currentImageUrl && !isLoading && (
                     <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
                         <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
                             <DownloadIcon className="w-5 h-5" /> Baixar Imagem

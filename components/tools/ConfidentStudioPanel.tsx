@@ -15,15 +15,14 @@ const ConfidentStudioPanel: React.FC = () => {
     const { 
         isLoading, 
         error, 
-        setError, 
-        setIsLoading, 
         baseImageFile,
-        setInitialImage, 
+        setInitialImage,
+        currentImageUrl,
+        handleConfidentStudio,
     } = useEditor();
     
     const [personImage, setPersonImage] = useState<File | null>(null);
     const [negativePrompt, setNegativePrompt] = useState('');
-    const [resultImage, setResultImage] = useState<string | null>(null);
 
     useEffect(() => {
         if (baseImageFile && !personImage) {
@@ -36,28 +35,14 @@ const ConfidentStudioPanel: React.FC = () => {
         if (file) {
             setInitialImage(file);
         }
-        setResultImage(null);
     };
 
     const handleGenerate = async () => {
-        if (!personImage) {
-            setError("Por favor, carregue sua foto.");
-            return;
-        }
+        if (!personImage) return;
 
-        setIsLoading(true);
-        setError(null);
-        setResultImage(null);
-        try {
-            const mainPrompt = `Gere um retrato de estúdio profissional e fotorrealista da pessoa na imagem fornecida, colocando-a na seguinte cena:\n\n**Instrução Crítica:** A identidade facial, cabelo, tom de pele e tipo de corpo da pessoa devem ser preservados com 100% de precisão. O resultado deve ser uma nova fotografia da *mesma pessoa*.\n\n**Detalhes da Cena:**\n- **Pose e Ação:** Sentado em uma poltrona bege moderna com pernas de madeira, ligeiramente inclinado para a frente com as mãos juntas. A pessoa deve ter um olhar intenso e confiante direcionado para a câmera.\n- **Figurino:** Camisa social azul-marinho escura com os botões de cima abertos, calças justas bege claras e mocassins pretos com solas bege.\n- **Cenário:** Fundo cinza claro minimalista com um gradiente suave.\n- **Iluminação:** Iluminação natural suave de estúdio, criando um clima cinematográfico e de editorial de moda.\n- **Câmera:** Simule uma lente de 50 mm em f/2.8, com enquadramento vertical e composição de corpo inteiro.\n\n**Qualidade:** A imagem deve ser de alta resolução (qualidade 8K), hiperdetalhada e com alto realismo.`;
-            
-            const result = await geminiService.generateStudioPortrait(personImage, mainPrompt, negativePrompt);
-            setResultImage(result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
-        } finally {
-            setIsLoading(false);
-        }
+        const mainPrompt = `Gere um retrato de estúdio profissional e fotorrealista da pessoa na imagem fornecida, colocando-a na seguinte cena:\n\n**Instrução Crítica:** A identidade facial, cabelo, tom de pele e tipo de corpo da pessoa devem ser preservados com 100% de precisão. O resultado deve ser uma nova fotografia da *mesma pessoa*.\n\n**Detalhes da Cena:**\n- **Pose e Ação:** Sentado em uma poltrona bege moderna com pernas de madeira, ligeiramente inclinado para a frente com as mãos juntas. A pessoa deve ter um olhar intenso e confiante direcionado para a câmera.\n- **Figurino:** Camisa social azul-marinho escura com os botões de cima abertos, calças justas bege claras e mocassins pretos com solas bege.\n- **Cenário:** Fundo cinza claro minimalista com um gradiente suave.\n- **Iluminação:** Iluminação natural suave de estúdio, criando um clima cinematográfico e de editorial de moda.\n- **Câmera:** Simule uma lente de 50 mm em f/2.8, com enquadramento vertical e composição de corpo inteiro.\n\n**Qualidade:** A imagem deve ser de alta resolução (qualidade 8K), hiperdetalhada e com alto realismo.`;
+        
+        handleConfidentStudio(personImage, mainPrompt, negativePrompt);
     };
 
     const isGenerateButtonDisabled = isLoading || !personImage;
@@ -90,7 +75,7 @@ const ConfidentStudioPanel: React.FC = () => {
                 <ResultViewer
                     isLoading={isLoading}
                     error={error}
-                    resultImage={resultImage}
+                    resultImage={currentImageUrl}
                     loadingMessage="Montando o estúdio..."
                 />
             </main>

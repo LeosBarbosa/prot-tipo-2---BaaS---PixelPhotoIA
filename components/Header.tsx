@@ -4,6 +4,7 @@
 */
 import React from 'react';
 import { SparkleIcon, UploadIcon, SaveIcon, LayersIcon, AdjustmentsHorizontalIcon, SunIcon, MoonIcon, UndoIcon, RedoIcon, HomeIcon } from './icons';
+// FIX: Import `useEditor` from context
 import { useEditor } from '../context/EditorContext';
 
 const Header: React.FC = () => {
@@ -22,9 +23,10 @@ const Header: React.FC = () => {
     redo,
     canUndo,
     canRedo,
-  } = useEditor()!;
+    isEditingSessionActive,
+  } = useEditor();
   
-  const showEditorControls = !!baseImageFile;
+  const showEditorControls = isEditingSessionActive;
 
   const handleLeftPanelToggle = () => {
     const newLeftVisibility = !isLeftPanelVisible;

@@ -26,7 +26,7 @@ const SketchRenderPanel: React.FC = () => {
             setSketchImage(baseImageFile);
         }
     }, [baseImageFile, sketchImage]);
-
+    
     useEffect(() => {
         // Cleanup for object URLs
         return () => {
@@ -61,7 +61,7 @@ const SketchRenderPanel: React.FC = () => {
             const imageHash = await hashFile(sketchImage);
             const promptHash = await sha256(`${prompt}:${negativePrompt}`);
             const cacheKey = `sketchRender:${imageHash}:${promptHash}`;
-
+            
             setLoadingMessage('Verificando cache...');
             const cachedBlob = await db.loadImageFromCache(cacheKey);
             if (cachedBlob) {
@@ -77,15 +77,16 @@ const SketchRenderPanel: React.FC = () => {
             if (negativePrompt.trim()) {
                 fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
             }
-            const result = await renderSketch(sketchImage, fullPrompt);
-            setResultImage(result);
+            const resultDataUrl = await renderSketch(sketchImage, fullPrompt);
+            setResultImage(resultDataUrl);
 
             try {
-                const resultFile = dataURLtoFile(result, `cache-${cacheKey}.png`);
+                const resultFile = dataURLtoFile(resultDataUrl, `cache-${cacheKey}.png`);
                 await db.saveImageToCache(cacheKey, resultFile);
             } catch (cacheError) {
                 console.warn("Falha ao salvar a imagem no cache:", cacheError);
             }
+
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
         } finally {
@@ -99,34 +100,32 @@ const SketchRenderPanel: React.FC = () => {
             <aside className="w-full md:w-96 flex-shrink-0 bg-gray-900/30 rounded-lg p-4 flex flex-col gap-4 border border-gray-700/50">
                 <div className="text-center">
                     <h3 className="text-lg font-semibold text-gray-200">Renderização de Esboço</h3>
-                    <p className="text-sm text-gray-400 mt-1">Transforme seus desenhos em imagens realistas.</p>
+                    <p className="text-sm text-gray-400 mt-1">Transforme desenhos em imagens realistas.</p>
                 </div>
-                <ImageDropzone 
+                <ImageDropzone
                     imageFile={sketchImage}
                     onFileSelect={handleFileSelect}
                     label="Seu Esboço"
                 />
-                
                 <CollapsiblePromptPanel
-                    title="Descrição do Render"
-                    prompt={prompt}
-                    setPrompt={setPrompt}
-                    negativePrompt={negativePrompt}
-                    onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
-                    isLoading={isLoading}
-                    toolId="sketchRender"
-                    promptPlaceholder="Ex: render 3D de um tênis esportivo..."
-                    promptHelperText="Especifique materiais (ex: metal escovado), texturas e ambiente para um resultado fotorrealista."
-                    negativePromptHelperText="Ex: distorcido, cores erradas, desfocado."
+                  title="Descrição da Renderização"
+                  prompt={prompt}
+                  setPrompt={setPrompt}
+                  negativePrompt={negativePrompt}
+                  onNegativePromptChange={(e) => setNegativePrompt(e.target.value)}
+                  isLoading={isLoading}
+                  toolId="sketchRender"
+                  promptPlaceholder="Ex: renderização fotorrealista de um tênis esportivo..."
+                  promptHelperText="Descreva materiais, texturas e iluminação."
+                  negativePromptHelperText="Ex: fundo complexo, estilo de desenho animado."
                 />
-                
                 <button
                     onClick={handleGenerate}
                     disabled={isLoading || !sketchImage || !prompt.trim()}
-                    className="w-full mt-auto bg-gradient-to-br from-blue-600 to-sky-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full mt-auto bg-gradient-to-br from-blue-600 to-indigo-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                     <BrushIcon className="w-5 h-5" />
-                    Renderizar
+                    Renderizar Esboço
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex items-center justify-center p-4">

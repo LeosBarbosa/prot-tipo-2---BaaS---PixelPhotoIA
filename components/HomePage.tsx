@@ -1,14 +1,14 @@
-
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
 
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+// FIX: Correct import path
 import { useEditor } from '../context/EditorContext';
 import { tools, toolToTabMap } from '../config/tools';
-import { type ToolConfig, type ToolCategory, type PredefinedSearch, type ToolId, TabId } from '../types';
+// FIX: Correct import path
+import { type ToolConfig, type ToolCategory, type PredefinedSearch, type ToolId, type TabId } from '../types';
 import SearchModule from './SearchModule';
 import RecentTools from './RecentTools';
 import SavedWorkflows from './SavedWorkflows';
@@ -21,6 +21,7 @@ import PromptSuggestions from './PromptSuggestions';
 import StartScreen from './StartScreen';
 import { quickStyles } from '../config/trends';
 import TrendCard from './TrendCard';
+import RestoredSessionCard from './RestoredSessionCard';
 
 const categoryConfig: Record<ToolCategory, { title: string; description: string; icon: React.ReactElement<{ className?: string }> }> = {
     generation: { 
@@ -41,23 +42,27 @@ const categoryConfig: Record<ToolCategory, { title: string; description: string;
 };
 
 const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
-    const { setActiveTool, baseImageFile, setToast, setActiveTab } = useEditor()!;
+    // FIX: Add setIsEditingSessionActive to destructuring
+    const { setActiveTool, baseImageFile, setToast, setActiveTab, setIsEditingSessionActive } = useEditor();
     
     const handleClick = () => {
-        if (tool.category === 'editing') {
+        if (tool.category === 'editing' || tool.category === 'workflow') {
             if (baseImageFile) {
                 // Image exists, switch to editing view and the correct tab
-                setActiveTool(null);
-                const tabId = toolToTabMap[tool.id];
+                setIsEditingSessionActive(true);
+                const tabId = toolToTabMap[tool.id as ToolId];
                 if (tabId) {
                     setActiveTab(tabId);
+                } else {
+                    // It's a workflow or a tool without a dedicated tab, so it opens as a modal tool
+                    setActiveTool(tool.id);
                 }
             } else {
                 // No image, prompt user to upload one. The uploader is already visible.
                 setToast({ message: `Primeiro, carregue uma imagem para usar a ferramenta '${tool.name}'.`, type: 'info' });
             }
         } else {
-            // It's a generation or workflow tool, open it in a modal
+            // It's a generation tool, open it in a modal
             setActiveTool(tool.id);
         }
     };
@@ -81,7 +86,7 @@ const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
 const PAGE_SIZE = 9; // Carregar 9 ferramentas de cada vez
 
 const HomePage: React.FC = () => {
-    const { handleSmartSearch, isSmartSearching, smartSearchResult, setSmartSearchResult, setActiveTool, handleFileSelect } = useEditor()!;
+    const { handleSmartSearch, isSmartSearching, smartSearchResult, setSmartSearchResult, setActiveTool, handleFileSelect, hasRestoredSession } = useEditor();
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<ToolCategory>('generation');
     const [predefinedResult, setPredefinedResult] = useState<PredefinedSearch | null>(null);
@@ -183,7 +188,7 @@ const HomePage: React.FC = () => {
     }, [displayedTools.length, filteredTools]);
 
     // Callback ref do Intersection Observer para o último elemento
-    const lastToolElementRef = useCallback(node => {
+    const lastToolElementRef = useCallback((node: any) => {
         if (isLoadingMore) return;
         if (observer.current) observer.current.disconnect();
         observer.current = new IntersectionObserver(entries => {
@@ -206,11 +211,17 @@ const HomePage: React.FC = () => {
                 <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-400 text-center mb-8 animate-fade-in-text" style={{ animationDelay: '200ms' }}>
                    Faça upload de uma foto para começar a editar ou use nossas ferramentas de IA para criar algo novo do zero.
                 </p>
-                <StartScreen onFileSelect={handleFileSelect} />
-                 <div className="text-center my-12 relative">
-                    <hr className="border-t border-gray-700" />
-                    <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-4 text-gray-500 font-bold uppercase">OU</span>
-                </div>
+                {hasRestoredSession ? (
+                    <RestoredSessionCard />
+                ) : (
+                    <>
+                        <StartScreen onFileSelect={handleFileSelect} />
+                         <div className="text-center my-12 relative">
+                            <hr className="border-t border-gray-700" />
+                            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-4 text-gray-500 font-bold uppercase">OU</span>
+                        </div>
+                    </>
+                )}
             </div>
             
             <div className="text-center mb-10">

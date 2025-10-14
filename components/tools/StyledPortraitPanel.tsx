@@ -16,15 +16,13 @@ const StyledPortraitPanel: React.FC = () => {
     const { 
         isLoading, 
         error, 
-        setError, 
-        setIsLoading, 
-        addPromptToHistory, 
         baseImageFile, 
         setInitialImage,
+        currentImageUrl,
+        handleStyledPortrait,
     } = useEditor();
     const [personImage, setPersonImage] = useState<File | null>(null);
     const [styleImages, setStyleImages] = useState<(File | null)[]>([null]); // Suporte a um slot inicial
-    const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState(''); // Instruções adicionais
     const [negativePrompt, setNegativePrompt] = useState('');
 
@@ -39,14 +37,12 @@ const StyledPortraitPanel: React.FC = () => {
         if (file) {
             setInitialImage(file);
         }
-        setResultImage(null);
     };
     
     const handleStyleFileSelect = (file: File | null, index: number) => {
         const newStyleImages = [...styleImages];
         newStyleImages[index] = file;
         setStyleImages(newStyleImages);
-        setResultImage(null);
     };
     
     const addStyleImageSlot = () => {
@@ -57,31 +53,14 @@ const StyledPortraitPanel: React.FC = () => {
     
     const removeStyleImageSlot = (index: number) => {
         setStyleImages(prev => prev.filter((_, i) => i !== index));
-        setResultImage(null);
     };
 
     const handleGenerate = async () => {
         const validStyleImages = styleImages.filter((f): f is File => f !== null);
-
         if (!personImage || validStyleImages.length === 0) {
-            setError("Por favor, carregue a imagem da Pessoa e pelo menos uma imagem de Estilo.");
             return;
         }
-        setIsLoading(true);
-        setError(null);
-        setResultImage(null);
-        if (prompt.trim()) {
-            addPromptToHistory(prompt);
-        }
-        try {
-            // Passa o array de imagens de estilo e o prompt opcional para a função
-            const result = await generateStyledPortrait(personImage, validStyleImages, prompt, negativePrompt);
-            setResultImage(result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
-        } finally {
-            setIsLoading(false);
-        }
+        handleStyledPortrait(personImage, validStyleImages, prompt, negativePrompt);
     };
     
     const isGenerateDisabled = isLoading || !personImage || styleImages.filter(f => f !== null).length === 0;
@@ -165,7 +144,7 @@ const StyledPortraitPanel: React.FC = () => {
                  <ResultViewer
                     isLoading={isLoading}
                     error={error}
-                    resultImage={resultImage}
+                    resultImage={currentImageUrl}
                     loadingMessage="Criando seu novo retrato..."
                 />
             </main>

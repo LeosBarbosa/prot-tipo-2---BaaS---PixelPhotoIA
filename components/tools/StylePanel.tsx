@@ -8,40 +8,38 @@ import { useEditor } from '../../context/EditorContext';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
 import TipBox from '../common/TipBox';
 import StylePreview from '../common/StylePreview';
+import { PaletteIcon } from '../icons';
 
 const styles = [
-    { name: 'Desenho Animado', prompt: 'Transforme a imagem em um estilo de desenho animado vibrante. Aplique contornos pretos grossos e definidos para delinear as formas. Use uma paleta de cores primárias saturadas e vibrantes. Exagere levemente as características principais para um efeito expressivo e divertido, semelhante a um desenho animado moderno.', bg: 'bg-gradient-to-br from-yellow-400 to-orange-500' },
-    { name: 'Anime', prompt: 'Estilo de anime dos anos 90, cores vibrantes, linhas nítidas, iluminação de cena dramática.', bg: 'bg-gradient-to-br from-pink-400 to-purple-500' },
-    { name: 'Van Gogh', prompt: 'Pintura a óleo no estilo de Vincent Van Gogh, com pinceladas espessas e expressivas, luz do final da tarde, composição dinâmica.', bg: 'bg-gradient-to-br from-yellow-400 to-blue-600' },
-    { name: 'Cyberpunk', prompt: 'Estilo cyberpunk, com luzes de neon, atmosfera sombria e chuvosa, detalhes de alta tecnologia.', bg: 'bg-gradient-to-br from-cyan-400 to-indigo-600' },
-    { name: 'Aquarela', prompt: 'Pintura em aquarela, com cores suaves, bordas fluidas e iluminação suave e difusa.', bg: 'bg-gradient-to-br from-green-300 to-sky-400' },
-    { name: 'Pixel Art', prompt: 'Pixel art de 16 bits, paleta de cores limitada, iluminação frontal simples.', bg: 'bg-gradient-to-br from-gray-500 to-blue-800' },
-    { name: 'HQ Clássico', prompt: 'Estilo de história em quadrinhos clássico, com hachuras, cores chapadas e sombras fortes e definidas.', bg: 'bg-gradient-to-br from-red-500 to-yellow-400' },
-    { name: 'Foto Antiga', prompt: 'Fotografia antiga em preto e branco, com grão de filme, leve sépia, cantos suavemente vinhetados e iluminação suave de janela.', bg: 'bg-gradient-to-br from-stone-500 to-stone-700' },
-    { name: 'Impressionismo', prompt: 'Pintura a óleo no estilo impressionista, capturando a luz dourada do final da tarde, com pinceladas visíveis.', bg: 'bg-gradient-to-br from-rose-300 to-violet-400' },
-    { name: 'Art Déco', prompt: 'Estilo Art Déco, com formas geométricas, cores fortes, detalhes luxuosos e iluminação dramática de baixo para cima.', bg: 'bg-gradient-to-br from-amber-400 to-gray-800' },
-    { name: 'Esboço Carvão', prompt: 'Close-up em estilo de esboço a carvão preto e branco, com linhas expressivas e sombreamento dramático de uma única fonte de luz.', bg: 'bg-gradient-to-br from-gray-300 to-gray-600' },
-    { name: 'Modelo 3D', prompt: 'Renderização de modelo 3D, com iluminação de estúdio de três pontos e texturas suaves e fotorrealistas.', bg: 'bg-gradient-to-br from-slate-400 to-slate-600' },
-    { name: 'Steampunk', prompt: 'Estilo Steampunk, com engrenagens de latão, vapor, estética vitoriana e iluminação quente de lâmpadas de filamento.', bg: 'bg-gradient-to-br from-orange-600 to-amber-800' },
-    { name: 'Pintura a Óleo', prompt: 'Pintura a óleo, com pinceladas texturizadas e visíveis, cores ricas e vibrantes e iluminação dramática.', bg: 'bg-gradient-to-br from-amber-500 to-rose-700' },
-    { name: 'Pop Art', prompt: 'Estilo pop art inspirado em Andy Warhol, com cores ousadas e contrastantes, serigrafia e repetição de padrões.', bg: 'bg-gradient-to-br from-yellow-300 to-pink-500' },
-    { name: 'Surrealismo', prompt: 'Cena de sonho surrealista no estilo de Salvador Dalí, com objetos derretendo, paisagens ilógicas e uma atmosfera misteriosa.', bg: 'bg-gradient-to-br from-sky-400 to-yellow-600' },
-    { name: 'Arte de Rua', prompt: 'Estilo de arte de rua (graffiti), usando texturas de tinta spray, estênceis e cores vibrantes, com um fundo de parede de tijolos.', bg: 'bg-gradient-to-br from-red-600 to-gray-700' },
-    { name: 'Mosaico', prompt: 'Transforme a imagem em um mosaico romano antigo, composto por pequenos ladrilhos de cerâmica coloridos, com linhas de argamassa visíveis.', bg: 'bg-gradient-to-br from-stone-500 to-teal-700' },
-    { name: 'Fantasia Sombria', prompt: 'Estilo de fantasia sombria e atmosférica, com iluminação de baixo contraste, paleta de cores dessaturada e detalhes góticos.', bg: 'bg-gradient-to-br from-indigo-900 to-gray-800' },
-    { name: 'Ukiyo-e', prompt: 'Estilo de xilogravura japonesa Ukiyo-e, com linhas fortes, áreas de cor chapada e uma composição inspirada na natureza.', bg: 'bg-gradient-to-br from-red-300 to-cyan-200' },
-    { name: 'Cubismo', prompt: 'Reconstrua a imagem no estilo cubista de Picasso, com formas fragmentadas, múltiplos pontos de vista e uma paleta de cores terrosas.', bg: 'bg-gradient-to-br from-amber-700 to-gray-600' },
-    { name: 'Pontilhismo', prompt: 'Estilo de pintura pontilhista, usando pequenos pontos distintos de cor para formar a imagem, com uma paleta de cores vibrante.', bg: 'bg-gradient-to-br from-green-400 to-yellow-300' },
-    { name: 'Vaporwave', prompt: 'Estética Vaporwave, com tons de rosa e ciano, elementos de glitch, e motivos nostálgicos dos anos 80, como estátuas romanas e grades de neon.', bg: 'bg-gradient-to-br from-pink-500 to-cyan-400' },
-    { name: 'Low Poly', prompt: 'Transforme a imagem em um estilo de arte low poly, usando uma malha de polígonos geométricos com cores chapadas e gradientes sutis.', bg: 'bg-gradient-to-br from-blue-500 to-purple-600' }
+    // FIX: Added icon to each style to satisfy the Trend type
+    { name: 'Desenho Animado', prompt: 'Transforme a imagem em um estilo de desenho animado vibrante. Aplique contornos pretos grossos e definidos para delinear as formas. Use uma paleta de cores primárias saturadas e vibrantes. Exagere levemente as características principais para um efeito expressivo e divertido, semelhante a um desenho animado moderno.', bg: 'bg-gradient-to-br from-yellow-400 to-orange-500', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Anime', prompt: 'Estilo de anime dos anos 90, cores vibrantes, linhas nítidas, iluminação de cena dramática.', bg: 'bg-gradient-to-br from-pink-400 to-purple-500', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Van Gogh', prompt: 'Pintura a óleo no estilo de Vincent Van Gogh, com pinceladas espessas e expressivas, luz do final da tarde, composição dinâmica.', bg: 'bg-gradient-to-br from-yellow-400 to-blue-600', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Cyberpunk', prompt: 'Estilo cyberpunk, com luzes de neon, atmosfera sombria e chuvosa, detalhes de alta tecnologia.', bg: 'bg-gradient-to-br from-cyan-400 to-indigo-600', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Aquarela', prompt: 'Pintura em aquarela, com cores suaves, bordas fluidas e iluminação suave e difusa.', bg: 'bg-gradient-to-br from-green-300 to-sky-400', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Pixel Art', prompt: 'Pixel art de 16 bits, paleta de cores limitada, iluminação frontal simples.', bg: 'bg-gradient-to-br from-gray-500 to-blue-800', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'HQ Clássico', prompt: 'Estilo de história em quadrinhos clássico, com hachuras, cores chapadas e sombras fortes e definidas.', bg: 'bg-gradient-to-br from-red-500 to-yellow-400', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Foto Antiga', prompt: 'Fotografia antiga em preto e branco, com grão de filme, leve sépia, cantos suavemente vinhetados e iluminação suave de janela.', bg: 'bg-gradient-to-br from-stone-500 to-stone-700', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Impressionismo', prompt: 'Pintura a óleo no estilo impressionista, capturando a luz dourada do final da tarde, com pinceladas visíveis.', bg: 'bg-gradient-to-br from-rose-300 to-violet-400', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Art Déco', prompt: 'Estilo Art Déco, com formas geométricas, cores fortes, detalhes luxuosos e iluminação dramática de baixo para cima.', bg: 'bg-gradient-to-br from-amber-400 to-gray-800', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Esboço Carvão', prompt: 'Close-up em estilo de esboço a carvão preto e branco, com linhas expressivas e sombreamento dramático de uma única fonte de luz.', bg: 'bg-gradient-to-br from-gray-300 to-gray-600', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Modelo 3D', prompt: 'Renderização de modelo 3D, com iluminação de estúdio de três pontos e texturas suaves e fotorrealistas.', bg: 'bg-gradient-to-br from-slate-400 to-slate-600', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Steampunk', prompt: 'Estilo Steampunk, com engrenagens de latão, vapor, estética vitoriana e iluminação quente de lâmpadas de filamento.', bg: 'bg-gradient-to-br from-orange-600 to-amber-800', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Pintura a Óleo', prompt: 'Pintura a óleo, com pinceladas texturizadas e visíveis, cores ricas e vibrantes e iluminação dramática.', bg: 'bg-gradient-to-br from-amber-500 to-rose-700', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Pop Art', prompt: 'Estilo pop art inspirado em Andy Warhol, com cores ousadas e contrastantes, serigrafia e repetição de padrões.', bg: 'bg-gradient-to-br from-yellow-300 to-pink-500', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Surrealismo', prompt: 'Cena de sonho surrealista no estilo de Salvador Dalí, com objetos derretendo, paisagens ilógicas e uma atmosfera misteriosa.', bg: 'bg-gradient-to-br from-sky-400 to-yellow-600', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Arte de Rua', prompt: 'Estilo de arte de rua (graffiti), usando texturas de tinta spray, estênceis e cores vibrantes, com um fundo de parede de tijolos.', bg: 'bg-gradient-to-br from-red-600 to-gray-700', icon: <PaletteIcon className="w-6 h-6" /> },
+    { name: 'Mosaico', prompt: 'Transforme a imagem em um mosaico romano antigo, composto por pequenos ladrilhos de cerâmica coloridos, com linhas de argamassa visíveis.', bg: 'bg-gradient-to-br from-amber-700 to-stone-500', icon: <PaletteIcon className="w-6 h-6" /> },
 ];
 
 const StylePanel: React.FC = () => {
-    const { isLoading, isGif, generateAIPreview, isPreviewLoading, previewState } = useEditor();
+    const { isLoading, handleApplyStyle, isGif, generateAIPreview, isPreviewLoading, previewState } = useEditor();
     const [applyToAll, setApplyToAll] = useState(true);
 
     const handleStyleClick = (style: typeof styles[0]) => {
-        generateAIPreview({ name: style.name, prompt: style.prompt, bg: style.bg }, applyToAll);
+        // The Trend type requires an icon property
+        const trend = { ...style, icon: <PaletteIcon className="w-6 h-6" /> };
+        generateAIPreview(trend, applyToAll);
     };
 
     return (
@@ -50,9 +48,9 @@ const StylePanel: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-300">Estilos Artísticos com IA</h3>
                 <p className="text-sm text-gray-400 -mt-1">Transforme sua foto com um clique.</p>
             </div>
-
-            <StylePreview />
             
+            <StylePreview />
+
             <div className={`transition-opacity duration-300 ${isPreviewLoading || previewState ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {styles.map(style => (
@@ -69,9 +67,8 @@ const StylePanel: React.FC = () => {
                     ))}
                 </div>
                 <TipBox>
-                    Clique em um estilo para ver uma prévia. A IA reinterpreta sua imagem no estilo escolhido, então os resultados podem variar. Experimente para obter o visual perfeito!
+                    A IA reinterpreta sua imagem no estilo escolhido. Use a pré-visualização para ver o resultado antes de aplicar!
                 </TipBox>
-
                 {isGif && <div className="mt-4"><ApplyToAllToggle checked={applyToAll} onChange={setApplyToAll} /></div>}
             </div>
         </div>

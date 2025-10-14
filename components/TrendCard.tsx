@@ -15,7 +15,7 @@ const TrendCard: React.FC<TrendCardProps> = ({ trend }) => {
 
     const handleClick = () => {
         if (baseImageFile) {
-            // A 'applyToAll' é para gifs, um padrão de true está bom.
+            // FIX: The function expects `(prompt, applyToAll)`.
             handleApplyStyle(trend.prompt, true); 
         } else {
             setToast({ message: `Primeiro, carregue uma imagem para aplicar o estilo '${trend.name}'.`, type: 'info' });

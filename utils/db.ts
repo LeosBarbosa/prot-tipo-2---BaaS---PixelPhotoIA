@@ -4,6 +4,7 @@
 */
 
 import { openDB, IDBPDatabase } from 'idb';
+// FIX: import from ../types
 import { ToolId, type Workflow, type LayerStateSnapshot } from '../types';
 
 const DB_NAME = 'PixelPhotoIADB';

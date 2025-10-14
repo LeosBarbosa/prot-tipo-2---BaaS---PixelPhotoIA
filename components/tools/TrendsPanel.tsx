@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
+// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
-import { SparkleIcon, PixarIcon, ToyIcon, ClockIcon, GtaIcon, LegoIcon, PixelsIcon, BrushIcon, CameraIcon } from '../icons';
+// FIX: Add BoltIcon, CombineIcon, TextureIcon
+import { SparkleIcon, PixarIcon, ToyIcon, ClockIcon, GtaIcon, LegoIcon, PixelsIcon, BrushIcon, CameraIcon, BoltIcon, TextureIcon } from '../icons';
 import StylePreview from '../common/StylePreview';
 import TipBox from '../common/TipBox';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
@@ -17,17 +19,22 @@ const trends: Trend[] = [
         bg: 'bg-gradient-to-br from-pink-300 to-purple-400',
         icon: <SparkleIcon className="w-6 h-6 text-white/80" />
     },
-    { name: 'Glitch', prompt: 'aplique um efeito de glitch digital, com distorção de pixels, aberração cromática e linhas de varredura', bg: 'bg-gradient-to-br from-red-500 to-blue-500' },
-    { name: 'Duotone', prompt: 'converta a imagem para um efeito duotone, usando as cores primárias de azul vibrante e rosa choque', bg: 'bg-gradient-to-br from-blue-500 to-pink-500' },
-    { name: 'Risograph', prompt: 'simule uma impressão risograph, com cores limitadas (vermelho e azul), grão e sobreimpressão sutil', bg: 'bg-gradient-to-br from-red-400 to-sky-400' },
+    // FIX: Add icon property
+    { name: 'Glitch', prompt: 'aplique um efeito de glitch digital, com distorção de pixels, aberração cromática e linhas de varredura', bg: 'bg-gradient-to-br from-red-500 to-blue-500', icon: <BoltIcon className="w-6 h-6 text-white/80" /> },
+    // FIX: Add icon property
+    { name: 'Duotone', prompt: 'converta a imagem para um efeito duotone, usando as cores primárias de azul vibrante e rosa choque', bg: 'bg-gradient-to-br from-blue-500 to-pink-500', icon: <SparkleIcon className="w-6 h-6 text-white/80" /> },
+    // FIX: Add icon property
+    { name: 'Risograph', prompt: 'simule uma impressão risograph, com cores limitadas (vermelho e azul), grão e sobreimpressão sutil', bg: 'bg-gradient-to-br from-red-400 to-sky-400', icon: <TextureIcon className="w-6 h-6 text-white/80" /> },
     { 
         name: 'Holográfico', 
         prompt: 'aplique um efeito iridescente e holográfico à imagem, com brilhos prismáticos e reflexos', 
         bg: 'bg-gradient-to-br from-purple-400 via-pink-400 to-cyan-300',
         icon: <SparkleIcon className="w-6 h-6 text-white/80" />
     },
-    { name: 'Caixa de Boneco', prompt: 'Coloque a pessoa principal da foto dentro de uma caixa de boneca de brinquedo colecionável. A caixa deve ter um design temático, uma janela de plástico transparente e texto como "Edição Limitada". O resultado deve ser fotorrealista e divertido.', bg: 'bg-gradient-to-br from-pink-500 to-violet-500' },
-    { name: 'Preto e Branco', prompt: 'Crie um retrato em primeiro plano, com alto contraste, em preto e branco com lentes 35mm e qualidade 4K HD. Adicione um leve efeito de gotas de água no rosto para um toque dramático.', bg: 'bg-gradient-to-br from-gray-400 to-gray-800' },
+    // FIX: Add icon property
+    { name: 'Caixa de Boneco', prompt: 'Coloque a pessoa principal da foto dentro de uma caixa de boneca de brinquedo colecionável. A caixa deve ter um design temático, uma janela de plástico transparente e texto como "Edição Limitada". O resultado deve ser fotorrealista e divertido.', bg: 'bg-gradient-to-br from-pink-500 to-violet-500', icon: <ToyIcon className="w-6 h-6 text-white/80" /> },
+    // FIX: Add icon property
+    { name: 'Preto e Branco', prompt: 'Crie um retrato em primeiro plano, com alto contraste, em preto e branco com lentes 35mm e qualidade 4K HD. Adicione um leve efeito de gotas de água no rosto para um toque dramático.', bg: 'bg-gradient-to-br from-gray-400 to-gray-800', icon: <CameraIcon className="w-6 h-6 text-white/80" /> },
     {
         name: 'Estilo Pixar',
         prompt: "Transforme a pessoa na foto em um personagem no estilo de animação 3D da Disney Pixar. Mantenha as características faciais reconhecíveis, mas com o visual de animação característico, com olhos grandes e expressivos e pele suave.",

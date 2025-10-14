@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { lazy } from 'react';
-import { type ToolId } from '../types';
+// FIX: import from `../types` instead of `./types`
+import { type ToolId, type TabId } from '../types';
 
 // NOVO: Mapa unificado para todos os componentes que aparecem no painel direito.
-export const panelComponents: Partial<Record<ToolId, React.LazyExoticComponent<React.FC<{}>>>> = {
+export const panelComponents: Partial<Record<ToolId | TabId, React.LazyExoticComponent<React.FC<{}>>>> = {
     // Painéis de Edição
     crop: lazy(() => import(/* webpackChunkName: "tool-panel-crop" */ '../components/tools/CropPanel')),
     style: lazy(() => import(/* webpackChunkName: "tool-panel-style" */ '../components/tools/StylePanel')),

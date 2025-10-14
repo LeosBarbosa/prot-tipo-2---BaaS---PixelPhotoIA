@@ -4,6 +4,7 @@
 */
 
 import React from 'react';
+// FIX: Correct import path
 import { useEditor } from '../context/EditorContext';
 import { LayersIcon, AdjustmentsHorizontalIcon, EyeIcon, UndoIcon, RedoIcon } from './icons';
 
@@ -36,7 +37,7 @@ const MobileBottomNav: React.FC = () => {
     };
 
     const handleViewToggle = () => {
-        // Este botão simplesmente fecha qualquer painel aberto
+        // This button simply closes any open panel
         setIsLeftPanelVisible(false);
         setIsRightPanelVisible(false);
     };

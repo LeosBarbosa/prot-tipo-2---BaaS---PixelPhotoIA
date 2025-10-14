@@ -4,6 +4,7 @@
 */
 
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+// FIX: import from ../../context/EditorContext
 import { useEditor } from '../../context/EditorContext';
 import { useMaskCanvas } from '../../hooks/useMaskCanvas';
 import { generateInteriorDesign } from '../../services/geminiService';
