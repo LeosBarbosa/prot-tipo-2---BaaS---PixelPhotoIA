@@ -43,6 +43,7 @@ import {
     BlendMode
 } from '../types';
 import { Crop, PixelCrop } from 'react-image-crop';
+import { hashFile, sha256 } from '../utils/cryptoUtils';
 
 export const DEFAULT_LOCAL_FILTERS: FilterState = {
   brightness: 100,
@@ -188,18 +189,35 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setHistory([]); setHistoryIndex(-1); setToolHistory([]); setIsEditingSessionActive(false);
             return;
         }
-        setIsLoading(true); setLoadingMessage('Otimizando imagem...');
+        setIsLoading(true); 
+        setLoadingMessage('Carregando imagem...');
+        setError(null);
+        setUploadProgress({ progress: 0, stage: 'reading' });
+
         try {
             const optimizedFile = await optimizeImage(file, setUploadProgress);
             const initialLayer: ImageLayer = { id: `layer_${Date.now()}`, name: 'Background', type: 'image', file: optimizedFile, isVisible: true, opacity: 100, blendMode: 'normal' };
             const snapshot: LayerStateSnapshot = { layers: [initialLayer], activeLayerId: initialLayer.id };
-            setHistory([snapshot]); setHistoryIndex(0); setToolHistory([]); setActiveTool(null); setActiveTab('adjust'); setIsEditingSessionActive(true);
+            setHistory([snapshot]); 
+            setHistoryIndex(0); 
+            setToolHistory([]); 
+            setActiveTool(null); 
+            setActiveTab('adjust'); 
+            setIsEditingSessionActive(true);
+            setToast({ message: 'Imagem carregada com sucesso!', type: 'success' });
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Falha ao processar a imagem.');
+            const errorMessage = err instanceof Error ? err.message : 'Falha ao processar a imagem.';
+            setError(errorMessage);
+            setToast({ message: errorMessage, type: 'error' });
         } finally {
-            setIsLoading(false); setLoadingMessage(null);
+            setIsLoading(false); 
+            setLoadingMessage(null);
         }
-    }, [setUploadProgress]);
+    }, [
+        setHistory, setHistoryIndex, setToolHistory, setIsEditingSessionActive, 
+        setIsLoading, setLoadingMessage, setError, setUploadProgress, 
+        setActiveTool, setActiveTab, setToast
+    ]);
 
     const executeTool = useCallback(async (toolId: ToolId, serviceCall: (file: File, ...args: any[]) => Promise<string>, loadingMsg: string, ...args: any[]) => {
         const fileToEdit = activeLayerFile;
@@ -222,10 +240,37 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } finally {
             setIsLoading(false); setLoadingMessage(null);
         }
-    }, [activeLayerFile, layers, activeLayerId, commitChange]);
+    }, [activeLayerFile, layers, activeLayerId, commitChange, setToast, setError, setIsLoading, setLoadingMessage]);
+
+    const executeBaseImageReplacement = useCallback(async (
+        toolId: ToolId,
+        loadingMsg: string,
+        serviceCall: () => Promise<string>
+    ) => {
+        setIsLoading(true);
+        setLoadingMessage(loadingMsg);
+        setError(null);
+        try {
+            const resultDataUrl = await serviceCall();
+            const newFile = dataURLtoFile(resultDataUrl, `${toolId}-result.png`);
+            const newLayers = layers.map(l => 
+                l.id === activeLayerId ? { ...l, file: newFile } : l
+            ) as Layer[];
+            
+            commitChange(newLayers, activeLayerId, toolId);
+            setToast({ message: 'Edição aplicada!', type: 'success' });
+            setIsInlineComparisonActive(true);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "Ocorreu um erro desconhecido.";
+            setError(errorMessage);
+            setToast({ message: errorMessage, type: 'error' });
+        } finally {
+            setIsLoading(false);
+            setLoadingMessage(null);
+        }
+    }, [layers, activeLayerId, commitChange, setToast, setError, setIsLoading, setLoadingMessage]);
     
-    // --- LAYER & MISC HANDLERS ---
-    const setActiveLayerId = useCallback((id: string | null) => {
+    const setActiveLayerId_callback = useCallback((id: string | null) => {
         if (id === activeLayerId) return;
         const currentSnapshot = history[historyIndex];
         if (!currentSnapshot) return;
@@ -261,7 +306,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (!layerId) return;
         const index = layers.findIndex(l => l.id === layerId);
         if (index === -1) return;
-        const newIndex = direction === 'up' ? index - 1 : index + 1; // Reversed because visually top is end of array
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
         if (newIndex < 0 || newIndex >= layers.length) return;
         const newLayers = [...layers];
         const temp = newLayers[index];
@@ -272,7 +317,6 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const moveLayerUp = (layerId: string | null) => moveLayer(layerId, 'up');
     const moveLayerDown = (layerId: string | null) => moveLayer(layerId, 'down');
     
-    // --- TOOL HANDLERS ---
     const handleRemoveBackground = () => executeTool('removeBg', geminiService.removeBackground, "Removendo fundo...");
     const handleRestorePhoto = (colorize: boolean) => executeTool('photoRestoration', (file) => geminiService.restorePhoto(file, colorize), "Restaurando foto...");
     const handleApplyUpscale = (factor: number, preserveFace: boolean) => executeTool('upscale', (file) => geminiService.upscaleImage(file, factor, preserveFace), `Aumentando resolução...`);
@@ -290,7 +334,6 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const handleApplyFaceRecovery = () => executeTool('faceRecovery', geminiService.applyFaceRecovery, "Recuperando rosto...");
     const handleApplyNewAspectRatio = () => executeTool('newAspectRatio', (file) => geminiService.outpaintImage(file, "Expandir a imagem criativamente", '16:9'), "Ajustando proporção...");
     const handleEnhanceResolutionAndSharpness = (factor: number, intensity: number, preserveFace: boolean) => executeTool('superResolution', (file) => geminiService.enhanceResolutionAndSharpness(file, factor, intensity, preserveFace), "Aplicando super resolução...");
-    // FIX: Add implementation for handleMagicMontage
     const handleMagicMontage = useCallback(async (mainImage: File, prompt: string, secondImage?: File) => {
         setIsLoading(true);
         setLoadingMessage("Realizando a mágica...");
@@ -326,7 +369,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         tempImage.onload = () => {
             ctx.drawImage(tempImage, completedCrop.x * scaleX, completedCrop.y * scaleY, completedCrop.width * scaleX, completedCrop.height * scaleY, 0, 0, completedCrop.width, completedCrop.height);
             const newFile = dataURLtoFile(canvas.toDataURL(), 'cropped.png');
-            const newLayers = layers.map(l => l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer[];
+            const newLayers = layers.map(l => (l.id === activeLayerId && l.type === 'image') ? { ...l, file: newFile } : l);
             commitChange(newLayers, activeLayerId, 'crop');
         }
         tempImage.src = URL.createObjectURL(activeLayerFile);
@@ -350,17 +393,39 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             ctx.drawImage(image, 0, 0);
         }
         const newFile = dataURLtoFile(canvas.toDataURL(), 'transformed.png');
-        const newLayers = layers.map(l => (l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer);
+        const newLayers = layers.map(l => (l.id === activeLayerId && l.type === 'image') ? { ...l, file: newFile } : l);
         commitChange(newLayers, activeLayerId, 'crop');
     }, [activeLayerFile, layers, activeLayerId, commitChange]);
 
-    const handleVirtualTryOn = (personImage: File, clothingImage: File, shoeImage?: File) => {
-        setIsLoading(true); setLoadingMessage("Vestindo o modelo..."); setError(null);
-        geminiService.virtualTryOn(personImage, clothingImage, shoeImage).then(resultDataUrl => {
-            const newFile = dataURLtoFile(resultDataUrl, `tryon-result.png`);
-            setInitialImage(newFile);
-            setActiveTool(null);
-        }).catch(err => setError(err.message)).finally(() => setIsLoading(false));
+    const handleApplyLocalAdjustments = useCallback(async (applyToAll: boolean) => {
+        if (!activeLayerFile || !maskDataUrl || !hasLocalAdjustments) {
+            setToast({ message: 'Nenhuma área selecionada ou nenhum ajuste para aplicar.', type: 'info' });
+            return;
+        }
+        setIsLoading(true); setLoadingMessage('Aplicando ajustes locais...'); setError(null);
+        try {
+            const imageUrl = URL.createObjectURL(activeLayerFile);
+            const filterString = buildFilterString(localFilters);
+            const resultDataUrl = await applyFiltersToMaskedArea(imageUrl, maskDataUrl, filterString);
+            URL.revokeObjectURL(imageUrl);
+            const newFile = dataURLtoFile(resultDataUrl, 'local-adjustment.png');
+            const newLayers = layers.map(l => (l.id === activeLayerId && l.type === 'image') ? { ...l, file: newFile } : l) as Layer[];
+            commitChange(newLayers, activeLayerId, 'localAdjust');
+            setToast({ message: "Ajustes locais aplicados!", type: 'success' });
+            setIsInlineComparisonActive(true);
+            resetLocalFilters(); clearMask();
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "Falha ao aplicar ajustes locais.";
+            setError(errorMessage);
+            setToast({ message: errorMessage, type: 'error' });
+            throw err;
+        } finally {
+            setIsLoading(false); setLoadingMessage(null);
+        }
+    }, [activeLayerFile, maskDataUrl, hasLocalAdjustments, buildFilterString, localFilters, layers, activeLayerId, commitChange, resetLocalFilters, clearMask]);
+
+    const handleVirtualTryOn = (personImage: File, clothingImage: File, shoeImage: File | undefined, scenePrompt: string, posePrompt: string, cameraLens: string, cameraAngle: string, lightingStyle: string, negativePrompt: string) => {
+        executeBaseImageReplacement('tryOn', "Montando o estúdio e vestindo o modelo...", () => geminiService.virtualTryOn(personImage, clothingImage, shoeImage, scenePrompt, posePrompt, cameraLens, cameraAngle, lightingStyle, negativePrompt));
     };
 
     const handleAIPortrait = async (styleId: string, personImages: File[], prompt: string) => {
@@ -387,54 +452,160 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
     
     const handleFunkoPop = (mainImage: File, personImage: File | null, bg: string, obj: string, light: string, type: string, finish: string) => {
-        setIsLoading(true); setLoadingMessage("Criando seu Funko Pop..."); setError(null);
-        const prompt = `Fundo: ${bg}. Objeto: ${obj}. Iluminação: ${light}. Tipo: ${type}. Acabamento: ${finish}`;
-        geminiService.generateMagicMontage(mainImage, prompt, personImage ?? undefined).then(resultUrl => {
-            const newFile = dataURLtoFile(resultUrl, `funko-result.png`);
-            const newLayers = layers.map(l => l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer[];
-            commitChange(newLayers, activeLayerId, 'funkoPopStudio');
-        }).catch(err => setError(err.message)).finally(() => setIsLoading(false));
+        executeBaseImageReplacement('funkoPopStudio', "Criando seu Funko Pop...", () => geminiService.generateMagicMontage(mainImage, `Fundo: ${bg}. Objeto: ${obj}. Iluminação: ${light}. Tipo: ${type}. Acabamento: ${finish}`, personImage ?? undefined));
     };
 
     const handleDoubleExposure = async (portraitImage: File, landscapeImage: File): Promise<string> => {
         return geminiService.generateDoubleExposure(portraitImage, landscapeImage);
     };
     
-    // ... other handlers
-    const generateAIPreview = useCallback(async (trend: Trend, applyToAll: boolean) => {
-        if (!activeLayerFile) return;
-        setIsPreviewLoading(true); setPreviewState(null); setError(null);
+    const handleSuperheroFusion = (userImage: File, heroImage: File) => {
+        executeBaseImageReplacement('superheroFusion', 'Criando seu alter ego...', () => geminiService.generateSuperheroFusion(userImage, heroImage));
+    };
+    
+    const handleDetectObjects = useCallback(async (objectPrompt?: string) => {
+        if (!baseImageFile) { setError("Nenhuma imagem base carregada para detectar objetos."); setToast({ message: 'Carregue uma imagem primeiro.', type: 'error' }); return; }
+        setIsLoading(true); setLoadingMessage("Detectando objetos com IA..."); setError(null); setDetectedObjects(null);
         try {
-            const resultUrl = trend.type === 'descriptive'
-                ? await geminiService.generateImageWithDescription(activeLayerFile, trend.prompt)
-                : await geminiService.applyStyle(activeLayerFile, trend.prompt);
+            const detectionPrompt = objectPrompt && objectPrompt.trim() ? `Detect all instances of '${objectPrompt}' in this image. Provide their labels and normalized bounding boxes.` : "Detect up to 5 of the most prominent objects in this image, ranked by visual importance. Provide their labels and normalized bounding boxes.";
+            const objects = await geminiService.detectObjects(baseImageFile, detectionPrompt);
+            setDetectedObjects(objects);
+            if (objects.length === 0) { setToast({ message: `Nenhum objeto encontrado${objectPrompt ? ` para '${objectPrompt}'` : ''}.`, type: 'info' }); } else { setToast({ message: `${objects.length} objeto(s) detectado(s).`, type: 'success' }); }
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "Falha ao detectar objetos.";
+            setError(errorMessage); setToast({ message: errorMessage, type: 'error' });
+        } finally {
+            setIsLoading(false); setLoadingMessage(null);
+        }
+    }, [baseImageFile]);
+
+    const handleDetectFaces = useCallback(async () => {
+        if (!baseImageFile) { setError("Nenhuma imagem base carregada para detectar rostos."); setToast({ message: 'Carregue uma imagem primeiro.', type: 'error' }); return; }
+        setIsLoading(true); setLoadingMessage("Detectando rostos com IA..."); setError(null); setDetectedObjects(null);
+        try {
+            const faces = await geminiService.detectFaces(baseImageFile);
+            setDetectedObjects(faces);
+            if (faces.length === 0) { setToast({ message: 'Nenhum rosto foi detectado na imagem.', type: 'info' }); } else { setToast({ message: `${faces.length} rosto(s) detectado(s).`, type: 'success' }); }
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "Falha ao detectar rostos.";
+            setError(errorMessage); setToast({ message: errorMessage, type: 'error' });
+        } finally {
+            setIsLoading(false); setLoadingMessage(null);
+        }
+    }, [baseImageFile]);
+
+    const handleSelectObject = useCallback((object: DetectedObject) => {
+        if (!imgRef.current) return;
+        setHighlightedObject(object);
+        const { naturalWidth, naturalHeight } = imgRef.current;
+        const mask = createMaskFromBoundingBox(object.box, naturalWidth, naturalHeight);
+        setMaskDataUrl(mask);
+    }, [imgRef, setMaskDataUrl, setHighlightedObject]);
+    
+    const handleFaceSwap = useCallback(async (sourceImage: File, userPrompt: string) => {
+        if (!baseImageFile || !maskDataUrl) { setError("Selecione um rosto na imagem de destino primeiro."); setToast({ message: 'Selecione o rosto que você deseja substituir.', type: 'error' }); return; }
+        setIsLoading(true); setLoadingMessage("Realizando a troca de rosto..."); setError(null);
+        try {
+            const maskFile = dataURLtoFile(maskDataUrl, 'mask.png');
+            const resultDataUrl = await geminiService.faceSwap(baseImageFile, maskFile, sourceImage, userPrompt);
+            const newFile = dataURLtoFile(resultDataUrl, 'face-swap-result.png');
+            const newLayers = layers.map(l => (l.id === activeLayerId ? { ...l, file: newFile } : l)) as Layer[];
+            commitChange(newLayers, activeLayerId, 'faceSwap');
+            setToast({ message: "Troca de rosto concluída!", type: 'success' });
+            setIsInlineComparisonActive(true);
+            setDetectedObjects(null); clearMask();
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "Ocorreu um erro desconhecido durante a troca de rosto.";
+            setError(errorMessage); setToast({ message: errorMessage, type: 'error' });
+        } finally {
+            setIsLoading(false); setLoadingMessage(null);
+        }
+    }, [baseImageFile, maskDataUrl, layers, activeLayerId, commitChange, clearMask]);
+
+
+    const generateAIPreview_callback = useCallback(async (trend: Trend, applyToAll: boolean) => {
+        if (!activeLayerFile) {
+            setToast({ message: "Por favor, selecione uma camada de imagem para gerar a pré-visualização.", type: 'error' });
+            return;
+        }
+        setIsPreviewLoading(true);
+        setPreviewState(null);
+        setError(null);
+        try {
+            let resultUrl;
+            if (trend.type === 'descriptive') {
+                resultUrl = await geminiService.generateImageWithDescription(activeLayerFile, trend.prompt);
+            } else {
+                resultUrl = await geminiService.applyStyle(activeLayerFile, trend.prompt);
+            }
             setPreviewState({ url: resultUrl, trend, applyToAll });
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Falha na pré-visualização.');
+            const errorMessage = e instanceof Error ? e.message : 'Falha ao gerar pré-visualização.';
+            setError(errorMessage);
+            setToast({ message: errorMessage, type: 'error' });
         } finally {
             setIsPreviewLoading(false);
         }
     }, [activeLayerFile]);
 
-    const commitAIPreview = useCallback(async () => {
+    const commitAIPreview_callback = useCallback(async () => {
         if (!previewState) return;
-        setIsLoading(true); setLoadingMessage('Aplicando estilo...');
+        setIsLoading(true); setLoadingMessage('Aplicando estilo...'); setError(null);
         try {
             const newFile = dataURLtoFile(previewState.url, `trend-${Date.now()}.png`);
             const newLayers = layers.map(l => l.id === activeLayerId ? { ...l, file: newFile } : l) as Layer[];
             commitChange(newLayers, activeLayerId, 'trends');
-            setToast({ message: 'Estilo aplicado!', type: 'success' });
+            setToast({ message: 'Estilo aplicado com sucesso!', type: 'success' });
             setPreviewState(null);
+            setIsInlineComparisonActive(true);
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Falha ao aplicar estilo.');
+            const errorMessage = e instanceof Error ? e.message : 'Falha ao aplicar o estilo da pré-visualização.';
+            setError(errorMessage);
+            setToast({ message: errorMessage, type: 'error' });
         } finally {
             setIsLoading(false); setLoadingMessage(null);
         }
     }, [previewState, layers, activeLayerId, commitChange]);
 
+    const handleCreativeFusion = useCallback(async (compositionImage: File, styleImages: File[]) => {
+        setIsLoading(true); setError(null); setLoadingMessage('Verificando cache...');
+        try {
+            const compHash = await hashFile(compositionImage);
+            const styleHashes = await Promise.all(styleImages.map(f => hashFile(f)));
+            const cacheKey = `creativeFusion:${compHash}:${styleHashes.join('-')}`;
+            let resultDataUrl: string;
+            const cachedBlob = await db.loadImageFromCache(cacheKey);
+            if (cachedBlob) {
+                resultDataUrl = await fileToDataURL(cachedBlob as File);
+                setToast({ message: 'Imagem carregada do cache!', type: 'info' });
+            } else {
+                setLoadingMessage('Criando fusão artística...');
+                resultDataUrl = await geminiService.fuseImages(compositionImage, styleImages);
+                try {
+                    const fileToCache = dataURLtoFile(resultDataUrl, 'cached.png');
+                    await db.saveImageToCache(cacheKey, fileToCache);
+                } catch (cacheError) {
+                    console.warn("Falha ao salvar a imagem no cache:", cacheError);
+                }
+            }
+            const newFile = dataURLtoFile(resultDataUrl, `fusion-result.png`);
+            const newLayers = layers.map(l => (l.id === activeLayerId ? { ...l, file: newFile } : l)) as Layer[];
+            commitChange(newLayers, activeLayerId, 'creativeFusion');
+            setToast({ message: 'Fusão aplicada!', type: 'success' });
+            setIsInlineComparisonActive(true);
+            setActiveTool(null);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "Ocorreu um erro desconhecido.";
+            setError(errorMessage);
+            setToast({ message: errorMessage, type: 'error' });
+        } finally {
+            setIsLoading(false);
+            setLoadingMessage(null);
+        }
+    }, [layers, activeLayerId, commitChange]);
+
     const contextValue: EditorContextType = {
-        activeTool, setActiveTool, activeTab, setActiveTab, isLoading, setIsLoading, loadingMessage, setLoadingMessage, error, setError, isComparisonModalOpen, setIsComparisonModalOpen, isInlineComparisonActive, setIsInlineComparisonActive, toast, setToast, proactiveSuggestion, setProactiveSuggestion, uploadProgress, setUploadProgress, isSaveWorkflowModalOpen, setIsSaveWorkflowModalOpen, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, theme, toggleTheme: () => setTheme(t => t === 'dark' ? 'light' : 'dark'), layers, activeLayerId, setActiveLayerId, baseImageFile, currentImageUrl, compositeCssFilter, originalImageUrl, imgRef, setInitialImage, hasRestoredSession, isEditingSessionActive, setIsEditingSessionActive, updateLayer, deleteLayer, toggleLayerVisibility, mergeDownLayer: () => {}, moveLayerUp, moveLayerDown, history, historyIndex, canUndo, canRedo, undo, redo, jumpToState, resetHistory, toolHistory, commitChange, isGif, gifFrames, currentFrameIndex, setCurrentFrameIndex, zoom, setZoom, panOffset, isPanModeActive, setIsPanModeActive, isCurrentlyPanning, handleWheel, handlePanStart, handleTouchStart, handleTouchMove, handleTouchEnd, resetZoomAndPan, crop, setCrop, completedCrop, setCompletedCrop, aspect, setAspect, canvasRef, maskDataUrl, setMaskDataUrl, brushSize, setBrushSize, clearMask, startDrawing, stopDrawing, draw, detectedObjects, setDetectedObjects, highlightedObject, setHighlightedObject, localFilters, setLocalFilters, hasLocalAdjustments, buildFilterString, resetLocalFilters, histogram, previewState, setPreviewState, isPreviewLoading, textToolState, setTextToolState, resetTextToolState, generatedVideoUrl, setGeneratedVideoUrl, texturePreview, setTexturePreview, isSmartSearching, smartSearchResult, setSmartSearchResult, savedWorkflows, addWorkflow: () => {}, recentTools, promptHistory, addPromptToHistory: () => {}, executeWorkflow: () => {}, handlePredefinedSearchAction: () => {}, handleSmartSearch: async () => {}, handleFileSelect: setInitialImage, handleGoHome: () => setInitialImage(null), handleTriggerUpload: () => {}, handleExplicitSave: async () => {}, handleApplyCrop, handleTransform, handleRemoveBackground, handleRelight, handleMagicPrompt, handleApplyLowPoly, handleExtractArt, handleApplyDustAndScratch, handleDenoise, handleApplyFaceRecovery, handleGenerateProfessionalPortrait, handleRestorePhoto, handleApplyUpscale, handleUnblurImage, handleApplySharpen, handleApplyNewAspectRatio, handleGenerativeEdit: async () => {}, handleObjectRemove: async () => {}, handleDetectObjects: async () => {}, handleDetectFaces: async () => {}, handleFaceRetouch: async () => {}, handleFaceSwap: () => {}, handleSelectObject: () => {}, handleApplyLocalAdjustments: () => {}, handleApplyCurve: () => {}, handleApplyStyle, handleApplyAIAdjustment, handleApplyText: async () => {}, handleGenerateVideo: () => {}, handleDownload: async () => {}, handleApplyTexture: async () => {}, handleVirtualTryOn, handleFunkoPop, handleStyledPortrait: async () => {}, handlePolaroid: async () => {}, handleConfidentStudio: async () => {}, handleAIPortrait, handleEnhanceResolutionAndSharpness, handleDoubleExposure, prompt, setPrompt, generateAIPreview, commitAIPreview, initialPromptFromMetadata,
-        // FIX: Add handleMagicMontage to context value
+        activeTool, setActiveTool, activeTab, setActiveTab, isLoading, setIsLoading, loadingMessage, setLoadingMessage, error, setError, isComparisonModalOpen, setIsComparisonModalOpen, isInlineComparisonActive, setIsInlineComparisonActive, toast, setToast, proactiveSuggestion, setProactiveSuggestion, uploadProgress, setUploadProgress, isSaveWorkflowModalOpen, setIsSaveWorkflowModalOpen, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, theme, toggleTheme: () => setTheme(t => t === 'dark' ? 'light' : 'dark'), layers, activeLayerId, setActiveLayerId: setActiveLayerId_callback, baseImageFile, currentImageUrl, compositeCssFilter, originalImageUrl, imgRef, setInitialImage, hasRestoredSession, isEditingSessionActive, setIsEditingSessionActive, updateLayer, deleteLayer, toggleLayerVisibility, mergeDownLayer: () => {}, moveLayerUp, moveLayerDown, history, historyIndex, canUndo, canRedo, undo, redo, jumpToState, resetHistory, toolHistory, commitChange, isGif, gifFrames, currentFrameIndex, setCurrentFrameIndex, zoom, setZoom, panOffset, isPanModeActive, setIsPanModeActive, isCurrentlyPanning, handleWheel, handlePanStart, handleTouchStart, handleTouchMove, handleTouchEnd, resetZoomAndPan, crop, setCrop, completedCrop, setCompletedCrop, aspect, setAspect, canvasRef, maskDataUrl, setMaskDataUrl, brushSize, setBrushSize, clearMask, startDrawing, stopDrawing, draw, detectedObjects, setDetectedObjects, highlightedObject, setHighlightedObject, localFilters, setLocalFilters, hasLocalAdjustments, buildFilterString, resetLocalFilters, histogram, previewState, setPreviewState, isPreviewLoading, textToolState, setTextToolState, resetTextToolState, generatedVideoUrl, setGeneratedVideoUrl, texturePreview, setTexturePreview, isSmartSearching, smartSearchResult, setSmartSearchResult, savedWorkflows, addWorkflow: () => {}, recentTools, promptHistory, addPromptToHistory: () => {}, executeWorkflow: () => {}, handlePredefinedSearchAction: () => {}, handleSmartSearch: async () => {}, handleFileSelect: setInitialImage, handleGoHome: () => setInitialImage(null), handleTriggerUpload: () => {}, handleExplicitSave: async () => {}, handleApplyCrop, handleTransform, handleRemoveBackground, handleRelight, handleMagicPrompt, handleApplyLowPoly, handleExtractArt, handleApplyDustAndScratch, handleDenoise, handleApplyFaceRecovery, handleGenerateProfessionalPortrait, handleRestorePhoto, handleApplyUpscale, handleUnblurImage, handleApplySharpen, handleApplyNewAspectRatio, handleGenerativeEdit: async () => {}, handleObjectRemove: async () => {}, handleDetectObjects, handleDetectFaces, handleFaceRetouch: async () => {}, handleFaceSwap, handleSelectObject, handleApplyLocalAdjustments, handleApplyCurve: () => {}, handleApplyStyle, handleApplyAIAdjustment, handleApplyText: async () => {}, handleGenerateVideo: () => {}, handleDownload: async () => {}, handleApplyTexture: async () => {}, handleVirtualTryOn, handleFunkoPop, handleStyledPortrait: async () => {}, handlePolaroid: async () => {}, handleConfidentStudio: async () => {}, handleSuperheroFusion, handleAIPortrait, handleEnhanceResolutionAndSharpness, handleDoubleExposure, handleCreativeFusion, prompt, setPrompt, generateAIPreview: generateAIPreview_callback, commitAIPreview: commitAIPreview_callback, initialPromptFromMetadata,
         handleMagicMontage,
     };
 

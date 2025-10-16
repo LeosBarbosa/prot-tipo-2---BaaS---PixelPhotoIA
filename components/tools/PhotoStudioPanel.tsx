@@ -7,8 +7,9 @@ import { useEditor } from '../../context/EditorContext';
 import * as geminiService from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { CameraIcon } from '../icons';
+import { CameraIcon, AdjustmentsHorizontalIcon } from '../icons';
 import TipBox from '../common/TipBox';
+import CollapsibleToolPanel from '../CollapsibleToolPanel';
 
 const PromptField: React.FC<{
     label: string;
@@ -261,26 +262,34 @@ const presets: Preset[] = [
     {
         name: 'Soldado Invernal',
         thumbnail: 'https://storage.googleapis.com/maker-studio-tools-us-east1/photostudio/winter_soldier.webp',
-        photoStyle: "Imagem cinematográfica hiper-realista, composição de pôster de filme, tom épico, detalhes nítidos, 8K.",
-        location: "Rua de cidade esfumaçada e devastada pela guerra, com faíscas e brasas voando.",
-        clothing: "Traje de combate tático icônico: armadura escura, braço cibernético de metal brilhante com gravuras, cabelo comprido e bagunçado.",
-        lighting: "Iluminação de contraste sombrio.",
-        pose: "Pose dramática segurando um rifle, braço de metal para a frente, máscara tática abaixada revelando uma expressão intensa e de batalha.",
+        photoStyle: "Imagem cinematográfica hiper-realista, composição de pôster de filme, tom épico, detalhes nítidos.",
+        location: "Telhado de um arranha-céu com vista para uma cidade noturna e chuvosa, com luzes de neon e arranha-céus futuristas. Atmosfera sombria e corajosa.",
+        clothing: "Jaqueta de couro tática preta, calças de combate e um braço de metal cibernético detalhado com placas segmentadas e brilhos internos sutis. O cabelo é na altura dos ombros e despenteado.",
+        lighting: "Iluminação de borda dramática (rim lighting) da paisagem urbana de neon, com um forte contraste entre luz e sombra no rosto e no corpo.",
+        pose: "Em pé, de costas para a câmera, mas olhando por cima do ombro para o espectador com uma expressão intensa e séria.",
     },
 ];
 
 const PhotoStudioPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, baseImageFile, setInitialImage } = useEditor();
+    const { 
+        isLoading, 
+        error, 
+        baseImageFile,
+        setInitialImage,
+        handleConfidentStudio,
+        currentImageUrl,
+        addPromptToHistory,
+    } = useEditor();
     
     const [personImage, setPersonImage] = useState<File | null>(null);
+    const [photoStyle, setPhotoStyle] = useState('');
     const [location, setLocation] = useState('');
     const [clothing, setClothing] = useState('');
     const [lighting, setLighting] = useState('');
     const [pose, setPose] = useState('');
-    const [photoStyle, setPhotoStyle] = useState('');
     const [negativePrompt, setNegativePrompt] = useState('');
-    const [resultImage, setResultImage] = useState<string | null>(null);
-    
+    const [isManualExpanded, setIsManualExpanded] = useState(false);
+
     useEffect(() => {
         if (baseImageFile && !personImage) {
             setPersonImage(baseImageFile);
@@ -292,74 +301,47 @@ const PhotoStudioPanel: React.FC = () => {
         if (file) {
             setInitialImage(file);
         }
-        setResultImage(null);
     };
 
-    const handlePresetClick = (preset: Preset) => {
+    const handlePresetSelect = (preset: Preset) => {
         setPhotoStyle(preset.photoStyle);
         setLocation(preset.location);
         setClothing(preset.clothing);
         setLighting(preset.lighting);
         setPose(preset.pose);
+        setIsManualExpanded(true);
     };
 
     const handleGenerate = async () => {
-        if (!personImage) {
-            setError("Por favor, carregue a imagem da pessoa.");
-            return;
-        }
+        if (!personImage) return;
 
-        setIsLoading(true);
-        setError(null);
-        setResultImage(null);
-        try {
-            const details = [
-                photoStyle && `- **Estilo Fotográfico:** ${photoStyle} (Ex: editorial de moda, retrato dramático, cinematográfico).`,
-                location && `- **Local e Cenário:** ${location} (Ex: rua parisiense à noite, estúdio minimalista, praia tropical ensolarada).`,
-                clothing && `- **Figurino e Vestuário:** ${clothing} (Ex: smoking preto elegante, vestido de verão esvoaçante, jaqueta de couro robusta).`,
-                lighting && `- **Iluminação:** ${lighting} (Ex: luz quente do pôr do sol, luzes vibrantes de neon da cidade, iluminação de estúdio suave e difusa).`,
-                pose && `- **Pose e Ação:** ${pose} (Ex: caminhando confiantemente em direção à câmera, olhando pensativamente pela janela, rindo espontaneamente).`,
-            ].filter(Boolean).join('\n');
-
-            const mainPrompt = `**Objetivo:** Gerar uma imagem de ensaio fotográfico profissional e fotorrealista, estrelando a pessoa da foto fornecida.
-**Instrução Crítica:** A identidade facial e as características distintivas da pessoa devem ser preservadas com 100% de precisão. O resultado final DEVE ser uma nova fotografia da *mesma pessoa*.
-
-**Detalhes da Cena:**
-${details}
-
-**Qualidade:** A imagem deve ser de alta resolução (qualidade 8K), hiperdetalhada e com um aspecto cinematográfico profissional.
-`.trim();
-            
-            const result = await geminiService.generateStudioPortrait(personImage, mainPrompt, negativePrompt);
-            setResultImage(result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
-        } finally {
-            setIsLoading(false);
-        }
+        const mainPrompt = `Gere um ensaio fotográfico fotorrealista da pessoa na imagem fornecida, colocando-a na seguinte cena:\n\n**Instrução Crítica:** A identidade facial, cabelo, tom de pele e tipo de corpo da pessoa devem ser preservados com 100% de precisão. O resultado deve ser uma nova fotografia da *mesma pessoa*.\n\n**Detalhes da Cena:**\n- **Estilo da Foto:** ${photoStyle}\n- **Local:** ${location}\n- **Figurino:** ${clothing}\n- **Iluminação:** ${lighting}\n- **Pose e Ação:** ${pose}\n\n**Qualidade:** A imagem deve ser de alta resolução (qualidade 8K), hiperdetalhada e com alto realismo.`;
+        
+        addPromptToHistory(mainPrompt);
+        handleConfidentStudio(personImage, mainPrompt, negativePrompt);
     };
 
-    const isGenerateButtonDisabled = isLoading || !personImage || !(location || clothing || lighting || pose || photoStyle);
+    const isGenerateButtonDisabled = isLoading || !personImage || !photoStyle || !location || !clothing || !lighting || !pose;
 
     return (
         <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6 h-full">
             <aside className="w-full md:w-96 flex-shrink-0 bg-gray-900/30 rounded-lg p-4 flex flex-col gap-4 border border-gray-700/50 overflow-y-auto scrollbar-thin">
                 <div className="text-center">
                     <h3 className="text-lg font-semibold text-gray-200">Ensaio Fotográfico IA</h3>
-                    <p className="text-sm text-gray-400 mt-1">Gere ensaios fotográficos realistas.</p>
+                    <p className="text-sm text-gray-400 mt-1">Gere ensaios realistas com cenários e roupas personalizados.</p>
                 </div>
                 
                 <ImageDropzone imageFile={personImage} onFileSelect={handlePersonFileSelect} label="Sua Foto"/>
                 
                 <div>
-                    <h4 className="text-sm font-semibold text-gray-300 mb-2 text-center">Inspirações</h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {presets.map(preset => (
+                    <h4 className="text-sm font-semibold text-gray-300 mb-2 text-center">Presets de Inspiração</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                        {presets.slice(0, 9).map(preset => (
                             <button
                                 key={preset.name}
-                                onClick={() => handlePresetClick(preset)}
+                                onClick={() => handlePresetSelect(preset)}
                                 disabled={isLoading}
-                                className="relative group aspect-[3/4] rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all"
+                                className="relative group aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all"
                                 title={preset.name}
                             >
                                 <img src={preset.thumbnail} alt={preset.name} className="w-full h-full object-cover" />
@@ -370,22 +352,27 @@ ${details}
                     </div>
                 </div>
 
-                <div className="space-y-3">
-                    <PromptField label="Estilo Fotográfico" value={photoStyle} onChange={e => setPhotoStyle(e.target.value)} placeholder="Ex: editorial de moda, capa de revista, cinematográfico" disabled={isLoading} />
-                    <PromptField label="Local / Cenário" value={location} onChange={e => setLocation(e.target.value)} placeholder="Ex: em uma rua de Paris, estúdio minimalista, praia tropical" disabled={isLoading} />
-                    <PromptField label="Figurino" value={clothing} onChange={e => setClothing(e.target.value)} placeholder="Ex: terno preto elegante, vestido de verão, jaqueta de couro" disabled={isLoading} />
-                    <PromptField label="Iluminação" value={lighting} onChange={e => setLighting(e.target.value)} placeholder="Ex: luz do pôr do sol, neon, estúdio profissional" disabled={isLoading} />
-                    <PromptField label="Pose / Ação" value={pose} onChange={e => setPose(e.target.value)} placeholder="Ex: andando em direção à câmera, olhando para o horizonte" disabled={isLoading} />
-                    <PromptField label="O que evitar (Negativo)" value={negativePrompt} onChange={e => setNegativePrompt(e.target.value)} placeholder="Ex: óculos, chapéu, mais de uma pessoa" rows={1} disabled={isLoading} />
-                </div>
-                
-                <TipBox>Descreva os detalhes do seu ensaio fotográfico. Quanto mais específico, melhor o resultado. É crucial que o rosto da pessoa na foto esteja claro e bem iluminado.</TipBox>
-                
-                <button
-                    onClick={handleGenerate}
-                    disabled={isGenerateButtonDisabled}
-                    className="w-full mt-auto bg-gradient-to-br from-sky-600 to-blue-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                <CollapsibleToolPanel
+                    title="Direção Manual"
+                    icon={<AdjustmentsHorizontalIcon className="w-5 h-5" />}
+                    isExpanded={isManualExpanded}
+                    onExpandToggle={() => setIsManualExpanded(!isManualExpanded)}
                 >
+                    <div className="flex flex-col gap-4">
+                        <PromptField label="Estilo da Foto" value={photoStyle} onChange={e => setPhotoStyle(e.target.value)} placeholder="Ex: Retrato cinematográfico..." disabled={isLoading}/>
+                        <PromptField label="Local" value={location} onChange={e => setLocation(e.target.value)} placeholder="Ex: Em uma rua de Paris à noite..." disabled={isLoading}/>
+                        <PromptField label="Figurino" value={clothing} onChange={e => setClothing(e.target.value)} placeholder="Ex: Terno preto elegante..." disabled={isLoading}/>
+                        <PromptField label="Iluminação" value={lighting} onChange={e => setLighting(e.target.value)} placeholder="Ex: Luz do pôr do sol..." disabled={isLoading}/>
+                        <PromptField label="Pose e Ação" value={pose} onChange={e => setPose(e.target.value)} placeholder="Ex: Sentado em uma poltrona..." disabled={isLoading}/>
+                        <PromptField label="Prompt Negativo" value={negativePrompt} onChange={e => setNegativePrompt(e.target.value)} placeholder="Ex: óculos, chapéu..." disabled={isLoading}/>
+                    </div>
+                </CollapsibleToolPanel>
+                
+                <TipBox>
+                    Use um preset como ponto de partida e depois ajuste os campos manualmente para criar sua cena perfeita.
+                </TipBox>
+                
+                <button onClick={handleGenerate} disabled={isGenerateButtonDisabled} className="w-full mt-auto bg-gradient-to-br from-sky-600 to-cyan-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                     <CameraIcon className="w-5 h-5" />
                     Gerar Ensaio
                 </button>
@@ -394,8 +381,8 @@ ${details}
                 <ResultViewer
                     isLoading={isLoading}
                     error={error}
-                    resultImage={resultImage}
-                    loadingMessage="Preparando seu ensaio fotográfico..."
+                    resultImage={currentImageUrl}
+                    loadingMessage="Preparando o estúdio..."
                 />
             </main>
         </div>

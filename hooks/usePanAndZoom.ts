@@ -101,47 +101,44 @@ export const usePanAndZoom = () => {
           e.preventDefault();
 
           const newDist = getTouchDistance(e.touches);
-          const newPanPoint = getTouchCenter(e.touches);
+          const newCenter = getTouchCenter(e.touches);
           
-          const panDelta = {
-              x: newPanPoint.x - lastPanPoint.current.x,
-              y: newPanPoint.y - lastPanPoint.current.y
-          };
           const zoomRatio = newDist / lastTouchDist.current;
+          const panDelta = {
+              x: newCenter.x - lastPanPoint.current.x,
+              y: newCenter.y - lastPanPoint.current.y
+          };
+
+          // Update zoom state
+          setZoom(prevZoom => Math.max(1, Math.min(5, prevZoom * zoomRatio)));
           
-          setZoom(prevZoom => {
-              const newZoom = Math.max(1, Math.min(5, prevZoom * zoomRatio));
+          // Update pan state
+          setPanOffset(prevPan => {
+              // The anchor point for zoom is the *last* known center of the pinch gesture, relative to the container.
+              const anchor = {
+                  x: lastPanPoint.current!.x - containerRect.left,
+                  y: lastPanPoint.current!.y - containerRect.top
+              };
+
+              // First, calculate the pan adjustment required to zoom around the anchor point.
+              // This keeps the point under the anchor stationary relative to the screen.
+              const panAfterZoom = {
+                  x: anchor.x + (prevPan.x - anchor.x) * zoomRatio,
+                  y: anchor.y + (prevPan.y - anchor.y) * zoomRatio
+              };
+
+              // Then, add the pan delta caused by the fingers moving across the screen.
+              const finalPan = {
+                  x: panAfterZoom.x + panDelta.x,
+                  y: panAfterZoom.y + panDelta.y
+              };
               
-              setPanOffset(prevPan => {
-                  // This combined logic handles both panning the image with two fingers
-                  // and adjusting the pan to zoom towards the pinch center.
-                  
-                  // 1. Start with the previous pan and add the movement of the fingers
-                  const newPan = {
-                      x: prevPan.x + panDelta.x,
-                      y: prevPan.y + panDelta.y,
-                  };
-
-                  // 2. Adjust pan to zoom towards the pinch center point
-                  const center = newPanPoint;
-                  const mouseX = center.x - containerRect.left;
-                  const mouseY = center.y - containerRect.top;
-
-                  // Find the image coordinate under the pinch center before the zoom
-                  const imageX_before = (mouseX - newPan.x) / prevZoom;
-                  const imageY_before = (mouseY - newPan.y) / prevZoom;
-                  
-                  // Calculate the new pan offset to keep that image coordinate under the pinch center
-                  newPan.x = mouseX - imageX_before * newZoom;
-                  newPan.y = mouseY - imageY_before * newZoom;
-
-                  return newPan;
-              });
-              return newZoom;
+              return finalPan;
           });
 
+          // Update refs for the next move event
           lastTouchDist.current = newDist;
-          lastPanPoint.current = newPanPoint;
+          lastPanPoint.current = newCenter;
       }
   }, [isPanModeActive]);
 

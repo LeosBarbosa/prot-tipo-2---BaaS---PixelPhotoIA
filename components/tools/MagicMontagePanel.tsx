@@ -10,13 +10,21 @@ import { useEditor } from '../../context/EditorContext';
 import { validatePromptSpecificity } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { MagicWandIcon, DownloadIcon, BrushIcon, LayersIcon, FireIcon, GtaIcon, UserIcon, LineArtIcon, SunIcon, TextToolIcon, ClockIcon } from '../icons';
+import { MagicWandIcon, DownloadIcon, BrushIcon, LayersIcon, FireIcon, GtaIcon, UserIcon, LineArtIcon, SunIcon, TextToolIcon, ClockIcon, PhotoIcon, LightbulbIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import { dataURLtoFile } from '../../utils/imageUtils';
 import TipBox from '../common/TipBox';
+import CollapsibleToolPanel from '../CollapsibleToolPanel';
+import PromptPresetPanel from '../common/PromptPresetPanel';
 
 const presets = [
-    // ... (a sua lista de presets permanece a mesma)
+    { name: 'Adicionar Tatuagem', prompt: 'Adicione uma tatuagem de dragão realista no braço da pessoa.', icon: <FireIcon className="w-5 h-5"/>, negativePrompt: 'roupa alterada' },
+    { name: 'Estilo GTA', prompt: 'Transforme a imagem em uma arte de pôster do Grand Theft Auto, com contornos ousados e cores vibrantes.', icon: <GtaIcon className="w-5 h-5"/>, negativePrompt: 'fotorrealista' },
+    { name: 'Trocar Roupas', prompt: 'Mude a roupa da pessoa para um terno de negócios elegante e profissional.', icon: <UserIcon className="w-5 h-5"/>, negativePrompt: 'rosto alterado' },
+    { name: 'Desenho de Linha', prompt: 'Converta a imagem em um esboço de arte de linha preto e branco.', icon: <LineArtIcon className="w-5 h-5"/>, negativePrompt: 'cor, sombreamento' },
+    { name: 'Iluminação Dramática', prompt: 'Altere a iluminação para ser mais dramática, com uma única fonte de luz vinda de cima.', icon: <SunIcon className="w-5 h-5"/>, negativePrompt: 'plano, brilhante' },
+    { name: 'Adicionar Texto', prompt: 'Adicione o texto "AVENTURA" em um estilo cinematográfico na parte inferior da imagem.', icon: <TextToolIcon className="w-5 h-5"/>, negativePrompt: 'texto ilegível' },
+    { name: 'Foto Antiga', prompt: 'Dê à foto um visual antigo, com cor sépia, grão de filme e algumas pequenas imperfeições.', icon: <ClockIcon className="w-5 h-5"/>, negativePrompt: 'moderno, limpo' },
 ];
 
 const MagicMontagePanel: React.FC = () => {
@@ -28,16 +36,17 @@ const MagicMontagePanel: React.FC = () => {
         setToast,
         addPromptToHistory,
         baseImageFile,
-        handleMagicMontage, // Nova função do contexto
-        currentImageUrl, // Usar a imagem do editor como resultado
+        handleMagicMontage,
+        currentImageUrl,
     } = useEditor();
 
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [secondImage, setSecondImage] = useState<File | null>(null);
     const [prompt, setPrompt] = useState('');
     const [negativePrompt, setNegativePrompt] = useState('');
+    const [isImagesExpanded, setIsImagesExpanded] = useState(true);
+    const [isInspirationsExpanded, setIsInspirationsExpanded] = useState(true);
     
-    // O resultado agora é a imagem principal do editor
     const resultImage = currentImageUrl;
 
     useEffect(() => {
@@ -76,7 +85,6 @@ const MagicMontagePanel: React.FC = () => {
             fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
         }
         
-        // Chama o handler centralizado
         handleMagicMontage(sourceImage, fullPrompt, secondImage || undefined);
     };
 
@@ -92,7 +100,6 @@ const MagicMontagePanel: React.FC = () => {
 
     const handleUseInEditor = () => {
         if (!resultImage) return;
-        // A imagem já está no editor, basta fechar a ferramenta.
         setActiveTool(null);
     };
 
@@ -142,7 +149,7 @@ const MagicMontagePanel: React.FC = () => {
                             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm"
                         >
                              <BrushIcon className="w-5 h-5" />
-                            Usar no Editor
+                            Continuar Editando
                         </button>
                     </div>
                 )}
@@ -152,21 +159,33 @@ const MagicMontagePanel: React.FC = () => {
                     <h3 className="text-lg font-semibold text-gray-200">Montagem Mágica ✨</h3>
                     <p className="text-sm text-gray-400 mt-1">Descreva qualquer edição e deixe a IA transformar sua foto.</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <ImageDropzone 
-                        imageFile={sourceImage}
-                        onFileSelect={handleSourceFileSelect}
-                        label="Imagem Principal"
-                    />
-                    <ImageDropzone 
-                        imageFile={secondImage}
-                        onFileSelect={setSecondImage}
-                        label="Imagem Opcional"
-                    />
-                </div>
 
-                <div>
-                    <h4 className="text-sm font-semibold text-gray-300 mb-2 text-center">Inspirações</h4>
+                <CollapsibleToolPanel
+                    title="Imagens de Origem"
+                    icon={<PhotoIcon className="w-5 h-5" />}
+                    isExpanded={isImagesExpanded}
+                    onExpandToggle={() => setIsImagesExpanded(!isImagesExpanded)}
+                >
+                    <div className="grid grid-cols-2 gap-4">
+                        <ImageDropzone 
+                            imageFile={sourceImage}
+                            onFileSelect={handleSourceFileSelect}
+                            label="Imagem Principal"
+                        />
+                        <ImageDropzone 
+                            imageFile={secondImage}
+                            onFileSelect={setSecondImage}
+                            label="Imagem Opcional"
+                        />
+                    </div>
+                </CollapsibleToolPanel>
+
+                <CollapsibleToolPanel
+                    title="Inspirações"
+                    icon={<LightbulbIcon className="w-5 h-5" />}
+                    isExpanded={isInspirationsExpanded}
+                    onExpandToggle={() => setIsInspirationsExpanded(!isInspirationsExpanded)}
+                >
                     <div className="flex flex-col gap-2">
                         {presets.map(preset => (
                             <button
@@ -181,7 +200,7 @@ const MagicMontagePanel: React.FC = () => {
                             </button>
                         ))}
                     </div>
-                </div>
+                </CollapsibleToolPanel>
                 
                 <CollapsiblePromptPanel
                   title="Descrição da Edição"
@@ -194,6 +213,12 @@ const MagicMontagePanel: React.FC = () => {
                   promptPlaceholder="Ex: coloque um chapéu de pirata na pessoa..."
                   promptHelperText="Seja o mais descritivo possível sobre a alteração que você deseja."
                   negativePromptHelperText="Ex: não altere a cor da camisa, evite adicionar sombras."
+                />
+
+                <PromptPresetPanel 
+                    toolId="magicMontage"
+                    onSelectPreset={(selectedPrompt) => setPrompt(selectedPrompt)}
+                    isLoading={isLoading}
                 />
 
                 <TipBox>

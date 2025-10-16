@@ -120,3 +120,52 @@ export const promptExamples: Partial<Record<ToolId, string[]>> = {
     'ajuste o tom de pele para ser mais bronzeado',
   ]
 };
+
+
+export const negativePromptExamples: Partial<Record<ToolId, string[]>> = {
+  imageGen: [
+    'texto, marca d\'água, baixa qualidade, feio, deformado',
+    'mãos extras, membros faltando, desfocado',
+    'cores opacas, chato, sem detalhes',
+  ],
+  characterDesign: [
+    'proporções erradas, mãos deformadas, rosto genérico',
+    'fundo branco simples, pose estática',
+    'roupas sem textura, sem detalhes',
+  ],
+  magicMontage: [
+    'não altere o rosto, preserve a identidade da pessoa',
+    'iluminação inconsistente, bordas de recorte visíveis',
+    'resultado irrealista, estilo de colagem',
+  ],
+  generativeEdit: [
+    'não altere o fundo, preserve o resto da imagem',
+    'resultado desfocado, baixa resolução',
+    'iluminação ou sombras que não correspondem',
+  ],
+  productPhotography: [
+    'fundo confuso, reflexos indesejados',
+    'sombras irrealistas, produto flutuando',
+    'baixa resolução, textura de plástico barato',
+  ],
+  relight: [
+    'estourado, superexposto, perda de detalhes nas altas luzes',
+    'escuro demais, subexposto, perda de detalhes nas sombras',
+    'cor da luz irrealista, artificial',
+  ],
+  outpainting: [
+    'bordas visíveis, junção óbvia',
+    'conteúdo repetitivo, sem criatividade',
+    'inconsistente com o estilo ou iluminação original',
+  ],
+  styledPortrait: [
+    'rosto alterado, perda de identidade, características irreconhecíveis',
+    'cabelo de cor errada',
+    'artefatos, fusão ruim entre o rosto e o corpo',
+  ],
+  tryOn: [
+    'rosto alterado, tipo de corpo alterado, tom de pele alterado',
+    'roupa mal ajustada, flutuando sobre o corpo',
+    'deformado, feio, mãos extras, membros extras',
+  ],
+};

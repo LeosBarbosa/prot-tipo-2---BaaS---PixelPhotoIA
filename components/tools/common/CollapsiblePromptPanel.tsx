@@ -38,16 +38,36 @@ const CollapsiblePromptPanel: React.FC<CollapsiblePromptPanelProps> = ({
   negativePromptHelperText,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const suggestions = usePromptSuggestions(prompt, toolId);
+
+  // State and hooks for POSITIVE prompt
+  const [showPositiveSuggestions, setShowPositiveSuggestions] = useState(false);
+  const positiveSuggestions = usePromptSuggestions(prompt, toolId, 'positive');
+  
+  // State and hooks for NEGATIVE prompt
+  const [showNegativeSuggestions, setShowNegativeSuggestions] = useState(false);
+  const negativeSuggestions = usePromptSuggestions(negativePrompt, toolId, 'negative');
+
+  useEffect(() => {
+    setShowPositiveSuggestions(positiveSuggestions.length > 0);
+  }, [positiveSuggestions]);
   
   useEffect(() => {
-    setShowSuggestions(suggestions.length > 0);
-  }, [suggestions]);
+    setShowNegativeSuggestions(negativeSuggestions.length > 0);
+  }, [negativeSuggestions]);
 
-  const handleSelectSuggestion = (suggestion: string) => {
+  const handleSelectPositiveSuggestion = (suggestion: string) => {
     setPrompt(suggestion);
-    setShowSuggestions(false);
+    setShowPositiveSuggestions(false);
+  };
+  
+  const handleSelectNegativeSuggestion = (suggestion: string) => {
+    const event = {
+      target: {
+        value: negativePrompt ? `${negativePrompt}, ${suggestion}` : suggestion
+      }
+    } as React.ChangeEvent<HTMLTextAreaElement>;
+    onNegativePromptChange(event);
+    setShowNegativeSuggestions(false);
   };
 
   return (
@@ -70,8 +90,8 @@ const CollapsiblePromptPanel: React.FC<CollapsiblePromptPanelProps> = ({
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                  onFocus={() => setShowSuggestions(suggestions.length > 0)}
+                  onBlur={() => setTimeout(() => setShowPositiveSuggestions(false), 150)}
+                  onFocus={() => setShowPositiveSuggestions(positiveSuggestions.length > 0)}
                   placeholder={promptPlaceholder || "Ex: um astronauta surfando em uma onda cósmica..."}
                   className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
                   disabled={isLoading}
@@ -79,24 +99,33 @@ const CollapsiblePromptPanel: React.FC<CollapsiblePromptPanelProps> = ({
                 />
                 <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId={toolId} />
               </div>
-              {showSuggestions && (
+              {showPositiveSuggestions && (
                   <PromptSuggestionsDropdown
-                      suggestions={suggestions}
-                      onSelect={handleSelectSuggestion}
+                      suggestions={positiveSuggestions}
+                      onSelect={handleSelectPositiveSuggestion}
                       searchTerm={prompt}
                   />
               )}
               {promptHelperText && <p className="mt-1 text-xs text-gray-500 px-1">{promptHelperText}</p>}
             </div>
-            <div>
+            <div className="relative">
               <textarea
                 value={negativePrompt}
                 onChange={onNegativePromptChange}
+                onBlur={() => setTimeout(() => setShowNegativeSuggestions(false), 150)}
+                onFocus={() => setShowNegativeSuggestions(negativeSuggestions.length > 0)}
                 placeholder={negativePromptPlaceholder || "Prompt Negativo (Opcional): o que evitar..."}
                 className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base min-h-[60px]"
                 disabled={isLoading}
                 rows={2}
               />
+              {showNegativeSuggestions && (
+                  <PromptSuggestionsDropdown
+                      suggestions={negativeSuggestions}
+                      onSelect={handleSelectNegativeSuggestion}
+                      searchTerm={negativePrompt}
+                  />
+              )}
               {negativePromptHelperText && <p className="mt-1 text-xs text-gray-500 px-1">{negativePromptHelperText}</p>}
             </div>
           </div>

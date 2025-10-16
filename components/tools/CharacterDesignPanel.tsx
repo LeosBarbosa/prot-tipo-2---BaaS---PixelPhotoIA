@@ -11,6 +11,7 @@ import ResultViewer from './common/ResultViewer';
 import { SparkleIcon, FaceSmileIcon } from '../icons';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
+import PromptPresetPanel from './common/PromptPresetPanel';
 
 const CharacterDesignPanel: React.FC = () => {
     const { isLoading, error, setError, setIsLoading, addPromptToHistory } = useEditor();
@@ -87,6 +88,12 @@ const CharacterDesignPanel: React.FC = () => {
                     promptPlaceholder="Ex: mulher com cabelo prateado, armadura ornamentada..."
                     promptHelperText="Inclua detalhes sobre cabelo, roupas, acessórios e expressão."
                     negativePromptHelperText="Ex: deformado, feio, membros extras."
+                />
+
+                <PromptPresetPanel 
+                    toolId="characterDesign"
+                    onSelectPreset={(selectedPrompt) => setDetails(selectedPrompt)}
+                    isLoading={isLoading}
                 />
                 
                 <button

@@ -4,13 +4,12 @@
 */
 
 import React, { useState, useEffect } from 'react';
-// FIX: import from ../../context/EditorContext
 import { useEditor } from '../../context/EditorContext';
-import { SparkleIcon, SwapIcon } from '../icons';
+import { SparkleIcon, SwapIcon, BullseyeIcon, UserIcon, AdjustmentsHorizontalIcon } from '../icons';
 import ImageDropzone from './common/ImageDropzone';
 import TipBox from '../common/TipBox';
-// FIX: import from ../../types
 import { type DetectedObject } from '../../types';
+import CollapsibleToolPanel from '../CollapsibleToolPanel';
 
 const FaceSwapPanel: React.FC = () => {
     const {
@@ -22,46 +21,50 @@ const FaceSwapPanel: React.FC = () => {
         baseImageFile,
         setToast,
         setHighlightedObject,
-        // FIX: `selectedObject` does not exist, use `highlightedObject` instead
         highlightedObject,
     } = useEditor();
 
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [userPrompt, setUserPrompt] = useState<string>('');
     const [selectedFace, setSelectedFace] = useState<DetectedObject | null>(null);
+    const [expandedStep, setExpandedStep] = useState<number>(1);
 
-    // Limpa a seleção local se as detecções forem limpas no contexto
+    useEffect(() => {
+        if (highlightedObject && detectedObjects?.includes(highlightedObject)) {
+            if (selectedFace?.box !== highlightedObject.box) {
+                setSelectedFace(highlightedObject);
+            }
+        }
+    }, [highlightedObject, detectedObjects, selectedFace]);
+
     useEffect(() => {
         if (!detectedObjects) {
             setSelectedFace(null);
-        } else {
-            // FIX: The logic here was potentially problematic. Sync local selection with context highlight.
-            if (highlightedObject && detectedObjects.includes(highlightedObject)) {
-                setSelectedFace(highlightedObject);
-            } else {
-                setSelectedFace(null);
-            }
         }
-    }, [detectedObjects, highlightedObject]);
+    }, [detectedObjects]);
+
 
     const handleFaceClick = (face: DetectedObject) => {
-        setSelectedFace(face); // Persiste a seleção localmente
-        handleSelectObject(face); // Atualiza o contexto (define a máscara e o destaque visual)
+        setSelectedFace(face);
+        handleSelectObject(face);
+        // Move to next step automatically
+        setExpandedStep(2);
     };
 
     const handleMouseLeaveList = () => {
-        // Quando o mouse sai da lista, ajusta o destaque do contexto de volta para o rosto selecionado
         setHighlightedObject(selectedFace);
     };
 
     const onSwap = () => {
         if (sourceImage && selectedFace) {
-            // O `handleSelectObject` já terá definido a máscara e o objeto correto no contexto.
-            // A chamada `handleFaceSwap` lerá o objeto correto do contexto.
             handleFaceSwap(sourceImage, userPrompt);
         } else {
             setToast({ message: "Por favor, selecione um rosto de origem e um de destino.", type: 'error' });
         }
+    };
+    
+    const handleExpandToggle = (step: number) => {
+        setExpandedStep(prev => (prev === step ? 0 : step));
     };
 
     const isReadyForSwap = baseImageFile && sourceImage && selectedFace;
@@ -75,8 +78,12 @@ const FaceSwapPanel: React.FC = () => {
                 </p>
             </div>
 
-            <div className="flex flex-col gap-4 p-4 bg-gray-900/50 rounded-lg border border-gray-700">
-                <h4 className="font-bold text-white text-md text-center">Passo 1: Selecione o rosto a substituir</h4>
+            <CollapsibleToolPanel
+                title="Passo 1: Selecione o rosto a substituir"
+                icon={<BullseyeIcon className="w-5 h-5" />}
+                isExpanded={expandedStep === 1}
+                onExpandToggle={() => handleExpandToggle(1)}
+            >
                 {!detectedObjects ? (
                     <button
                         type="button"
@@ -106,19 +113,27 @@ const FaceSwapPanel: React.FC = () => {
                          </ul>
                      </div>
                 )}
-            </div>
+            </CollapsibleToolPanel>
             
-            <div className="flex flex-col gap-4 p-4 bg-gray-900/50 rounded-lg border border-gray-700">
-                 <h4 className="font-bold text-white text-md text-center">Passo 2: Forneça o novo rosto</h4>
-                 <ImageDropzone 
+            <CollapsibleToolPanel
+                title="Passo 2: Forneça o novo rosto"
+                icon={<UserIcon className="w-5 h-5" />}
+                isExpanded={expandedStep === 2}
+                onExpandToggle={() => handleExpandToggle(2)}
+            >
+                <ImageDropzone 
                     imageFile={sourceImage}
                     onFileSelect={setSourceImage}
                     label="Imagem do Rosto de Origem"
                  />
-            </div>
+            </CollapsibleToolPanel>
 
-            <div className="flex flex-col gap-2 p-4 bg-gray-900/50 rounded-lg border border-gray-700">
-                 <h4 className="font-bold text-white text-md text-center">Passo 3: Ajustes Finos (Opcional)</h4>
+            <CollapsibleToolPanel
+                title="Passo 3: Ajustes Finos (Opcional)"
+                icon={<AdjustmentsHorizontalIcon className="w-5 h-5" />}
+                isExpanded={expandedStep === 3}
+                onExpandToggle={() => handleExpandToggle(3)}
+            >
                 <textarea
                     value={userPrompt}
                     onChange={(e) => setUserPrompt(e.target.value)}
@@ -127,8 +142,7 @@ const FaceSwapPanel: React.FC = () => {
                     disabled={isLoading}
                     rows={3}
                 />
-            </div>
-
+            </CollapsibleToolPanel>
              <TipBox>
                 Para melhores resultados, use uma imagem de origem com o rosto virado para a frente e bem iluminado. A IA tentará corresponder à iluminação e ao ângulo automaticamente.
             </TipBox>

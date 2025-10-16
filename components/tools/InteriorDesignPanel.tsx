@@ -8,10 +8,11 @@ import { useEditor } from '../../context/EditorContext';
 import { useMaskCanvas } from '../../hooks/useMaskCanvas';
 import { generateInteriorDesign } from '../../services/geminiService';
 import { dataURLtoFile } from '../../utils/imageUtils';
-import { UploadIcon, SparkleIcon, BrushIcon } from '../icons';
+import { UploadIcon, SparkleIcon, BrushIcon, AdjustmentsHorizontalIcon } from '../icons';
 import PromptEnhancer from './common/PromptEnhancer';
 import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
 import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import CollapsibleToolPanel from '../CollapsibleToolPanel';
 
 const InteriorDesignPanel: React.FC = () => {
     const [uploadedImage, setUploadedImage] = useState<File | null>(null);
@@ -21,6 +22,8 @@ const InteriorDesignPanel: React.FC = () => {
     const [prompt, setPrompt] = useState<string>('');
     const [brushSize, setBrushSize] = useState(40);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isConfigExpanded, setIsConfigExpanded] = useState(true);
+    const [isDetailsExpanded, setIsDetailsExpanded] = useState(true);
 
     const { isLoading, error, setError, setIsLoading, setLoadingMessage, baseImageFile, setInitialImage, addPromptToHistory } = useEditor();
     const suggestions = usePromptSuggestions(prompt, 'interiorDesign');
@@ -90,49 +93,69 @@ const InteriorDesignPanel: React.FC = () => {
             <aside className="w-full md:w-96 flex-shrink-0 bg-gray-900/30 rounded-lg p-4 flex flex-col gap-4 border border-gray-700/50">
                 <h2 className="text-xl font-bold text-white text-center">Controles da Reforma</h2>
 
-                <div className="flex flex-col gap-4">
-                    <label className="block text-sm font-medium text-gray-300">Tipo de Ambiente</label>
-                    <select value={roomType} onChange={e => setRoomType(e.target.value)} className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base">
-                        {['Sala de Estar', 'Quarto', 'Cozinha', 'Banheiro', 'Escritório', 'Sala de Jantar'].map(type => <option key={type} value={type}>{type}</option>)}
-                    </select>
+                <CollapsibleToolPanel
+                    title="Configurações de Design"
+                    icon={<AdjustmentsHorizontalIcon className="w-5 h-5" />}
+                    isExpanded={isConfigExpanded}
+                    onExpandToggle={() => setIsConfigExpanded(prev => !prev)}
+                >
+                    <div className="flex flex-col gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300">Tipo de Ambiente</label>
+                            <select value={roomType} onChange={e => setRoomType(e.target.value)} className="w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg p-3 text-base">
+                                {['Sala de Estar', 'Quarto', 'Cozinha', 'Banheiro', 'Escritório', 'Sala de Jantar'].map(type => <option key={type} value={type}>{type}</option>)}
+                            </select>
+                        </div>
 
-                    <label className="block text-sm font-medium text-gray-300">Estilo de Design</label>
-                    <select value={roomStyle} onChange={e => setRoomStyle(e.target.value)} className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base">
-                        {['Moderno', 'Minimalista', 'Industrial', 'Boêmio', 'Rústico', 'Contemporâneo', 'Escandinavo'].map(style => <option key={style} value={style}>{style}</option>)}
-                    </select>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300">Estilo de Design</label>
+                            <select value={roomStyle} onChange={e => setRoomStyle(e.target.value)} className="w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg p-3 text-base">
+                                {['Moderno', 'Minimalista', 'Industrial', 'Boêmio', 'Rústico', 'Contemporâneo', 'Escandinavo'].map(style => <option key={style} value={style}>{style}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                </CollapsibleToolPanel>
 
-                    <div className="relative">
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Instruções Adicionais</label>
+                <CollapsibleToolPanel
+                    title="Seleção e Detalhes"
+                    icon={<BrushIcon className="w-5 h-5" />}
+                    isExpanded={isDetailsExpanded}
+                    onExpandToggle={() => setIsDetailsExpanded(prev => !prev)}
+                >
+                    <div className="flex flex-col gap-4">
                         <div className="relative">
-                            <textarea
-                                value={prompt}
-                                onChange={e => setPrompt(e.target.value)}
-                                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                                onFocus={() => setShowSuggestions(suggestions.length > 0)}
-                                placeholder="Ex: adicione uma planta grande, mude a cor da parede para azul..."
-                                className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]"
-                                disabled={isLoading}
-                            />
-                             <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="interiorDesign" />
+                            <label className="block text-sm font-medium text-gray-300 mb-1">Instruções Adicionais</label>
+                            <div className="relative">
+                                <textarea
+                                    value={prompt}
+                                    onChange={e => setPrompt(e.target.value)}
+                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                                    onFocus={() => setShowSuggestions(suggestions.length > 0)}
+                                    placeholder="Ex: adicione uma planta grande..."
+                                    className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]"
+                                    disabled={isLoading}
+                                />
+                                <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="interiorDesign" />
+                            </div>
+                            {showSuggestions && (
+                                <PromptSuggestionsDropdown
+                                    suggestions={suggestions}
+                                    onSelect={handleSelectSuggestion}
+                                    searchTerm={prompt}
+                                />
+                            )}
+                            <p className="mt-1 text-xs text-gray-500 px-1">"adicione uma estante de livros", "troque o sofá por um de couro".</p>
                         </div>
-                        {showSuggestions && (
-                            <PromptSuggestionsDropdown
-                                suggestions={suggestions}
-                                onSelect={handleSelectSuggestion}
-                                searchTerm={prompt}
-                            />
-                        )}
-                        <p className="mt-1 text-xs text-gray-500 px-1">Exemplos: "adicione uma estante de livros de madeira escura", "troque o sofá por um de couro marrom".</p>
-                    </div>
-                    
-                    <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2"><BrushIcon className="w-5 h-5 text-gray-400" /><label htmlFor="brush-size" className="font-medium text-gray-300">Tamanho do Pincel</label></div>
-                            <span className="font-mono text-gray-200">{brushSize}</span>
+                        
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2"><BrushIcon className="w-5 h-5 text-gray-400" /><label htmlFor="brush-size" className="font-medium text-gray-300">Tamanho do Pincel</label></div>
+                                <span className="font-mono text-gray-200">{brushSize}</span>
+                            </div>
+                            <input id="brush-size" type="range" min="10" max="150" value={brushSize} onChange={e => setBrushSize(Number(e.target.value))} className="w-full" disabled={isLoading || !uploadedImage} />
                         </div>
-                        <input id="brush-size" type="range" min="10" max="150" value={brushSize} onChange={e => setBrushSize(Number(e.target.value))} className="w-full" disabled={isLoading || !uploadedImage} />
                     </div>
-                </div>
+                </CollapsibleToolPanel>
 
                 <div className="mt-auto flex flex-col gap-2 pt-4">
                     <button onClick={handleGenerate} disabled={isLoading || !maskDataUrl} className="w-full bg-gradient-to-br from-blue-600 to-blue-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">

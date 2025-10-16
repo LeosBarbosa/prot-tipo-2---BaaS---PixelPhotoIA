@@ -4,7 +4,6 @@
 */
 
 import React, { Suspense } from 'react';
-import GlobalMagicPrompt from './common/GlobalMagicPrompt';
 import FooterActions from './FooterActions';
 import LayersPanel from './LayersPanel';
 import Spinner from './Spinner';
@@ -64,7 +63,6 @@ const RightPanel: React.FC<PanelProps> = React.memo(({ activeToolConfig, panelCo
             </div>
             {activeToolConfig?.category === 'editing' && (
                 <>
-                    <GlobalMagicPrompt />
                     <div className="flex-shrink-0 border-t border-gray-700/50">
                         <LayersPanel />
                     </div>

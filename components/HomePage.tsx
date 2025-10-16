@@ -3,25 +3,27 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 // FIX: Correct import path
 import { useEditor } from '../context/EditorContext';
 import { tools, toolToTabMap } from '../config/tools';
 // FIX: Correct import path
 import { type ToolConfig, type ToolCategory, type PredefinedSearch, type ToolId, type TabId } from '../types';
 import SearchModule from './SearchModule';
-import RecentTools from './RecentTools';
-import SavedWorkflows from './SavedWorkflows';
 import SmartSearchResultCard from './SmartSearchResultCard';
 import Spinner from './Spinner';
 import { GenerationIcon, WorkflowIcon, EditingIcon } from './icons';
 import { predefinedSearches } from '../config/predefinedSearches';
 import PredefinedSearchCard from './PredefinedSearchCard';
-import PromptSuggestions from './PromptSuggestions';
 import StartScreen from './StartScreen';
 import { quickStyles } from '../config/trends';
 import TrendCard from './TrendCard';
 import RestoredSessionCard from './RestoredSessionCard';
+
+// Lazy load components that are not immediately visible on page load
+const RecentTools = lazy(() => import('./RecentTools'));
+const SavedWorkflows = lazy(() => import('./SavedWorkflows'));
+const PromptSuggestions = lazy(() => import('./PromptSuggestions'));
 
 const categoryConfig: Record<ToolCategory, { title: string; description: string; icon: React.ReactElement<{ className?: string }> }> = {
     generation: { 
@@ -286,9 +288,11 @@ const HomePage: React.FC = () => {
                                 <p className="text-gray-400 text-base sm:text-lg">{categoryConfig[activeCategory].description}</p>
                             </div>
                              <div className="mt-8 space-y-12">
-                                <RecentTools />
-                                <SavedWorkflows />
-                                <PromptSuggestions />
+                                <Suspense fallback={<div className="flex justify-center p-8"><Spinner /></div>}>
+                                    <RecentTools />
+                                    <SavedWorkflows />
+                                    <PromptSuggestions />
+                                </Suspense>
                             </div>
                         </>
                     ) : (

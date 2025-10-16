@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -7,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 // FIX: Correct import path
 import { useEditor, DEFAULT_LOCAL_FILTERS } from '../../context/EditorContext';
 import ToneCurve from '../ToneCurve';
-import { ToneCurveIcon, SunIcon, PaletteIcon, AdjustmentsHorizontalIcon } from '../icons';
+import { ToneCurveIcon, SunIcon, PaletteIcon, AdjustmentsHorizontalIcon, CheckCircleIcon } from '../icons';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
 import TipBox from '../common/TipBox';
 // FIX: Correct import path
@@ -54,6 +55,7 @@ const AdjustmentPanel: React.FC = () => {
     } = useEditor();
     
     const [applyToAll, setApplyToAll] = useState(true);
+    const [isApplied, setIsApplied] = useState(false);
 
     const activeLayer = layers.find(l => l.id === activeLayerId);
     const isEditingAdjustmentLayer = activeLayer?.type === 'adjustment';
@@ -70,6 +72,21 @@ const AdjustmentPanel: React.FC = () => {
 
     const handleFilterChange = (filter: keyof Omit<typeof localFilters, 'curve'>, value: number) => {
         setLocalFilters(prev => ({ ...prev, [filter]: value }));
+    };
+
+    const handleApplyClick = async () => {
+        if (isLoading || !hasLocalAdjustments || isEditingAdjustmentLayer) return;
+        
+        try {
+            await handleApplyLocalAdjustments(applyToAll); 
+            setIsApplied(true);
+            setTimeout(() => {
+                setIsApplied(false);
+            }, 2000);
+        } catch(e) {
+            // Error is handled in context, but we can log it here if needed
+            console.error("Failed to apply local adjustments", e);
+        }
     };
 
     return (
@@ -128,11 +145,20 @@ const AdjustmentPanel: React.FC = () => {
                     Resetar
                 </button>
                 <button
-                    onClick={() => handleApplyLocalAdjustments(applyToAll)}
+                    onClick={handleApplyClick}
                     disabled={isLoading || !hasLocalAdjustments || isEditingAdjustmentLayer}
-                    className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg shadow-green-500/20 hover:shadow-xl disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed active:scale-95"
+                    className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg shadow-green-500/20 hover:shadow-xl disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed active:scale-95 flex items-center justify-center gap-2"
                 >
-                    {isLoading ? <span className="animate-pulse">Aplicando...</span> : 'Aplicar'}
+                    {isLoading ? (
+                        <span className="animate-pulse">Aplicando...</span>
+                    ) : isApplied ? (
+                        <>
+                            <CheckCircleIcon className="w-5 h-5" />
+                            <span>Aplicado!</span>
+                        </>
+                    ) : (
+                        'Aplicar'
+                    )}
                 </button>
             </div>
         </div>

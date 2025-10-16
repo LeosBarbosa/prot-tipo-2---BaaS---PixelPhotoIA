@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 // FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
-import { BrushIcon, SparkleIcon, AdjustmentsHorizontalIcon } from '../icons';
+import { BrushIcon, SparkleIcon, AdjustmentsHorizontalIcon, CheckCircleIcon } from '../icons';
 import TipBox from '../common/TipBox';
 
 const Slider: React.FC<{
@@ -34,6 +34,7 @@ const Slider: React.FC<{
     </div>
 );
 
+
 const LocalAdjustmentPanel: React.FC = () => {
     const {
         isLoading,
@@ -55,6 +56,7 @@ const LocalAdjustmentPanel: React.FC = () => {
 
     type SelectionMode = 'brush' | 'magic';
     const [selectionMode, setSelectionMode] = useState<SelectionMode>('brush');
+    const [isApplied, setIsApplied] = useState(false);
 
     const switchMode = (mode: SelectionMode) => {
         setSelectionMode(mode);
@@ -66,6 +68,18 @@ const LocalAdjustmentPanel: React.FC = () => {
     
     const handleFilterChange = (filter: keyof typeof localFilters, value: number) => {
         setLocalFilters(prev => ({ ...prev, [filter]: value }));
+    };
+
+    const handleApplyClick = async () => {
+        if (isLoading || !maskDataUrl || !hasLocalAdjustments) return;
+        try {
+            await handleApplyLocalAdjustments(true);
+            setIsApplied(true);
+            setTimeout(() => setIsApplied(false), 2000);
+        } catch (e) {
+            console.error("Failed to apply local adjustments from panel", e);
+            // Error toast is handled in context
+        }
     };
 
     return (
@@ -86,7 +100,7 @@ const LocalAdjustmentPanel: React.FC = () => {
                     <SparkleIcon className="w-5 h-5" /> Mágica
                 </button>
             </div>
-
+            
             {/* UI de Seleção */}
             {selectionMode === 'brush' && (
                 <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50 animate-fade-in flex flex-col gap-2">
@@ -155,16 +169,25 @@ const LocalAdjustmentPanel: React.FC = () => {
                 <button
                     onClick={resetLocalFilters}
                     disabled={isLoading || !hasLocalAdjustments}
-                    className="w-full bg-gray-800/50 hover:bg-gray-700/50 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Resetar
                 </button>
                 <button
-                    onClick={() => handleApplyLocalAdjustments(true)}
+                    onClick={handleApplyClick}
                     disabled={isLoading || !maskDataUrl || !hasLocalAdjustments}
-                    className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg shadow-green-500/20 hover:shadow-xl disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
+                    className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg shadow-green-500/20 hover:shadow-xl disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                    Aplicar
+                    {isLoading ? (
+                        <span className="animate-pulse">Aplicando...</span>
+                    ) : isApplied ? (
+                        <>
+                            <CheckCircleIcon className="w-5 h-5" />
+                            <span>Aplicado!</span>
+                        </>
+                    ) : (
+                        'Aplicar'
+                    )}
                 </button>
             </div>
         </div>

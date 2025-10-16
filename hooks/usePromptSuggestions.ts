@@ -5,49 +5,52 @@
 
 import { useState, useEffect, useMemo } from 'react';
 // FIX: Correct import path
-import { useEditor } from '../context/EditorContext';
-import { promptExamples } from '../config/promptExamples';
+import { promptExamples, negativePromptExamples } from '../config/promptExamples';
 // FIX: Correct import path
 import { type ToolId } from '../types';
 
 /**
  * A custom hook to provide contextual prompt suggestions.
- * It combines tool-specific examples with the user's personal prompt history.
+ * It filters a list of tool-specific examples based on user input.
  * @param prompt - The current user input in the text area.
  * @param toolId - The ID of the active tool.
+ * @param type - The type of prompt suggestions to provide ('positive' or 'negative').
  * @returns An array of suggestion strings.
  */
-export const usePromptSuggestions = (prompt: string, toolId: ToolId | null): string[] => {
-    const { promptHistory } = useEditor();
+export const usePromptSuggestions = (
+  prompt: string, 
+  toolId: ToolId | null,
+  type: 'positive' | 'negative' = 'positive'
+): string[] => {
     const [suggestions, setSuggestions] = useState<string[]>([]);
-
-    const memoizedExamples = useMemo(() => (toolId ? promptExamples[toolId] : []) || [], [toolId]);
+    
+    const examples = type === 'positive' ? promptExamples : negativePromptExamples;
+    
+    const memoizedExamples = useMemo(() => (toolId ? examples[toolId] : []) || [], [toolId, examples]);
 
     useEffect(() => {
-        if (!prompt || prompt.trim().length < 2) {
+        if (!prompt || prompt.trim().length < 1) {
             setSuggestions([]);
             return;
         }
 
         const lowerCasePrompt = prompt.toLowerCase();
         
-        // Combine and deduplicate sources, giving priority to tool-specific examples.
-        const combinedSource = [
-            ...memoizedExamples,
-            ...promptHistory,
-        ];
-        const uniqueSuggestions = [...new Set(combinedSource)];
+        // Source is now only the curated examples for the tool, improving contextuality.
+        const source = memoizedExamples;
 
-        // Filter based on user input.
-        const filtered = uniqueSuggestions.filter(p =>
+        const uniqueSuggestions = [...new Set(source)];
+
+        // The type of `p` should be correctly inferred as string by TypeScript.
+        // FIX: Explicitly type `p` as a string to fix type inference issue where it was being inferred as `unknown`.
+        const filtered = uniqueSuggestions.filter((p: string) =>
             p.toLowerCase().includes(lowerCasePrompt) &&
             p.toLowerCase() !== lowerCasePrompt
         );
 
-        // Limit results.
         setSuggestions(filtered.slice(0, 5));
 
-    }, [prompt, toolId, promptHistory, memoizedExamples]);
+    }, [prompt, toolId, memoizedExamples]);
 
     return suggestions;
 };

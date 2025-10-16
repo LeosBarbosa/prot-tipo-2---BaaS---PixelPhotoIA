@@ -5,7 +5,6 @@
 import React from 'react';
 import { PhotoIcon, DownloadIcon, BrushIcon, LayersIcon } from '../icons';
 import Spinner from '../Spinner';
-// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
 import { dataURLtoFile } from '../../utils/imageUtils';
 
@@ -24,10 +23,17 @@ const ResultViewer: React.FC<ResultViewerProps> = ({
 }) => {
     const { setInitialImage, setActiveTool, setToast } = useEditor();
 
-    const handleCreateVariation = () => {
+    const handleCreateVariation = async () => {
         if (!resultImage) return;
         try {
-            const file = dataURLtoFile(resultImage, `variation-base-${Date.now()}.png`);
+            let file: File;
+            if (resultImage.startsWith('blob:')) {
+                const response = await fetch(resultImage);
+                const blob = await response.blob();
+                file = new File([blob], `variation-base-${Date.now()}.png`, { type: blob.type });
+            } else {
+                file = dataURLtoFile(resultImage, `variation-base-${Date.now()}.png`);
+            }
             setInitialImage(file);
             setActiveTool('imageVariation');
             setToast({ message: "Imagem enviada para o 'Gerador de Variação'.", type: 'info' });
@@ -37,10 +43,17 @@ const ResultViewer: React.FC<ResultViewerProps> = ({
         }
     };
 
-    const handleUseInEditor = () => {
+    const handleUseInEditor = async () => {
         if (!resultImage) return;
         try {
-            const file = dataURLtoFile(resultImage, `edited-from-gen-${Date.now()}.png`);
+            let file: File;
+            if (resultImage.startsWith('blob:')) {
+                const response = await fetch(resultImage);
+                const blob = await response.blob();
+                file = new File([blob], `edited-from-gen-${Date.now()}.png`, { type: blob.type });
+            } else {
+                file = dataURLtoFile(resultImage, `edited-from-gen-${Date.now()}.png`);
+            }
             setInitialImage(file);
             setActiveTool('adjust'); 
         } catch (e) {

@@ -9,6 +9,7 @@ import { SunIcon } from '../icons';
 import TipBox from '../common/TipBox';
 import { validatePromptSpecificity } from '../../services/geminiService';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
+import PromptPresetPanel from '../common/PromptPresetPanel';
 
 const lightingPresets = [
     { name: 'Hora Dourada', prompt: 'luz quente e dourada do final da tarde, com sombras longas e suaves' },
@@ -75,6 +76,12 @@ const RelightPanel: React.FC = () => {
                 toolId="relight"
                 promptPlaceholder="Ex: luz de vela vinda de baixo, criando sombras longas..."
                 promptHelperText="Seja descritivo sobre a fonte de luz, sua cor, direção e intensidade."
+            />
+
+            <PromptPresetPanel 
+                toolId="relight"
+                onSelectPreset={(selectedPrompt) => setCustomPrompt(selectedPrompt)}
+                isLoading={isLoading}
             />
 
              <TipBox>

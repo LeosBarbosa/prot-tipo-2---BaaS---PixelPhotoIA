@@ -1,3 +1,5 @@
+
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -332,7 +334,7 @@ export interface EditorContextType {
     handleFaceRetouch: () => Promise<void>;
     handleFaceSwap: (sourceImage: File, userPrompt: string) => void;
     handleSelectObject: (object: DetectedObject) => void;
-    handleApplyLocalAdjustments: (applyToAll: boolean) => void;
+    handleApplyLocalAdjustments: (applyToAll: boolean) => Promise<void>;
     handleApplyCurve: (lut: number[]) => void;
     handleApplyStyle: (stylePrompt: string, applyToAll: boolean) => void;
     handleApplyAIAdjustment: (adjustmentPrompt: string, applyToAll: boolean) => void;
@@ -340,14 +342,16 @@ export interface EditorContextType {
     handleGenerateVideo: (prompt: string, aspectRatio: string) => void;
     handleDownload: () => void;
     handleApplyTexture: () => void;
-    handleVirtualTryOn: (personImage: File, clothingImage: File, shoeImage?: File) => void;
+    handleVirtualTryOn: (personImage: File, clothingImage: File, shoeImage: File | undefined, scenePrompt: string, posePrompt: string, cameraLens: string, cameraAngle: string, lightingStyle: string, negativePrompt: string) => void;
     handleFunkoPop: (mainImage: File, personImage: File | null, bg: string, obj: string, light: string, type: string, finish: string) => void;
     handleStyledPortrait: (personImage: File, styleImages: File[], prompt: string, negativePrompt: string) => Promise<void>;
     handlePolaroid: (personImage: File, celebrityImage: File, negativePrompt: string) => Promise<void>;
     handleConfidentStudio: (personImage: File, mainPrompt: string, negativePrompt: string) => Promise<void>;
+    handleSuperheroFusion: (userImage: File, heroImage: File) => void;
     handleAIPortrait: (styleId: string, personImages: File[], prompt: string) => Promise<void>;
     handleEnhanceResolutionAndSharpness: (factor: number, intensity: number, preserveFace: boolean) => void;
     handleDoubleExposure: (portraitImage: File, landscapeImage: File) => Promise<string>;
+    handleCreativeFusion: (compositionImage: File, styleImages: File[]) => Promise<void>;
     prompt: string;
     setPrompt: React.Dispatch<React.SetStateAction<string>>;
     generateAIPreview: (trend: Trend, applyToAll: boolean) => Promise<void>;

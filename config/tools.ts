@@ -12,9 +12,8 @@ import {
     PatternIcon, TextEffectsIcon, VectorIcon, LogoIcon, StickersIcon, CaricatureIcon, Model3DIcon,
     BananaIcon,
     EraserIcon,
-    ShirtIcon,
     CameraIcon,
-    PolaroidIcon,
+    PolaroidWithArtistIcon, // 1. IMPORTE O NOVO ÍCONE AQUI
     TextureIcon,
     HomeIcon,
     BuildingIcon,
@@ -31,6 +30,13 @@ import {
     PngIcon,
     ShieldCheckIcon,
     DoubleExposureIcon,
+    SuperheroIcon,
+    // 1. IMPORTE OS NOVOS ÍCONES AQUI
+    SuperHeroFusionIcon,
+    StyledPortraitIcon,
+    WardrobeIcon, // 1. IMPORTE O NOVO ÍCONE AQUI
+    SuperheroPoseIcon,
+
 } from '../components/icons';
 // FIX: import from ../types
 import { type ToolId, type ToolConfig, type ToolCategory, type TabId } from '../types';
@@ -121,28 +127,29 @@ export const tools: ToolConfig[] = [
         id: 'polaroid',
         name: 'Polaroid com Artista IA',
         description: 'Crie uma foto Polaroid sua com seu artista favorito.',
-        icon: React.createElement(PolaroidIcon, { className: 'w-8 h-8 text-stone-400' }),
+        // 2. SUBSTITUA O ÍCONE ANTIGO PELO NOVO
+        icon: React.createElement(PolaroidWithArtistIcon, { className: 'w-8 h-8 text-stone-400' }),
         category: 'workflow',
     },
     {
         id: 'superheroFusion',
         name: 'Fusão de Super-Herói',
-        description: 'Transforme-se no seu super-herói favorito, mantendo seu rosto.',
-        icon: React.createElement(ShieldCheckIcon, { className: 'w-8 h-8 text-red-400' }),
+        description: 'Transforme sua foto em um super-herói, combinando seu rosto com trajes icônicos.',
+        icon: React.createElement(SuperheroPoseIcon, { className: 'w-8 h-8 text-red-400' }),
         category: 'workflow',
     },
     {
         id: 'styledPortrait',
         name: 'Retrato Estilizado',
         description: 'Aplique o estilo (roupa, cenário, luz) de uma foto em outra, preservando o rosto original.',
-        icon: React.createElement(ShirtIcon, { className: 'w-8 h-8 text-teal-400' }),
+        icon: React.createElement(StyledPortraitIcon, { className: 'w-8 h-8 text-teal-400' }),
         category: 'workflow',
     },
      {
         id: 'tryOn',
         name: 'Provador Virtual',
         description: 'Experimente roupas e calçados em uma foto sua usando IA.',
-        icon: React.createElement(ShirtIcon, { className: 'w-8 h-8 text-pink-400' }),
+        icon: React.createElement(WardrobeIcon, { className: 'w-8 h-8 text-pink-400' }),
         category: 'workflow',
     },
     {
@@ -163,6 +170,7 @@ export const tools: ToolConfig[] = [
         id: 'creativeFusion',
         name: 'Fusão Criativa',
         description: 'Combine a composição de uma imagem com o estilo de outra.',
+        // FIX: Use a more appropriate icon for "Creative Fusion".
         icon: React.createElement(CombineIcon, { className: 'w-8 h-8 text-pink-400' }),
         category: 'workflow',
     },

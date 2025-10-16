@@ -10,6 +10,8 @@ import { generateImageFromText, validatePromptSpecificity } from '../../services
 import ResultViewer from './common/ResultViewer';
 import { PhotoIcon, AspectRatioSquareIcon, AspectRatioLandscapeIcon, AspectRatioPortraitIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
+// 1. IMPORTE O NOVO COMPONENTE
+import PromptPresetPanel from '../common/PromptPresetPanel';
 
 const ImageGenPanel: React.FC = () => {
     const { isLoading, error, setError, setIsLoading, setLoadingMessage, setToast, addPromptToHistory, initialPromptFromMetadata } = useEditor();
@@ -84,6 +86,13 @@ const ImageGenPanel: React.FC = () => {
                   promptPlaceholder="Ex: um astronauta surfando em uma onda cósmica..."
                   promptHelperText="Adicione estilo (ex: 'fotorrealista'), iluminação e detalhes da câmera para melhores resultados."
                   negativePromptHelperText="Ex: texto, desfocado, baixa qualidade."
+                />
+
+                {/* 2. ADICIONE O COMPONENTE DE PRESETS AQUI */}
+                <PromptPresetPanel 
+                    toolId="imageGen"
+                    onSelectPreset={(selectedPrompt) => setPrompt(selectedPrompt)}
+                    isLoading={isLoading}
                 />
 
                 <div>
