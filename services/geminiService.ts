@@ -5,7 +5,6 @@
 
 import { GoogleGenAI, GenerateContentResponse, Part, Type, Modality } from "@google/genai";
 import { fileToDataURL, dataURLtoFile } from '../utils/imageUtils';
-// FIX: Corrected import path for types
 import { type DetectedObject, type ToolId } from '../types';
 import { smartSearchToolDeclarations } from './smartSearchToolDeclarations';
 import { applyBackgroundColor } from '../utils/imageProcessing';
@@ -39,12 +38,8 @@ const handleGenAIResponse = <T extends GenerateContentResponse>(response: T): T 
 };
 
 const extractBase64Image = (response: GenerateContentResponse): string => {
-    // Check if generation was successful but returned no image
-    if (!response.candidates || response.candidates.length === 0) {
-         throw new Error('A IA não conseguiu gerar uma imagem. Isso geralmente acontece quando o prompt é bloqueado por políticas de segurança. Por favor, ajuste seu pedido.');
-    }
+    const parts = response.candidates?.[0]?.content?.parts;
 
-    const parts = response.candidates[0].content?.parts;
     if (parts) {
         for (const part of parts) {
           if (part.inlineData && part.inlineData.mimeType.startsWith('image/')) {
@@ -53,14 +48,12 @@ const extractBase64Image = (response: GenerateContentResponse): string => {
         }
     }
     
-    // If no image part was found, see if there's a text explanation
+    // MELHORIA: Propagar a mensagem de erro da IA para facilitar a depuração.
     const textResponse = response.text?.trim();
     if (textResponse) {
-        throw new Error(`A IA não gerou uma imagem e respondeu: "${textResponse}"`);
+        throw new Error(`A IA respondeu com texto em vez de uma imagem: "${textResponse}"`);
     }
-    
-    // Final fallback
-    throw new Error('A IA não retornou uma imagem. Isso pode acontecer se o prompt for muito complexo ou ambíguo. Tente simplificar ou reformular seu prompt.');
+    throw new Error('Nenhuma imagem foi gerada pelo modelo. A resposta pode estar vazia ou bloqueada por políticas de segurança.');
 };
 
 export const generateImageFromParts = async (parts: Part[], model: string = 'gemini-2.5-flash-image', config?: { [key: string]: any }): Promise<string> => {
@@ -212,7 +205,7 @@ export const generateMagicMontage = async (sourceImage: File, prompt: string, se
         parts.push(secondPart);
     }
 
-    const fullPrompt = `### COMANDO: MONTAGEM MÁGICA\n\n**OBJETIVO:** Realize uma edição na imagem base, seguindo as instruções do usuário. Se uma segunda imagem for fornecida, incorpore-a na edição.\n\n**REGRAS DE EXECUÇÃO OBRIGATÓRIAS:**\n1.  **COERÊNCIA VISUAL:** A edição deve se integrar perfeitamente à imagem base em termos de iluminação, sombras, textura, perspectiva e estilo.\n2.  **PRESERVAÇÃO DE IDENTIDADE:** Se a edição envolver um rosto, a identidade facial original (traços, expressões) deve ser 100% preservada, a menos que o prompt solicite explicitamente uma alteração de identidade. A consistência do tom de pele entre o rosto e o corpo deve ser mantida.\n3.  **FIDELIDADE AO PROMPT:** Siga as instruções do usuário com a maior precisão possível.\n\n${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
+    const fullPrompt = `### COMANDO: MONTAGEM MÁGICA\n\n**OBJETIVO:** Realize uma edição na imagem base, seguindo as instruções do usuário. Se uma segunda imagem for fornecida, incorpore-a na edição.\n\n**REGRAS DE EXECUÇÃO OBRIGATÓRIAS:**\n1.  **COERÊNCIA VISUAL:** A edição deve se integrar perfeitamente à imagem base em termos de iluminação, sombras, textura, perspectiva e estilo.\n2.  **PRESERVAÇÃO DE IDENTIDADE:** Se a edição envolver um rosto, a identidade facial original (traços, expressões) deve ser 100% preservada, a menos que o prompt solicite explicitamente uma alteração de identidade. A consistência do tom de pele entre o rosto e o corpo deve ser mantida.\n3.  **FIDELIDADE AO PROMPT:** Siga as instruções do usuário com a maior precisão possível.\n\n**INSTRUÇÕES DO USUÁRIO:** "${prompt}"\n\n${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
     parts.push({ text: fullPrompt });
 
     return generateImageFromParts(parts);
@@ -362,6 +355,7 @@ export const applyGenerativeSharpening = (image: File, intensity: number): Promi
 
 export const enhanceResolutionAndSharpness = (image: File, factor: number, intensity: number, preserveFace: boolean) => {
     const prompt = `### COMANDO: SUPER RESOLUÇÃO\n\n**OBJETIVO:** Aumentar a resolução da imagem por um fator de ${factor}x e aplicar nitidez generativa a uma intensidade de ${intensity}%.\n\n**REGRAS DE EXECUÇÃO:**\n1.  **AÇÃO DUPLA:** Realize o aumento de escala e a nitidez simultaneamente para um resultado coeso.\n2.  **MELHORIA SIGNIFICATIVA:** O objetivo é melhorar drasticamente tanto a resolução quanto a nitidez percebida.\n${preserveFace ? `3.  **PRESERVAÇÃO FACIAL:** Preste atenção especial para preservar e aprimorar os detalhes faciais de forma realista. ${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}` : ''}`;
+    // FIX: Correct variable name from `finalPrompt` to `prompt`.
     return singleImageAndTextToImage(image, prompt);
 };
 
@@ -645,7 +639,6 @@ export const virtualTryOn = async (
     );
 };
 
-// FIX: Added createTransparentPng function to fix import error in AIPngCreatorPanel.
 interface PngCreatorBackgroundOptions {
     type: 'color' | 'prompt';
     value: string;
@@ -683,7 +676,6 @@ export const createTransparentPng = async (image: File, options: PngCreatorOptio
 };
 
 
-// FIX: Replaced incomplete suggestCreativeEdits function with a full implementation to fix the "must return a value" error.
 export const suggestCreativeEdits = async (image: File): Promise<{ message: string, acceptLabel: string, toolId: ToolId, args?: any } | null> => {
     const imagePart = await fileToPart(image);
     const prompt = `

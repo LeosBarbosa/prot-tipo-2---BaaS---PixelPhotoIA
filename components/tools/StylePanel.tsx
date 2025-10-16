@@ -46,7 +46,7 @@ const StylePanel: React.FC = () => {
     return (
         <div className="w-full flex flex-col gap-4 animate-fade-in">
             <div className="text-center">
-                <h3 className="text-lg font-semibold text-gray-300">Estilos Artísticos com IA</h3>
+                <h3 className="text-lg font-semibold text-gray-300">Estilo de Foto com IA</h3>
                 <p className="text-sm text-gray-400 -mt-1">Transforme sua foto com um clique.</p>
             </div>
             

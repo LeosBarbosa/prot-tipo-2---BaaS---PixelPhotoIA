@@ -1,12 +1,10 @@
-
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
 
 import React from 'react';
-import { Crop, PixelCrop } from 'react-image-crop';
+import { type Crop, type PixelCrop } from 'react-image-crop';
 
 // General App State
 export type Theme = 'light' | 'dark';
@@ -30,11 +28,10 @@ export type ToolId =
   | 'superResolution' | 'photoRestoration' | 'relight' | 'lowPoly' | 'pixelArt'
   | 'portraits' | 'styleGen' | 'dustAndScratches' | 'neuralFilters' | 'trends'
   | 'vectorConverter' | 'texture' | 'newAspectRatio' | 'history' | 'localAdjust'
-  // FIX: Added missing ToolIds
   | 'faceRecovery' | 'denoise' | 'imageVariation';
 
 export type TabId =
-  | 'crop' | 'newAspectRatio' | 'adjust' | 'localAdjust' | 'magicMontage' | 'objectRemover'
+  | 'imageGen' | 'crop' | 'newAspectRatio' | 'adjust' | 'localAdjust' | 'magicMontage' | 'objectRemover'
   | 'removeBg' | 'faceSwap' | 'generativeEdit' | 'text' | 'photoRestoration'
   | 'upscale' | 'superResolution' | 'unblur' | 'sharpen' | 'relight' | 'style'
   | 'portraits' | 'lowPoly' | 'pixelArt' | 'styleGen' | 'texture' | 'dustAndScratches'
@@ -46,6 +43,8 @@ export interface ToolConfig {
     description: string;
     icon: React.ReactNode;
     category: ToolCategory;
+    componentPath: string; // Caminho para o componente da ferramenta
+    isEditingTool: boolean; // Distingue ferramentas de edição de modais
     tag?: 'new' | 'tip';
 }
 

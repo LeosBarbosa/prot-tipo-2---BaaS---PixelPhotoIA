@@ -46,7 +46,7 @@ export const editingTabs: TabConfig[] = [
     { id: 'unblur', name: 'Remover Desfoque', icon: React.createElement(UnblurIcon, { className: "w-6 h-6" }) },
     { id: 'sharpen', name: 'Nitidez', icon: React.createElement(SharpenIcon, { className: "w-6 h-6" }), tag: 'new' },
     { id: 'relight', name: 'Reacender', icon: React.createElement(SunIcon, { className: "w-6 h-6" }) },
-    { id: 'style', name: 'Estilos Artísticos', icon: React.createElement(PaletteIcon, { className: "w-6 h-6" }) },
+    { id: 'style', name: 'Estilo de Foto', icon: React.createElement(PaletteIcon, { className: "w-6 h-6" }) },
     { id: 'portraits', name: 'Retratos IA', icon: React.createElement(UserIcon, { className: "w-6 h-6" }) },
     { id: 'lowPoly', name: 'Estilo Low Poly', icon: React.createElement(LowPolyIcon, { className: "w-6 h-6" }) },
     { id: 'pixelArt', name: 'Pixel Art', icon: React.createElement(PixelsIcon, { className: "w-6 h-6" }) },

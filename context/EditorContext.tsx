@@ -43,7 +43,7 @@ import {
     BlendMode,
     TexturePreviewState,
 } from '../types';
-import { Crop, PixelCrop } from 'react-image-crop';
+import { type Crop, type PixelCrop } from 'react-image-crop';
 import { hashFile, sha256 } from '../utils/cryptoUtils';
 import { tools } from '../config/tools';
 
