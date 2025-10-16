@@ -43,7 +43,6 @@ export interface ToolConfig {
     description: string;
     icon: React.ReactNode;
     category: ToolCategory;
-    componentPath: string; // Caminho para o componente da ferramenta
     isEditingTool: boolean; // Distingue ferramentas de edição de modais
     tag?: 'new' | 'tip';
 }
@@ -207,7 +206,7 @@ export interface PreviewState {
 export interface TexturePreviewState {
     url: string;
     opacity: number;
-    blendMode: BlendMode;
+    blendMode: 'overlay' | 'multiply' | 'screen' | 'normal';
 }
 
 export interface EditorContextType {
@@ -247,7 +246,9 @@ export interface EditorContextType {
     isPanModeActive: boolean;
     isCurrentlyPanning: boolean;
     crop: Crop | undefined;
+    setCrop: React.Dispatch<React.SetStateAction<Crop | undefined>>;
     completedCrop: PixelCrop | undefined;
+    setCompletedCrop: React.Dispatch<React.SetStateAction<PixelCrop | undefined>>;
     aspect: number | undefined;
     maskDataUrl: string | null;
     brushSize: number;
@@ -261,6 +262,7 @@ export interface EditorContextType {
     textToolState: TextToolState;
     generatedVideoUrl: string | null;
     texturePreview: TexturePreviewState | null;
+    setTexturePreview: React.Dispatch<React.SetStateAction<TexturePreviewState | null>>;
     isSmartSearching: boolean;
     smartSearchResult: SmartSearchResult | null;
     savedWorkflows: Workflow[];
@@ -306,8 +308,6 @@ export interface EditorContextType {
     setZoom: React.Dispatch<React.SetStateAction<number>>;
     setIsPanModeActive: React.Dispatch<React.SetStateAction<boolean>>;
     resetZoomAndPan: () => void;
-    setCrop: React.Dispatch<React.SetStateAction<Crop | undefined>>;
-    setCompletedCrop: React.Dispatch<React.SetStateAction<PixelCrop | undefined>>;
     setAspect: React.Dispatch<React.SetStateAction<number | undefined>>;
     setMaskDataUrl: React.Dispatch<React.SetStateAction<string | null>>;
     setBrushSize: React.Dispatch<React.SetStateAction<number>>;
@@ -323,7 +323,6 @@ export interface EditorContextType {
     setTextToolState: React.Dispatch<React.SetStateAction<TextToolState>>;
     resetTextToolState: () => void;
     setGeneratedVideoUrl: React.Dispatch<React.SetStateAction<string | null>>;
-    setTexturePreview: React.Dispatch<React.SetStateAction<TexturePreviewState | null>>;
     setSmartSearchResult: React.Dispatch<React.SetStateAction<SmartSearchResult | null>>;
     addWorkflow: (workflow: Workflow) => void;
     addPromptToHistory: (prompt: string) => void;

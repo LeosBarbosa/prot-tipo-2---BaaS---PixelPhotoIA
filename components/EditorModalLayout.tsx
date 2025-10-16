@@ -3,20 +3,20 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { useEditor } from '../context/EditorContext';
 import ImageViewer from './ImageViewer';
 import FloatingControls from './FloatingControls';
 import { type TabId, type ToolConfig } from '../types';
 import GifTimeline from './common/GifTimeline';
-import LeftPanel from './LeftPanel';
 import RightPanel from './RightPanel';
-// FIX: Removed unused import of editingTabs
 import MobileBottomNav from './MobileBottomNav';
-// FIX: Import 'tools' to get the full tool configuration
 import { toolToTabMap, tools } from '../config/tools';
-import { panelComponents } from '../config/toolComponentMap';
+// FIX: Correctly import 'toolComponentMap' and alias it as 'panelComponents'. Also updated relative path.
+import { toolComponentMap as panelComponents } from '../config/toolComponentMap';
+import Spinner from './Spinner';
 
+const LeftPanel = lazy(() => import('./LeftPanel'));
 
 const EditorModalLayout: React.FC = () => {
     const { activeTool, isGif, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, activeTab, setActiveTab, setToast, isPanModeActive } = useEditor();
@@ -110,7 +110,9 @@ const EditorModalLayout: React.FC = () => {
 
             {/* Left Panel (com rolagem interna) */}
             <aside className={`fixed lg:relative z-40 h-full w-full max-w-sm lg:w-80 flex-shrink-0 transition-transform duration-300 ease-in-out ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-                <LeftPanel />
+                <Suspense fallback={<div className="w-full h-full flex items-center justify-center bg-gray-800/80"><Spinner /></div>}>
+                    <LeftPanel />
+                </Suspense>
             </aside>
 
             {/* Main Content (ocupa a altura total e não centraliza) */}

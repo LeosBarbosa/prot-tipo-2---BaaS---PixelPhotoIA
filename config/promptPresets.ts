@@ -111,6 +111,21 @@ export const promptPresets: Partial<Record<ToolId, PromptPreset[]>> = {
             description: 'Alto contraste e sombras fortes de uma persiana.',
             prompt: 'Aplique uma iluminação de filme noir, com alto contraste, sombras fortes e bem definidas e um feixe de luz vindo de uma persiana.'
         },
+        {
+            name: 'Estúdio Dramático',
+            description: 'Luz lateral forte para um efeito Rembrandt.',
+            prompt: 'Aplique uma iluminação de estúdio dramática (Rembrandt), com uma única fonte de luz lateral forte criando um triângulo de luz na bochecha sombreada e alto contraste.'
+        },
+        {
+            name: 'Luz Suave de Janela',
+            description: 'Iluminação difusa e calma de uma janela lateral.',
+            prompt: 'Reacenda a foto com uma luz suave e difusa vinda de uma grande janela lateral, criando sombras suaves e uma atmosfera calma e introspectiva.'
+        },
+        {
+            name: 'Raios Volumétricos',
+            description: 'Feixes de luz dramáticos (god rays).',
+            prompt: 'Adicione raios de luz volumétricos (god rays) atravessando a cena, como se a luz do sol estivesse passando por uma janela empoeirada ou pela copa de árvores.'
+        }
     ],
     aiPortraitStudio: [
         {

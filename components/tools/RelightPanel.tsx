@@ -13,10 +13,13 @@ import PromptPresetPanel from '../common/PromptPresetPanel';
 
 const lightingPresets = [
     { name: 'Hora Dourada', prompt: 'luz quente e dourada do final da tarde, com sombras longas e suaves' },
-    { name: 'Neon', prompt: 'luz de neon vibrante vinda de várias direções, criando reflexos coloridos' },
+    { name: 'Neon Noir', prompt: 'Ilumine a cena com luzes de neon azuis e roxas como se estivesse em uma rua de cyberpunk, com alto contraste e reflexos em superfícies molhadas.' },
     { name: 'Contraluz Dramático', prompt: 'iluminação de contraluz forte (rim light), criando uma silhueta com bordas iluminadas' },
-    { name: 'Estúdio Suave', prompt: 'iluminação de estúdio suave e difusa, minimizando sombras fortes' },
-    { name: 'Cinematográfico', prompt: 'iluminação cinematográfica, com' },
+    { name: 'Estúdio Suave', prompt: 'iluminação de estúdio suave e difusa (softbox), minimizando sombras fortes para um retrato limpo.' },
+    { name: 'Estúdio Dramático', prompt: 'Aplique uma iluminação de estúdio dramática (Rembrandt), com uma única fonte de luz lateral forte criando um triângulo de luz na bochecha sombreada e alto contraste.'},
+    { name: 'Luz de Janela', prompt: 'Reacenda a foto com uma luz suave e difusa vinda de uma grande janela lateral, criando sombras suaves e uma atmosfera calma e introspectiva.'},
+    { name: 'Luz Volumétrica', prompt: 'Adicione raios de luz volumétricos (god rays) atravessando a cena, como se a luz do sol estivesse passando por uma janela empoeirada ou pela copa de árvores.'},
+    { name: 'Luz de Fogueira', prompt: 'Reacenda a cena com uma luz de fogueira quente e cintilante vinda de baixo, projetando sombras longas e dançantes para cima.'},
 ];
 
 const RelightPanel: React.FC = () => {
