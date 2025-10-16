@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { lazy } from 'react';
-// FIX: import from `../types` instead of `./types`
 import { type ToolId, type TabId } from '../types';
 
 // NOVO: Mapa unificado para todos os componentes que aparecem no painel direito.

@@ -43,8 +43,7 @@ const categoryConfig: Record<ToolCategory, { title: string; description: string;
     },
 };
 
-const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
-    // FIX: Add setIsEditingSessionActive to destructuring
+const ToolCard = React.forwardRef<HTMLButtonElement, { tool: ToolConfig }>(({ tool }, ref) => {
     const { setActiveTool, baseImageFile, setToast, setActiveTab, setIsEditingSessionActive } = useEditor();
     
     const handleClick = () => {
@@ -71,19 +70,21 @@ const ToolCard: React.FC<{ tool: ToolConfig }> = ({ tool }) => {
 
     return (
         <button
+            ref={ref}
             onClick={handleClick}
-            className="group relative bg-gray-800/70 border border-gray-700 rounded-xl p-4 sm:p-6 text-center hover:bg-gray-700/70 hover:border-blue-500/50 transition-all duration-300 transform hover:-translate-y-1 active:scale-95 shadow-lg hover:shadow-blue-500/10"
+            className="group relative flex flex-col h-full bg-gray-800/70 border border-gray-700 rounded-xl p-4 sm:p-6 text-center hover:bg-gray-700/70 hover:border-blue-500/50 transition-all duration-300 transform hover:-translate-y-1 active:scale-95 shadow-lg hover:shadow-blue-500/10"
         >
             <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 flex items-center justify-center bg-gray-900/50 rounded-lg transition-all duration-300 group-hover:scale-110 group-hover:bg-blue-500/20">
                 {tool.icon}
             </div>
-            <div>
+            <div className="flex flex-col flex-grow">
                 <h3 className="font-semibold text-lg text-white">{tool.name}</h3>
                 <p className="text-sm text-gray-400 mt-1">{tool.description}</p>
             </div>
         </button>
     );
-};
+});
+
 
 const PAGE_SIZE = 9; // Carregar 9 ferramentas de cada vez
 
@@ -190,7 +191,7 @@ const HomePage: React.FC = () => {
     }, [displayedTools.length, filteredTools]);
 
     // Callback ref do Intersection Observer para o último elemento
-    const lastToolElementRef = useCallback((node: any) => {
+    const lastToolElementRef = useCallback((node: HTMLButtonElement | null) => {
         if (isLoadingMore) return;
         if (observer.current) observer.current.disconnect();
         observer.current = new IntersectionObserver(entries => {
@@ -316,11 +317,13 @@ const HomePage: React.FC = () => {
                  {showMainContent && (
                     <>
                         {displayedTools.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in auto-rows-fr">
                                 {displayedTools.map((tool, index) => (
-                                     <div key={tool.id} ref={index === displayedTools.length - 1 ? lastToolElementRef : null}>
-                                        <ToolCard tool={tool} />
-                                    </div>
+                                    <ToolCard
+                                        key={tool.id}
+                                        ref={index === displayedTools.length - 1 ? lastToolElementRef : null}
+                                        tool={tool}
+                                    />
                                 ))}
                             </div>
                         ) : (

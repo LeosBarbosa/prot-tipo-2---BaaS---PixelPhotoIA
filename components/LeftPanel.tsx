@@ -8,22 +8,9 @@ import { type TabId, type ToolCategory, type ToolConfig } from '../types';
 // FIX: import from ../context/EditorContext
 import { useEditor } from '../context/EditorContext';
 import { tools } from '../config/tools';
-import { ChevronDownIcon, GenerationIcon, WorkflowIcon, EditingIcon, SearchIcon } from './icons';
-
-const categoryConfig: Record<ToolCategory, { title: string; icon: React.ReactElement<{ className?: string }> }> = {
-    generation: { 
-        title: "Geração", 
-        icon: <GenerationIcon /> 
-    },
-    workflow: { 
-        title: "Fluxos de Trabalho", 
-        icon: <WorkflowIcon />
-    },
-    editing: { 
-        title: "Edição", 
-        icon: <EditingIcon />
-    },
-};
+// FIX: Remove local config and unused icons, import from config file.
+import { ChevronDownIcon, SearchIcon } from './icons';
+import { categoryConfig } from '../config/categoryConfig';
 
 const categoryOrder: ToolCategory[] = ['generation', 'workflow', 'editing'];
 
@@ -141,7 +128,7 @@ const LeftPanel: React.FC = React.memo(() => {
                                 aria-expanded={isExpanded}
                             >
                                 <div className="flex items-center gap-3">
-                                    {React.cloneElement(categoryInfo.icon, { className: 'w-5 h-5 text-blue-400' })}
+                                    {React.cloneElement(categoryInfo.icon, { className: `w-5 h-5 ${categoryInfo.colorClasses.text}` })}
                                     <span className="font-bold">{categoryInfo.title}</span>
                                 </div>
                                 <ChevronDownIcon className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
@@ -151,12 +138,13 @@ const LeftPanel: React.FC = React.memo(() => {
                                 <div className="py-2 px-1 space-y-1 animate-fade-in">
                                     {toolsForCategory.map(tool => {
                                         const isDisabled = !baseImageFile && (tool.category === 'editing' || tool.category === 'workflow');
+                                        const activeColorClass = categoryConfig[tool.category].colorClasses.bg;
                                         return (
                                             <button
                                                 key={tool.id}
                                                 onClick={() => handleSelectTool(tool)}
                                                 disabled={isDisabled}
-                                                className={`w-full flex items-center gap-3 p-2 rounded-md text-left transition-colors ${activeTab === tool.id ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700/80 hover:text-white'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                                className={`w-full flex items-center gap-3 p-2 rounded-md text-left transition-colors ${activeTab === tool.id ? `${activeColorClass} text-white` : 'text-gray-300 hover:bg-gray-700/80 hover:text-white'} disabled:opacity-50 disabled:cursor-not-allowed`}
                                                 title={isDisabled ? `Carregue uma imagem para usar '${tool.name}'` : tool.description}
                                             >
                                                 <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400">

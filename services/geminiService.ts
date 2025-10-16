@@ -48,7 +48,6 @@ const extractBase64Image = (response: GenerateContentResponse): string => {
         }
     }
     
-    // MELHORIA: Propagar a mensagem de erro da IA para facilitar a depuração.
     const textResponse = response.text?.trim();
     if (textResponse) {
         throw new Error(`A IA respondeu com texto em vez de uma imagem: "${textResponse}"`);
@@ -213,7 +212,7 @@ export const generateMagicMontage = async (sourceImage: File, prompt: string, se
 
 export const generateVideo = async (prompt: string, aspectRatio: string): Promise<string> => {
     let operation = await ai.models.generateVideos({
-        model: 'veo-3.1-fast-generate-preview',
+        model: 'veo-2.0-generate-001',
         prompt,
         config: { aspectRatio }
     });
@@ -241,7 +240,7 @@ export const generateAnimationFromImage = async (sourceImage: File, prompt: stri
     const data = arr[1];
 
     let operation = await ai.models.generateVideos({
-        model: 'veo-3.1-fast-generate-preview',
+        model: 'veo-2.0-generate-001',
         prompt,
         image: { imageBytes: data, mimeType },
     });
@@ -355,7 +354,6 @@ export const applyGenerativeSharpening = (image: File, intensity: number): Promi
 
 export const enhanceResolutionAndSharpness = (image: File, factor: number, intensity: number, preserveFace: boolean) => {
     const prompt = `### COMANDO: SUPER RESOLUÇÃO\n\n**OBJETIVO:** Aumentar a resolução da imagem por um fator de ${factor}x e aplicar nitidez generativa a uma intensidade de ${intensity}%.\n\n**REGRAS DE EXECUÇÃO:**\n1.  **AÇÃO DUPLA:** Realize o aumento de escala e a nitidez simultaneamente para um resultado coeso.\n2.  **MELHORIA SIGNIFICATIVA:** O objetivo é melhorar drasticamente tanto a resolução quanto a nitidez percebida.\n${preserveFace ? `3.  **PRESERVAÇÃO FACIAL:** Preste atenção especial para preservar e aprimorar os detalhes faciais de forma realista. ${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}` : ''}`;
-    // FIX: Correct variable name from `finalPrompt` to `prompt`.
     return singleImageAndTextToImage(image, prompt);
 };
 
@@ -560,6 +558,48 @@ export const generateImageWithDescription = async (image: File, promptTemplate: 
     const textPartForGen = { text: finalPrompt };
     
     return generateImageFromParts([imagePartForGen, textPartForGen]);
+};
+
+// FIX: Add generateFunkoPop function
+export const generateFunkoPop = async (
+    mainImage: File, 
+    personImage: File | null, 
+    bg: string, 
+    obj: string, 
+    light: string, 
+    type: string, 
+    finish: string
+): Promise<string> => {
+
+    const parts: Part[] = [
+        { text: "IMAGEM_BASE (para estilo/assunto):" },
+        await fileToPart(mainImage),
+    ];
+
+    if (personImage) {
+        parts.push({ text: "IMAGEM_PESSOA (para características faciais):" }, await fileToPart(personImage));
+    }
+
+    const fullPrompt = `### COMANDO: GERADOR DE FUNKO POP
+
+**OBJETIVO:** Transformar a(s) imagem(ns) fornecida(s) em uma renderização 3D de um boneco colecionável Funko Pop, seguindo as especificações.
+
+**REGRAS DE EXECUÇÃO CRÍTICAS:**
+1.  **ESTILO FUNKO POP:** O resultado DEVE ter o estilo icônico dos bonecos Funko Pop: cabeça grande, corpo pequeno, olhos grandes e pretos, sem boca.
+2.  **FIDELIDADE AO ASSUNTO:**
+    *   Se uma "IMAGEM_PESSOA" for fornecida, a identidade facial (cabelo, formato do rosto, características únicas como barba ou óculos) DEVE ser adaptada para o estilo Funko Pop, mas ainda ser reconhecível.
+    *   Use a "IMAGEM_BASE" para inspirar as roupas, a pose e o tema geral.
+3.  **ESPECIFICAÇÕES DO USUÁRIO:**
+    *   **Tipo de Funko:** ${type}. Se for 'Deluxe' ou 'Moment', crie um cenário elaborado. Se for 'Rides', inclua um veículo.
+    *   **Acabamento Especial:** ${finish}. Se for 'Metálico', 'Brilhante', etc., aplique a textura correspondente no boneco.
+    *   **Objeto:** Se especificado, coloque o seguinte objeto na mão do Funko: "${obj}".
+    *   **Cenário:** Crie o seguinte fundo: "${bg}". Se em branco, crie um fundo de estúdio simples.
+    *   **Iluminação:** Aplique a seguinte iluminação: "${light}".
+    
+**SAÍDA:** Uma renderização 3D fotorrealista de alta qualidade, como se fosse uma foto do produto final.`;
+    
+    parts.push({ text: fullPrompt });
+    return generateImageFromParts(parts);
 };
 
 export const virtualTryOn = async (

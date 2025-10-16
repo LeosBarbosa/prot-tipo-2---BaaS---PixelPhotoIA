@@ -3,18 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useMemo, useEffect, useRef } from 'react';
-// FIX: Correct import path for useEditor
+import React, { useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { useEditor } from './context/EditorContext';
 import ImageViewer from './components/ImageViewer';
 import FloatingControls from './components/FloatingControls';
 import { type TabId, type ToolConfig } from './types';
 import GifTimeline from './components/common/GifTimeline';
-import LeftPanel from './components/LeftPanel';
 import RightPanel from './components/RightPanel';
 import MobileBottomNav from './components/MobileBottomNav';
 import { toolToTabMap, tools } from './config/tools';
 import { panelComponents } from './config/toolComponentMap';
+import Spinner from './components/Spinner';
+
+const LeftPanel = lazy(() => import('./components/LeftPanel'));
 
 const EditorModalLayout: React.FC = () => {
     const { activeTool, isGif, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, activeTab, setActiveTab, setToast, isPanModeActive } = useEditor();
@@ -108,7 +109,9 @@ const EditorModalLayout: React.FC = () => {
 
             {/* Left Panel */}
             <aside className={`fixed lg:relative z-40 h-full w-full max-w-sm lg:w-80 flex-shrink-0 transition-transform duration-300 ease-in-out ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-                <LeftPanel />
+                <Suspense fallback={<div className="w-full h-full flex items-center justify-center bg-gray-800/80"><Spinner /></div>}>
+                    <LeftPanel />
+                </Suspense>
             </aside>
 
             {/* Main Content */}

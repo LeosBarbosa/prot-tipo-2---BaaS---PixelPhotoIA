@@ -122,7 +122,7 @@ const Header: React.FC = () => {
             <div className="hidden lg:flex items-center gap-2">
                 <button 
                     onClick={handleLeftPanelToggle}
-                    className={`p-2 rounded-md transition-all duration-200 ease-in-out active:scale-90 z-30 ${isLeftPanelVisible ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200'}`}
+                    className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 ease-in-out active:scale-90 z-30 ${isLeftPanelVisible ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200'}`}
                     title="Alternar lista de ferramentas"
                     aria-label="Alternar lista de ferramentas"
                     aria-pressed={isLeftPanelVisible}
@@ -131,7 +131,7 @@ const Header: React.FC = () => {
                 </button>
                  <button 
                     onClick={handleRightPanelToggle}
-                    className={`p-2 rounded-md transition-all duration-200 ease-in-out active:scale-90 z-30 ${isRightPanelVisible ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200'}`}
+                    className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 ease-in-out active:scale-90 z-30 ${isRightPanelVisible ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-800/50 dark:hover:bg-gray-700/50 text-gray-800 dark:text-gray-200'}`}
                     title="Alternar opções da ferramenta"
                     aria-label="Alternar opções da ferramenta"
                     aria-pressed={isRightPanelVisible}

@@ -96,6 +96,25 @@ export interface LayerStateSnapshot {
   gifFrames?: GifFrame[];
 }
 
+// History Reducer Types
+export interface HistoryState {
+  history: LayerStateSnapshot[];
+  historyIndex: number;
+  toolHistory: ToolId[];
+}
+
+export type HistoryAction =
+  | { type: 'SET_INITIAL'; payload: { snapshot: LayerStateSnapshot } }
+  | { type: 'COMMIT'; payload: { snapshot: LayerStateSnapshot; toolId?: ToolId } }
+  | { type: 'UNDO' }
+  | { type: 'REDO' }
+  | { type: 'JUMP'; payload: { index: number } }
+  | { type: 'RESET' }
+  | { type: 'UPDATE_LAYER_PROPERTIES'; payload: { layerId: string; updates: Partial<Layer> } }
+  | { type: 'SET_ACTIVE_LAYER'; payload: { activeLayerId: string | null } }
+  | { type: 'RESTORE'; payload: HistoryState };
+
+
 export interface FilterState {
   brightness: number;
   contrast: number;

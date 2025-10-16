@@ -4,10 +4,8 @@
 */
 
 import React, { useMemo, useCallback, useEffect } from 'react';
-// FIX: Correct import path
 import { useEditor } from '../context/EditorContext';
 import VirtualizedList from './VirtualizedList';
-// FIX: Correct import path
 import { LayerStateSnapshot, ImageLayer } from '../types';
 
 // Set item height to 80px (h-16 is 4rem/64px, p-2 is 0.5rem/8px top and bottom, so 64+16=80)

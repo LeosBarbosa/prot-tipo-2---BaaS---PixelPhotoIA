@@ -48,7 +48,7 @@ const RightPanel: React.FC<PanelProps> = React.memo(({ activeToolConfig, panelCo
                 {activeToolConfig ? (
                     <>
                         {/* FIX: Cast icon to React.ReactElement<any> to allow adding className prop. */}
-                        <div className="text-blue-400">{React.cloneElement(activeToolConfig.icon as React.ReactElement<any>, { className: 'w-6 h-6' })}</div>
+                        {React.cloneElement(activeToolConfig.icon as React.ReactElement<any>, { className: 'w-6 h-6 text-blue-400' })}
                         <h2 className="text-lg font-bold text-white">{activeToolConfig.name}</h2>
                     </>
                 ) : (

@@ -11,12 +11,13 @@ import ResultViewer from './common/ResultViewer';
 import { ShirtIcon, CloseIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import TipBox from '../common/TipBox';
+import PromptPresetPanel from '../common/PromptPresetPanel';
 
 const StyledPortraitPanel: React.FC = () => {
     const { 
         isLoading, 
         error, 
-        baseImageFile, 
+        baseImageFile,
         setInitialImage,
         currentImageUrl,
         handleStyledPortrait,
@@ -125,6 +126,12 @@ const StyledPortraitPanel: React.FC = () => {
                   promptPlaceholder="Ex: mantenha o cabelo curto, adicione um leve sorriso, troque a cor da camisa para verde."
                   promptHelperText="Use este campo para refinar a aparência, pose, ou para adicionar/remover um acessório. O rosto será preservado."
                   negativePromptHelperText="Ex: óculos, chapéu, cores específicas, não altere o fundo."
+                />
+
+                <PromptPresetPanel 
+                    toolId="styledPortrait"
+                    onSelectPreset={(selectedPrompt) => setPrompt(selectedPrompt)}
+                    isLoading={isLoading}
                 />
                 
                 <TipBox>

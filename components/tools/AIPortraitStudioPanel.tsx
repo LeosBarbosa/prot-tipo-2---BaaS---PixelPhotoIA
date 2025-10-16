@@ -12,6 +12,7 @@ import { dataURLtoFile } from '../../utils/imageUtils';
 import PromptEnhancer from './common/PromptEnhancer';
 import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
 import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import PromptPresetPanel from '../common/PromptPresetPanel';
 
 type StyleId = 'caricature' | 'pixar' | '3d' | 'yearbook90s';
 
@@ -228,6 +229,12 @@ const AIPortraitStudioPanel: React.FC = () => {
                         />
                      )}
                 </div>
+                
+                <PromptPresetPanel 
+                    toolId="aiPortraitStudio"
+                    onSelectPreset={(selectedPrompt) => setPrompt(selectedPrompt)}
+                    isLoading={isLoading}
+                />
                 
                 <button onClick={handleGenerate} disabled={isGenerateButtonDisabled} className="w-full mt-auto bg-gradient-to-br from-lime-600 to-green-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                     <MagicWandIcon className="w-5 h-5" />

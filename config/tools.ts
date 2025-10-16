@@ -40,7 +40,7 @@ import { type ToolId, type ToolConfig, type TabId } from '../types';
 
 export const tools: ToolConfig[] = [
     // Ferramentas de Geração (isEditingTool: false)
-    { id: 'imageGen', name: 'Gerador de Imagens AI', description: 'Crie imagens a partir de descrições de texto.', icon: React.createElement(PhotoIcon), category: 'generation', componentPath: './components/tools/ImageGenPanel', isEditingTool: false },
+    { id: 'imageGen', name: 'Gerador de Imagens AI', description: 'Crie imagens a partir de descrições de texto.', icon: React.createElement(PhotoIcon, { className: 'w-8 h-8 text-purple-400' }), category: 'generation', componentPath: './components/tools/ImageGenPanel', isEditingTool: false },
     { id: 'sketchRender', name: 'Renderização de Esboço', description: 'Transforme seus desenhos em imagens realistas.', icon: React.createElement(BrushIcon), category: 'generation', componentPath: './components/tools/SketchRenderPanel', isEditingTool: false },
     { id: 'characterDesign', name: 'Design de Personagem', description: 'Desenvolva conceitos de personagens únicos.', icon: React.createElement(FaceSmileIcon), category: 'generation', componentPath: './components/tools/CharacterDesignPanel', isEditingTool: false },
     { id: 'videoGen', name: 'Gerador de Vídeo AI', description: 'Crie vídeos curtos a partir de texto.', icon: React.createElement(VideoCameraIcon), category: 'generation', componentPath: './components/tools/VideoGenPanel', isEditingTool: false },
