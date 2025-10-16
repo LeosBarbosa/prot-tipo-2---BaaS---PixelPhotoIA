@@ -9,10 +9,11 @@ import { useEditor } from '../../context/EditorContext';
 import * as geminiService from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { PngIcon, SparkleIcon } from '../icons';
+import { PngIcon, SparkleIcon, DownloadIcon, BrushIcon } from '../icons';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
 import ToggleSwitch from '../common/ToggleSwitch';
 import TipBox from '../common/TipBox';
+import { dataURLtoFile } from '../../utils/imageUtils';
 
 const AIPngCreatorPanel: React.FC = () => {
     const { 
@@ -23,6 +24,8 @@ const AIPngCreatorPanel: React.FC = () => {
         baseImageFile,
         setInitialImage, 
         setLoadingMessage,
+        setActiveTool,
+        setToast,
     } = useEditor();
     
     const [sourceImage, setSourceImage] = useState<File | null>(null);
@@ -85,6 +88,24 @@ const AIPngCreatorPanel: React.FC = () => {
             setIsLoading(false);
             setLoadingMessage(null);
         }
+    };
+    
+    const handleDownload = () => {
+        if (!resultImage) return;
+        const link = document.createElement('a');
+        link.href = resultImage;
+        link.download = `png-criado-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleUseInEditor = () => {
+        if (!resultImage) return;
+        const file = dataURLtoFile(resultImage, `png-criado-${Date.now()}.png`);
+        setInitialImage(file);
+        setActiveTool(null);
+        setToast({ message: "Imagem carregada no editor!", type: 'success' });
     };
 
     const isGenerateButtonDisabled = isLoading || !sourceImage;
@@ -151,6 +172,16 @@ const AIPngCreatorPanel: React.FC = () => {
                     resultImage={resultImage}
                     loadingMessage="Processando imagem..."
                 />
+                 {resultImage && !isLoading && (
+                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
+                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
+                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
+                        </button>
+                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
+                            <BrushIcon className="w-5 h-5" /> Usar no Editor
+                        </button>
+                    </div>
+                )}
             </main>
         </div>
     );

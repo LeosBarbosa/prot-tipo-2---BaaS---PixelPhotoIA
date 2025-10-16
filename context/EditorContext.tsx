@@ -40,10 +40,12 @@ import {
     PreviewState,
     Trend,
     AdjustmentLayer,
-    BlendMode
+    BlendMode,
+    TexturePreviewState,
 } from '../types';
 import { Crop, PixelCrop } from 'react-image-crop';
 import { hashFile, sha256 } from '../utils/cryptoUtils';
+import { tools } from '../config/tools';
 
 export const DEFAULT_LOCAL_FILTERS: FilterState = {
   brightness: 100,
@@ -108,7 +110,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
     const [textToolState, setTextToolState] = useState<TextToolState>(DEFAULT_TEXT_TOOL_STATE);
     const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
-    const [texturePreview, setTexturePreview] = useState<any>(null);
+    const [texturePreview, setTexturePreview] = useState<TexturePreviewState | null>(null);
     const [isSmartSearching, setIsSmartSearching] = useState(false);
     const [smartSearchResult, setSmartSearchResult] = useState<SmartSearchResult | null>(null);
     const [savedWorkflows, setSavedWorkflows] = useState<Workflow[]>([]);
@@ -218,6 +220,45 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setIsLoading, setLoadingMessage, setError, setUploadProgress, 
         setActiveTool, setActiveTab, setToast
     ]);
+
+    const handleGoHome = useCallback(async () => {
+        setInitialImage(null);
+        setActiveTool(null);
+        setHasRestoredSession(false);
+        setProactiveSuggestion(null);
+        try {
+            await db.clearHistoryDB();
+            setToast({ message: "Pronto para uma nova imagem.", type: 'info' });
+        } catch (e) {
+            console.error("Failed to clear DB:", e);
+            setToast({ message: "Não foi possível limpar a sessão anterior.", type: 'error' });
+        }
+    }, [setInitialImage, setActiveTool, setHasRestoredSession, setProactiveSuggestion, setToast]);
+
+    const handleTriggerUpload = useCallback(() => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+    
+        input.onchange = async (event) => {
+            const target = event.target as HTMLInputElement;
+            const file = target.files?.[0];
+    
+            if (file) {
+                try {
+                    await db.clearHistoryDB(); // Limpa a sessão anterior
+                } catch (e) {
+                    console.error("Failed to clear DB:", e);
+                    setToast({ message: "Não foi possível limpar a sessão anterior.", type: 'error' });
+                }
+                await setInitialImage(file); // Usa a mesma função de seleção de arquivo
+                setHasRestoredSession(false);
+                setProactiveSuggestion(null); 
+            }
+        };
+    
+        input.click();
+    }, [setInitialImage, setHasRestoredSession, setProactiveSuggestion, setToast]);
 
     const executeTool = useCallback(async (toolId: ToolId, serviceCall: (file: File, ...args: any[]) => Promise<string>, loadingMsg: string, ...args: any[]) => {
         const fileToEdit = activeLayerFile;
@@ -353,7 +394,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setIsLoading(false);
             setLoadingMessage(null);
         }
-    }, [layers, activeLayerId, commitChange]);
+    }, [layers, activeLayerId, commitChange, setToast, setError, setIsLoading, setLoadingMessage]);
 
     const handleApplyCrop = useCallback(() => {
         if (!completedCrop || !imgRef.current || !activeLayerFile) return;
@@ -422,7 +463,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } finally {
             setIsLoading(false); setLoadingMessage(null);
         }
-    }, [activeLayerFile, maskDataUrl, hasLocalAdjustments, buildFilterString, localFilters, layers, activeLayerId, commitChange, resetLocalFilters, clearMask]);
+    }, [activeLayerFile, maskDataUrl, hasLocalAdjustments, buildFilterString, localFilters, layers, activeLayerId, commitChange, resetLocalFilters, clearMask, setToast, setError, setIsLoading, setLoadingMessage]);
 
     const handleVirtualTryOn = (personImage: File, clothingImage: File, shoeImage: File | undefined, scenePrompt: string, posePrompt: string, cameraLens: string, cameraAngle: string, lightingStyle: string, negativePrompt: string) => {
         executeBaseImageReplacement('tryOn', "Montando o estúdio e vestindo o modelo...", () => geminiService.virtualTryOn(personImage, clothingImage, shoeImage, scenePrompt, posePrompt, cameraLens, cameraAngle, lightingStyle, negativePrompt));
@@ -477,7 +518,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } finally {
             setIsLoading(false); setLoadingMessage(null);
         }
-    }, [baseImageFile]);
+    }, [baseImageFile, setError, setToast, setIsLoading, setLoadingMessage, setDetectedObjects]);
 
     const handleDetectFaces = useCallback(async () => {
         if (!baseImageFile) { setError("Nenhuma imagem base carregada para detectar rostos."); setToast({ message: 'Carregue uma imagem primeiro.', type: 'error' }); return; }
@@ -492,7 +533,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } finally {
             setIsLoading(false); setLoadingMessage(null);
         }
-    }, [baseImageFile]);
+    }, [baseImageFile, setError, setToast, setIsLoading, setLoadingMessage, setDetectedObjects]);
 
     const handleSelectObject = useCallback((object: DetectedObject) => {
         if (!imgRef.current) return;
@@ -520,7 +561,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } finally {
             setIsLoading(false); setLoadingMessage(null);
         }
-    }, [baseImageFile, maskDataUrl, layers, activeLayerId, commitChange, clearMask]);
+    }, [baseImageFile, maskDataUrl, layers, activeLayerId, commitChange, clearMask, setToast, setError, setIsLoading, setLoadingMessage, setDetectedObjects, setIsInlineComparisonActive]);
 
 
     const generateAIPreview_callback = useCallback(async (trend: Trend, applyToAll: boolean) => {
@@ -546,7 +587,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } finally {
             setIsPreviewLoading(false);
         }
-    }, [activeLayerFile]);
+    }, [activeLayerFile, setToast, setIsPreviewLoading, setPreviewState, setError]);
 
     const commitAIPreview_callback = useCallback(async () => {
         if (!previewState) return;
@@ -565,7 +606,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } finally {
             setIsLoading(false); setLoadingMessage(null);
         }
-    }, [previewState, layers, activeLayerId, commitChange]);
+    }, [previewState, layers, activeLayerId, commitChange, setToast, setPreviewState, setIsInlineComparisonActive, setIsLoading, setLoadingMessage, setError]);
 
     const handleCreativeFusion = useCallback(async (compositionImage: File, styleImages: File[]) => {
         setIsLoading(true); setError(null); setLoadingMessage('Verificando cache...');
@@ -602,10 +643,100 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setIsLoading(false);
             setLoadingMessage(null);
         }
-    }, [layers, activeLayerId, commitChange]);
+    }, [layers, activeLayerId, commitChange, setToast, setError, setIsLoading, setLoadingMessage, setActiveTool, setIsInlineComparisonActive]);
 
+    const handleGenerativeEdit = useCallback(async () => {
+        executeTool('generativeEdit', (file, p) => geminiService.generativeEdit(file, p, { maskImage: maskDataUrl ? dataURLtoFile(maskDataUrl, 'mask.png') : undefined }), 'Aplicando edição generativa...', prompt);
+    }, [executeTool, prompt, maskDataUrl]);
+
+    const handleObjectRemove = useCallback(async () => {
+        executeTool('objectRemover', (file) => geminiService.generativeEdit(file, 'Remova o objeto ou pessoa na área mascarada e preencha o fundo de forma realista', { maskImage: maskDataUrl ? dataURLtoFile(maskDataUrl, 'mask.png') : undefined }), 'Removendo objeto...');
+    }, [executeTool, maskDataUrl]);
+
+    const handleFaceRetouch = useCallback(async () => {
+        executeTool('portraits', (file) => geminiService.retouchFace(file, dataURLtoFile(maskDataUrl!, 'mask.png')), 'Retocando rosto...');
+    }, [executeTool, maskDataUrl]);
+    
+    const handleApplyCurve = useCallback((lut: number[]) => {
+        // This is a complex operation that needs to be implemented
+    }, []);
+
+    const handleApplyText = useCallback(async () => {
+        // This needs implementation
+    }, []);
+    
+    const handleGenerateVideo = useCallback((prompt: string, aspectRatio: VideoAspectRatio) => {
+        // This needs implementation
+    }, []);
+    
+    const handleDownload = useCallback(async () => {
+        // This needs implementation
+    }, []);
+
+    const handleApplyTexture = useCallback(async () => {
+        // This needs implementation
+    }, []);
+    
+    const handleConfidentStudio = useCallback((personImage: File, mainPrompt: string, negativePrompt: string) => {
+        executeBaseImageReplacement('confidentStudio', "Gerando retrato de estúdio...", () => geminiService.generateStudioPortrait(personImage, mainPrompt, negativePrompt));
+    }, [executeBaseImageReplacement]);
+
+    const handlePolaroid = useCallback(async (personImage: File, celebrityImage: File, negativePrompt: string) => {
+        await executeBaseImageReplacement('polaroid', "Gerando Polaroid...", () => geminiService.generatePolaroidWithCelebrity(personImage, celebrityImage, negativePrompt));
+    }, [executeBaseImageReplacement]);
+
+    const handleStyledPortrait = useCallback(async (personImage: File, styleImages: File[], prompt: string, negativePrompt: string) => {
+        await executeBaseImageReplacement('styledPortrait', "Gerando retrato estilizado...", () => geminiService.generateStyledPortrait(personImage, styleImages, prompt, negativePrompt));
+    }, [executeBaseImageReplacement]);
+
+    const addWorkflow = useCallback((workflow: Workflow) => {
+        setSavedWorkflows(prev => [...prev, workflow]);
+        db.addWorkflow(workflow);
+    }, []);
+
+    const addPromptToHistory = useCallback((p: string) => {
+        setPromptHistory(prev => [p, ...prev.slice(0, 49)]);
+    }, []);
+
+    const executeWorkflow = useCallback((toolIds: ToolId[]) => {
+        // Placeholder for workflow execution logic
+        setToast({ message: `Executando fluxo de trabalho com ${toolIds.length} ferramentas.`, type: 'info' });
+    }, [setToast]);
+
+    const handlePredefinedSearchAction = useCallback((action: PredefinedSearch['action']) => {
+        if (action.type === 'tool') {
+            setActiveTool(action.payload as ToolId);
+        } else if (action.type === 'workflow') {
+            executeWorkflow(action.payload as ToolId[]);
+        }
+    }, [setActiveTool, executeWorkflow]);
+    
+    const handleSmartSearch = useCallback(async (term: string) => {
+        setIsSmartSearching(true);
+        setSmartSearchResult(null);
+        try {
+            const result = await geminiService.suggestToolFromPrompt(term);
+            if (result) {
+                // FIX: Look up the full tool configuration from the tools array to ensure type safety and complete tool data.
+                const toolConfig = tools.find(tool => tool.id === result.name);
+                if (toolConfig) {
+                    setSmartSearchResult({ tool: toolConfig, args: result.args });
+                } else {
+                    console.warn(`Smart search returned an unknown tool: ${result.name}`);
+                    setToast({ message: `A IA sugeriu uma ferramenta desconhecida: '${result.name}'.`, type: 'error' });
+                }
+            } else {
+                setToast({ message: 'A IA não sugeriu uma ferramenta. Tente a busca normal.', type: 'info' });
+            }
+        } catch (e) {
+            setToast({ message: e instanceof Error ? e.message : 'Erro na busca inteligente.', type: 'error' });
+        } finally {
+            setIsSmartSearching(false);
+        }
+    }, [setToast]);
+    
     const contextValue: EditorContextType = {
-        activeTool, setActiveTool, activeTab, setActiveTab, isLoading, setIsLoading, loadingMessage, setLoadingMessage, error, setError, isComparisonModalOpen, setIsComparisonModalOpen, isInlineComparisonActive, setIsInlineComparisonActive, toast, setToast, proactiveSuggestion, setProactiveSuggestion, uploadProgress, setUploadProgress, isSaveWorkflowModalOpen, setIsSaveWorkflowModalOpen, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, theme, toggleTheme: () => setTheme(t => t === 'dark' ? 'light' : 'dark'), layers, activeLayerId, setActiveLayerId: setActiveLayerId_callback, baseImageFile, currentImageUrl, compositeCssFilter, originalImageUrl, imgRef, setInitialImage, hasRestoredSession, isEditingSessionActive, setIsEditingSessionActive, updateLayer, deleteLayer, toggleLayerVisibility, mergeDownLayer: () => {}, moveLayerUp, moveLayerDown, history, historyIndex, canUndo, canRedo, undo, redo, jumpToState, resetHistory, toolHistory, commitChange, isGif, gifFrames, currentFrameIndex, setCurrentFrameIndex, zoom, setZoom, panOffset, isPanModeActive, setIsPanModeActive, isCurrentlyPanning, handleWheel, handlePanStart, handleTouchStart, handleTouchMove, handleTouchEnd, resetZoomAndPan, crop, setCrop, completedCrop, setCompletedCrop, aspect, setAspect, canvasRef, maskDataUrl, setMaskDataUrl, brushSize, setBrushSize, clearMask, startDrawing, stopDrawing, draw, detectedObjects, setDetectedObjects, highlightedObject, setHighlightedObject, localFilters, setLocalFilters, hasLocalAdjustments, buildFilterString, resetLocalFilters, histogram, previewState, setPreviewState, isPreviewLoading, textToolState, setTextToolState, resetTextToolState, generatedVideoUrl, setGeneratedVideoUrl, texturePreview, setTexturePreview, isSmartSearching, smartSearchResult, setSmartSearchResult, savedWorkflows, addWorkflow: () => {}, recentTools, promptHistory, addPromptToHistory: () => {}, executeWorkflow: () => {}, handlePredefinedSearchAction: () => {}, handleSmartSearch: async () => {}, handleFileSelect: setInitialImage, handleGoHome: () => setInitialImage(null), handleTriggerUpload: () => {}, handleExplicitSave: async () => {}, handleApplyCrop, handleTransform, handleRemoveBackground, handleRelight, handleMagicPrompt, handleApplyLowPoly, handleExtractArt, handleApplyDustAndScratch, handleDenoise, handleApplyFaceRecovery, handleGenerateProfessionalPortrait, handleRestorePhoto, handleApplyUpscale, handleUnblurImage, handleApplySharpen, handleApplyNewAspectRatio, handleGenerativeEdit: async () => {}, handleObjectRemove: async () => {}, handleDetectObjects, handleDetectFaces, handleFaceRetouch: async () => {}, handleFaceSwap, handleSelectObject, handleApplyLocalAdjustments, handleApplyCurve: () => {}, handleApplyStyle, handleApplyAIAdjustment, handleApplyText: async () => {}, handleGenerateVideo: () => {}, handleDownload: async () => {}, handleApplyTexture: async () => {}, handleVirtualTryOn, handleFunkoPop, handleStyledPortrait: async () => {}, handlePolaroid: async () => {}, handleConfidentStudio: async () => {}, handleSuperheroFusion, handleAIPortrait, handleEnhanceResolutionAndSharpness, handleDoubleExposure, handleCreativeFusion, prompt, setPrompt, generateAIPreview: generateAIPreview_callback, commitAIPreview: commitAIPreview_callback, initialPromptFromMetadata,
+        activeTool, setActiveTool, activeTab, setActiveTab, isLoading, setIsLoading, loadingMessage, setLoadingMessage, error, setError, isComparisonModalOpen, setIsComparisonModalOpen, isInlineComparisonActive, setIsInlineComparisonActive, toast, setToast, proactiveSuggestion, setProactiveSuggestion, uploadProgress, setUploadProgress, isSaveWorkflowModalOpen, setIsSaveWorkflowModalOpen, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, theme, toggleTheme: () => setTheme(t => t === 'dark' ? 'light' : 'dark'), layers, activeLayerId, setActiveLayerId: setActiveLayerId_callback, baseImageFile, currentImageUrl, compositeCssFilter, originalImageUrl, imgRef, setInitialImage, hasRestoredSession, isEditingSessionActive, setIsEditingSessionActive, updateLayer, deleteLayer, toggleLayerVisibility, mergeDownLayer: () => {}, moveLayerUp, moveLayerDown, history, historyIndex, canUndo, canRedo, undo, redo, jumpToState, resetHistory, toolHistory, commitChange, isGif, gifFrames, currentFrameIndex, setCurrentFrameIndex, zoom, setZoom, panOffset, isPanModeActive, setIsPanModeActive, isCurrentlyPanning, handleWheel, handlePanStart, handleTouchStart, handleTouchMove, handleTouchEnd, resetZoomAndPan, crop, setCrop, completedCrop, setCompletedCrop, aspect, setAspect, canvasRef, maskDataUrl, setMaskDataUrl, brushSize, setBrushSize, clearMask, startDrawing, stopDrawing, draw, detectedObjects, setDetectedObjects, highlightedObject, setHighlightedObject, localFilters, setLocalFilters, hasLocalAdjustments, buildFilterString, resetLocalFilters, histogram, previewState, setPreviewState, isPreviewLoading, textToolState, setTextToolState, resetTextToolState, generatedVideoUrl, setGeneratedVideoUrl, texturePreview, setTexturePreview, isSmartSearching, smartSearchResult, setSmartSearchResult, savedWorkflows, addWorkflow, recentTools, promptHistory, addPromptToHistory, executeWorkflow, handlePredefinedSearchAction, handleSmartSearch, handleFileSelect: setInitialImage, handleGoHome, handleTriggerUpload, handleExplicitSave: async () => {}, handleApplyCrop, handleTransform, handleRemoveBackground, handleRelight, handleMagicPrompt, handleApplyLowPoly, handleExtractArt, handleApplyDustAndScratch, handleDenoise, handleApplyFaceRecovery, handleGenerateProfessionalPortrait, handleRestorePhoto, handleApplyUpscale, handleUnblurImage, handleApplySharpen, handleApplyNewAspectRatio, handleGenerativeEdit, handleObjectRemove, handleDetectObjects, handleDetectFaces, handleFaceRetouch, handleFaceSwap, handleSelectObject, handleApplyLocalAdjustments, handleApplyCurve, handleApplyStyle, handleApplyAIAdjustment, handleApplyText, handleGenerateVideo, handleDownload, handleApplyTexture, handleVirtualTryOn, handleFunkoPop, handleStyledPortrait, handlePolaroid, handleConfidentStudio, handleSuperheroFusion, handleAIPortrait, handleEnhanceResolutionAndSharpness, handleDoubleExposure, handleCreativeFusion, prompt, setPrompt, generateAIPreview: generateAIPreview_callback, commitAIPreview: commitAIPreview_callback, initialPromptFromMetadata,
         handleMagicMontage,
     };
 

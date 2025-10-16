@@ -7,12 +7,13 @@ import { useEditor } from '../../context/EditorContext';
 import { convertToVector } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { VectorIcon } from '../icons';
+import { VectorIcon, DownloadIcon, BrushIcon } from '../icons';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
 import PromptEnhancer from './common/PromptEnhancer';
+import { dataURLtoFile } from '../../utils/imageUtils';
 
 const VectorConverterPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, baseImageFile, setInitialImage } = useEditor();
+    const { isLoading, error, setError, setIsLoading, baseImageFile, setInitialImage, setActiveTool, setToast } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
@@ -48,6 +49,24 @@ const VectorConverterPanel: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleDownload = () => {
+        if (!resultImage) return;
+        const link = document.createElement('a');
+        link.href = resultImage;
+        link.download = `vetor-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleUseInEditor = () => {
+        if (!resultImage) return;
+        const file = dataURLtoFile(resultImage, `vetor-${Date.now()}.png`);
+        setInitialImage(file);
+        setActiveTool(null);
+        setToast({ message: "Imagem carregada no editor!", type: 'success' });
     };
 
     return (
@@ -92,13 +111,23 @@ const VectorConverterPanel: React.FC = () => {
                     Criar Adesivo Vetorizado
                 </button>
             </aside>
-            <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex items-center justify-center p-4">
+            <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center p-4">
                 <ResultViewer
                     isLoading={isLoading}
                     error={error}
                     resultImage={resultImage}
                     loadingMessage="Criando seu adesivo vetorizado..."
                 />
+                {resultImage && !isLoading && (
+                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
+                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
+                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
+                        </button>
+                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
+                            <BrushIcon className="w-5 h-5" /> Usar no Editor
+                        </button>
+                    </div>
+                )}
             </main>
         </div>
     );

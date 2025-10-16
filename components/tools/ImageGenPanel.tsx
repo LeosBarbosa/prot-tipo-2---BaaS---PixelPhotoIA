@@ -8,13 +8,14 @@ import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { generateImageFromText, validatePromptSpecificity } from '../../services/geminiService';
 import ResultViewer from './common/ResultViewer';
-import { PhotoIcon, AspectRatioSquareIcon, AspectRatioLandscapeIcon, AspectRatioPortraitIcon } from '../icons';
+import { PhotoIcon, AspectRatioSquareIcon, AspectRatioLandscapeIcon, AspectRatioPortraitIcon, DownloadIcon, BrushIcon } from '../icons'; // Adicione ícones
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 // 1. IMPORTE O NOVO COMPONENTE
 import PromptPresetPanel from '../common/PromptPresetPanel';
+import { dataURLtoFile } from '../../utils/imageUtils'; // Importe a função utilitária
 
 const ImageGenPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, setLoadingMessage, setToast, addPromptToHistory, initialPromptFromMetadata } = useEditor();
+    const { isLoading, error, setError, setIsLoading, setLoadingMessage, setToast, addPromptToHistory, initialPromptFromMetadata, setInitialImage, setActiveTool } = useEditor();
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('Uma vasta biblioteca interior com livros que se estendem até um teto abobadado, feixes de luz empoeirados, estilo de fantasia cinematográfica, detalhado.');
     const [negativePrompt, setNegativePrompt] = useState('');
@@ -65,6 +66,24 @@ const ImageGenPanel: React.FC = () => {
             setIsLoading(false);
             setLoadingMessage(null);
         }
+    };
+
+    const handleDownload = () => {
+        if (!resultImage) return;
+        const link = document.createElement('a');
+        link.href = resultImage;
+        link.download = `gerada-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleUseInEditor = () => {
+        if (!resultImage) return;
+        const file = dataURLtoFile(resultImage, `gerada-${Date.now()}.png`);
+        setInitialImage(file);
+        setActiveTool(null);
+        setToast({ message: "Imagem carregada no editor!", type: 'success' });
     };
 
     return (
@@ -123,13 +142,24 @@ const ImageGenPanel: React.FC = () => {
                     {isLoading ? 'Gerando...' : 'Gerar Imagem'}
                 </button>
             </aside>
-            <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex items-center justify-center p-4">
+            <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center p-4">
                 <ResultViewer
                     isLoading={isLoading}
                     error={error}
                     resultImage={resultImage}
                     loadingMessage="Gerando sua imagem..."
                 />
+                {/* BLOCO DE BOTÕES ADICIONADO */}
+                {resultImage && !isLoading && (
+                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
+                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
+                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
+                        </button>
+                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
+                            <BrushIcon className="w-5 h-5" /> Usar no Editor
+                        </button>
+                    </div>
+                )}
             </main>
         </div>
     );

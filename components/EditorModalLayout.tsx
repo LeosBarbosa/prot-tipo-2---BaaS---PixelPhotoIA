@@ -4,7 +4,6 @@
 */
 
 import React, { useMemo, useEffect, useRef } from 'react';
-// FIX: Correct import path for useEditor
 import { useEditor } from '../context/EditorContext';
 import ImageViewer from './ImageViewer';
 import FloatingControls from './FloatingControls';
@@ -12,9 +11,12 @@ import { type TabId, type ToolConfig } from '../types';
 import GifTimeline from './common/GifTimeline';
 import LeftPanel from './LeftPanel';
 import RightPanel from './RightPanel';
+// FIX: Removed unused import of editingTabs
 import MobileBottomNav from './MobileBottomNav';
+// FIX: Import 'tools' to get the full tool configuration
 import { toolToTabMap, tools } from '../config/tools';
 import { panelComponents } from '../config/toolComponentMap';
+
 
 const EditorModalLayout: React.FC = () => {
     const { activeTool, isGif, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, activeTab, setActiveTab, setToast, isPanModeActive } = useEditor();
@@ -34,10 +36,10 @@ const EditorModalLayout: React.FC = () => {
         }
     }, [activeTool, setActiveTab, setToast]);
 
-    const activeToolConfig = useMemo(() => tools.find(tool => tool.id === activeTab), [activeTab]);
-
+    // FIX: Use the 'tools' array to find the full configuration for the active tab (ToolId).
+    // This ensures that 'activeTabConfig' is of type 'ToolConfig | undefined' as expected by RightPanel.
+    const activeTabConfig = useMemo(() => tools.find(tool => tool.id === activeTab), [activeTab]);
     const showBackdrop = isLeftPanelVisible || isRightPanelVisible;
-
     const touchStartRef = useRef<{ x: number, time: number } | null>(null);
 
     const handleTouchStart = (e: React.TouchEvent) => {
@@ -97,7 +99,7 @@ const EditorModalLayout: React.FC = () => {
             {/* Backdrop for mobile overlays */}
             {showBackdrop && (
                 <div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-md z-30 lg:hidden animate-fade-in"
+                    className="fixed inset-0 bg-black/60 z-30 lg:hidden animate-fade-in"
                     onClick={() => {
                         setIsLeftPanelVisible(false);
                         setIsRightPanelVisible(false);
@@ -106,27 +108,24 @@ const EditorModalLayout: React.FC = () => {
                 />
             )}
 
-            {/* Left Panel */}
+            {/* Left Panel (com rolagem interna) */}
             <aside className={`fixed lg:relative z-40 h-full w-full max-w-sm lg:w-80 flex-shrink-0 transition-transform duration-300 ease-in-out ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
                 <LeftPanel />
             </aside>
 
-            {/* Main Content */}
-            <main 
-                className={`flex-grow flex flex-col relative pb-20 lg:pb-0 transition-all duration-300 ease-in-out origin-center
-                    ${(isLeftPanelVisible || isRightPanelVisible) ? 'scale-90 rounded-2xl shadow-2xl overflow-hidden blur-sm lg:scale-100 lg:rounded-none lg:shadow-none lg:overflow-auto lg:blur-0' : 'scale-100'}
-                `}
-            >
-                <div className="flex-grow flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Main Content (ocupa a altura total e não centraliza) */}
+            <main className="flex-grow flex flex-col h-full overflow-hidden relative pb-20 lg:pb-0">
+                {/* O wrapper do ImageViewer expande para preencher o espaço */}
+                <div className="flex-grow relative p-4">
                     <ImageViewer />
                     <FloatingControls />
                 </div>
                 {isGif && <GifTimeline />}
             </main>
 
-            {/* Right Panel */}
+            {/* Right Panel (com rolagem interna) */}
             <aside className={`fixed lg:relative right-0 z-40 h-full w-full max-w-sm lg:w-96 flex-shrink-0 transition-transform duration-300 ease-in-out ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
-                <RightPanel activeToolConfig={activeToolConfig as ToolConfig | undefined} panelComponents={panelComponents} />
+                <RightPanel activeToolConfig={activeTabConfig} panelComponents={panelComponents} />
             </aside>
 
             <MobileBottomNav />

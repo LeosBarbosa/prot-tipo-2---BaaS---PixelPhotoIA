@@ -7,7 +7,7 @@ import { useEditor } from '../../context/EditorContext';
 import { generateLogo, generateLogoVariation } from '../../services/geminiService';
 import { dataURLtoFile, fileToDataURL } from '../../utils/imageUtils';
 import ResultViewer from './common/ResultViewer';
-import { LogoIcon, SparkleIcon } from '../icons';
+import { LogoIcon, SparkleIcon, DownloadIcon, BrushIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import Spinner from '../Spinner';
 import ImageDropzone from './common/ImageDropzone';
@@ -21,6 +21,9 @@ const LogoGenPanel: React.FC = () => {
         addPromptToHistory, 
         setLoadingMessage, 
         loadingMessage,
+        setInitialImage,
+        setActiveTool,
+        setToast,
     } = useEditor();
     
     // State for the main image being displayed/worked on
@@ -107,6 +110,24 @@ const LogoGenPanel: React.FC = () => {
         setLogoFile(dataURLtoFile(variationUrl, 'variation-logo.png'));
         setVariations([]);
     };
+    
+    const handleDownload = () => {
+        if (!resultImage) return;
+        const link = document.createElement('a');
+        link.href = resultImage;
+        link.download = `logotipo-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleUseInEditor = () => {
+        if (!resultImage) return;
+        const file = dataURLtoFile(resultImage, `logotipo-${Date.now()}.png`);
+        setInitialImage(file);
+        setActiveTool(null);
+        setToast({ message: "Imagem carregada no editor!", type: 'success' });
+    };
 
     return (
         <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6 h-full">
@@ -170,6 +191,17 @@ const LogoGenPanel: React.FC = () => {
                     resultImage={resultImage}
                     loadingMessage={loadingMessage ?? "Processando..."}
                 />
+                
+                {resultImage && !isLoading && !isGeneratingVariations && variations.length === 0 && (
+                     <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
+                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
+                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
+                        </button>
+                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
+                            <BrushIcon className="w-5 h-5" /> Usar no Editor
+                        </button>
+                    </div>
+                )}
 
                 {(isGeneratingVariations || variations.length > 0) && (
                     <div className="w-full mt-4 p-4 border-t border-gray-700/50">
