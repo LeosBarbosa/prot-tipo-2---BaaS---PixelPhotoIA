@@ -4,21 +4,20 @@
 */
 
 import React, { useState } from 'react';
-// FIX: import from ../../context/EditorContext
 import { useEditor } from '../../context/EditorContext';
 import { generateProfessionalPortrait } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { FaceSmileIcon, DownloadIcon, BrushIcon } from '../icons';
 import { dataURLtoFile } from '../../utils/imageUtils';
+import LazyIcon from '../LazyIcon';
 
 const AIPortraitPanel: React.FC = () => {
     const { isLoading, error, setError, setIsLoading, setInitialImage, setActiveTool, setToast } = useEditor();
-    const [sourceImage, setSourceImage] = useState<File | null>(null);
+    const [sourceImage, setSourceImage] = useState<File[]>([]);
     const [resultImage, setResultImage] = useState<string | null>(null);
 
     const handleGenerate = async () => {
-        if (!sourceImage) {
+        if (!sourceImage[0]) {
             setError("Por favor, carregue uma imagem para transformar.");
             return;
         }
@@ -26,7 +25,7 @@ const AIPortraitPanel: React.FC = () => {
         setError(null);
         setResultImage(null);
         try {
-            const result = await generateProfessionalPortrait(sourceImage);
+            const result = await generateProfessionalPortrait(sourceImage[0], setToast);
             setResultImage(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -61,17 +60,17 @@ const AIPortraitPanel: React.FC = () => {
                     <p className="text-sm text-gray-400 mt-1">Transforme sua selfie casual em um retrato de negócios profissional.</p>
                 </div>
                 <ImageDropzone
-                    imageFile={sourceImage}
-                    onFileSelect={setSourceImage}
+                    files={sourceImage}
+                    onFilesChange={setSourceImage}
                     label="Sua Foto"
                 />
                 <p className="text-xs text-gray-500 text-center">A IA manterá suas características faciais, mas irá gerar novas roupas, um novo fundo e iluminação profissional.</p>
                 <button
                     onClick={handleGenerate}
-                    disabled={isLoading || !sourceImage}
+                    disabled={isLoading || sourceImage.length === 0}
                     className="w-full mt-auto bg-gradient-to-br from-blue-600 to-indigo-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <FaceSmileIcon className="w-5 h-5" />
+                    <LazyIcon name="FaceSmileIcon" className="w-5 h-5" />
                     Gerar Retrato
                 </button>
             </aside>
@@ -82,16 +81,6 @@ const AIPortraitPanel: React.FC = () => {
                     resultImage={resultImage}
                     loadingMessage="Criando seu retrato profissional..."
                 />
-                {resultImage && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
             </main>
         </div>
     );

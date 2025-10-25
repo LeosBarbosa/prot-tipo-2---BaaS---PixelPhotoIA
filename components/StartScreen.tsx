@@ -4,7 +4,7 @@
 */
 
 import React, { useState, useRef, useCallback } from 'react';
-import { UploadIcon } from './icons';
+import LazyIcon from './LazyIcon';
 
 interface StartScreenProps {
   onFileSelect: (file: File) => void;
@@ -52,7 +52,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFileSelect, onCancel }) => 
         <div className={`relative flex flex-col items-center gap-4 text-gray-400 pointer-events-none transition-transform duration-300 ${isDraggingOver ? 'scale-105' : 'group-hover:scale-105'}`}>
             <div className="relative w-20 h-20 flex items-center justify-center bg-gray-800/50 rounded-2xl border border-gray-700">
                 <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent rounded-2xl"></div>
-                <UploadIcon className="w-10 h-10 text-gray-400 transition-colors duration-300 group-hover:text-blue-400" />
+                <LazyIcon name="UploadIcon" className="w-10 h-10 text-gray-400 transition-colors duration-300 group-hover:text-blue-400" />
             </div>
             <h2 className="text-2xl font-bold text-white">Arraste sua imagem aqui</h2>
             <p>Ou <span className="text-blue-400 font-semibold">procure em seus arquivos</span></p>

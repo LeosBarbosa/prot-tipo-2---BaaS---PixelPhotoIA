@@ -5,14 +5,14 @@
 
 import React, { useState } from 'react';
 import { useEditor } from '../context/EditorContext';
-import { CloseIcon, WorkflowIcon, FaceSmileIcon, SparkleIcon, PaletteIcon } from './icons';
 import { type Workflow, type WorkflowIconType } from '../types';
+import LazyIcon from './LazyIcon';
 
-const icons: { id: WorkflowIconType, icon: React.ReactNode }[] = [
-    { id: 'restore', icon: <FaceSmileIcon className="w-6 h-6" /> },
-    { id: 'product', icon: <SparkleIcon className="w-6 h-6" /> },
-    { id: 'creative', icon: <PaletteIcon className="w-6 h-6" /> },
-    { id: 'custom', icon: <WorkflowIcon className="w-6 h-6" /> },
+const icons: { id: WorkflowIconType, iconName: string }[] = [
+    { id: 'restore', iconName: 'FaceSmileIcon' },
+    { id: 'product', iconName: 'SparkleIcon' },
+    { id: 'creative', iconName: 'PaletteIcon' },
+    { id: 'custom', iconName: 'WorkflowIcon' },
 ];
 
 const SaveWorkflowModal: React.FC = () => {
@@ -31,7 +31,8 @@ const SaveWorkflowModal: React.FC = () => {
             id: `user_${Date.now()}`,
             name,
             description,
-            toolIds: toolHistory,
+            // FIX: Map over ToolHistoryItem[] to get ToolId[]
+            toolIds: toolHistory.map(item => item.toolId),
             icon: selectedIcon,
             isUserDefined: true,
         };
@@ -52,11 +53,11 @@ const SaveWorkflowModal: React.FC = () => {
             >
                 <header className="flex items-center justify-between p-4 border-b border-gray-700">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                        <WorkflowIcon className="w-6 h-6 text-blue-400" />
+                        <LazyIcon name="WorkflowIcon" className="w-6 h-6 text-blue-400" />
                         Salvar Fluxo de Trabalho
                     </h2>
                     <button onClick={() => setIsSaveWorkflowModalOpen(false)} className="text-gray-400 hover:text-white transition-colors">
-                        <CloseIcon className="w-6 h-6" />
+                        <LazyIcon name="CloseIcon" className="w-6 h-6" />
                     </button>
                 </header>
                 <div className="p-6 space-y-4">
@@ -89,14 +90,14 @@ const SaveWorkflowModal: React.FC = () => {
                      <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">Ícone</label>
                         <div className="flex justify-center gap-3">
-                            {icons.map(({ id, icon }) => (
+                            {icons.map(({ id, iconName }) => (
                                 <button
                                     key={id}
                                     type="button"
                                     onClick={() => setSelectedIcon(id)}
                                     className={`p-3 rounded-lg transition-all ${selectedIcon === id ? 'bg-blue-600 ring-2 ring-blue-400' : 'bg-gray-700/50 hover:bg-gray-600/50'}`}
                                 >
-                                    {icon}
+                                    <LazyIcon name={iconName} className="w-6 h-6" />
                                 </button>
                             ))}
                         </div>

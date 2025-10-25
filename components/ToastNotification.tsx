@@ -4,7 +4,7 @@
 */
 
 import React, { useEffect } from 'react';
-import { InformationCircleIcon, CloseIcon, CheckCircleIcon } from './icons';
+import LazyIcon from './LazyIcon';
 import { type ToastType } from '../types';
 
 interface ToastNotificationProps {
@@ -31,7 +31,7 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({ message, type, on
       iconColor: 'text-red-300',
       textColor: 'text-red-100',
       title: 'Erro',
-      Icon: InformationCircleIcon,
+      iconName: 'InformationCircleIcon',
     },
     success: {
       bg: 'bg-green-800/90',
@@ -39,7 +39,7 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({ message, type, on
       iconColor: 'text-green-300',
       textColor: 'text-green-100',
       title: 'Sucesso',
-      Icon: CheckCircleIcon,
+      iconName: 'CheckCircleIcon',
     },
     info: {
       bg: 'bg-blue-800/90',
@@ -47,7 +47,7 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({ message, type, on
       iconColor: 'text-blue-300',
       textColor: 'text-blue-100',
       title: 'Informação',
-      Icon: InformationCircleIcon,
+      iconName: 'InformationCircleIcon',
     },
   }[type];
 
@@ -59,7 +59,7 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({ message, type, on
     >
       <div className="flex items-start gap-4">
         <div className={`flex-shrink-0 ${config.iconColor}`}>
-          <config.Icon className="w-6 h-6" />
+          <LazyIcon name={config.iconName} className="w-6 h-6" />
         </div>
         <div className={`flex-grow ${config.textColor}`}>
           <p className="font-bold">{config.title}</p>
@@ -67,7 +67,7 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({ message, type, on
         </div>
         <div className="flex-shrink-0">
           <button onClick={onClose} className="text-current opacity-70 hover:opacity-100 transition-opacity" aria-label="Fechar notificação">
-            <CloseIcon className="w-5 h-5" />
+            <LazyIcon name="CloseIcon" className="w-5 h-5" />
           </button>
         </div>
       </div>

@@ -3,29 +3,26 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
-// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
 import StylePreview from '../common/StylePreview';
 import TipBox from '../common/TipBox';
-// FIX: Import SparkleIcon to use as a default icon
 import { SparkleIcon } from '../icons';
-// FIX: Correct import path
 import { Trend } from '../../types';
 
 const filters: Trend[] = [
-    { name: 'Sonho', prompt: 'aplique um efeito de sonho suave e etéreo com um brilho suave e cores pastel', bg: 'bg-gradient-to-br from-pink-300 to-purple-400', icon: <SparkleIcon/> },
-    { name: 'Cinemático', prompt: 'aplique uma gradação de cor cinematográfica de teal e laranja, aumentando o contraste para um visual dramático', bg: 'bg-gradient-to-br from-teal-500 to-orange-500', icon: <SparkleIcon/> },
-    { name: 'Néon Noir', prompt: 'transforme a imagem em uma cena noturna de neon noir, com luzes de neon vibrantes e sombras profundas', bg: 'bg-gradient-to-br from-fuchsia-600 to-indigo-700', icon: <SparkleIcon/> },
-    { name: 'Surreal', prompt: 'aplique um filtro surreal e psicadélico com cores distorcidas e padrões fluidos', bg: 'bg-gradient-to-br from-lime-400 to-cyan-500', icon: <SparkleIcon/> },
-    { name: 'Fantasia', prompt: 'dê à imagem um brilho de fantasia mágica, com tons de lavanda, ouro e partículas de luz flutuantes', bg: 'bg-gradient-to-br from-violet-400 to-yellow-300', icon: <SparkleIcon/> },
-    { name: 'Vaporwave', prompt: 'aplique uma estética vaporwave, com tons de rosa e ciano, falhas e motivos nostálgicos dos anos 80', bg: 'bg-gradient-to-br from-pink-500 to-cyan-400', icon: <SparkleIcon/> },
-    { name: 'Vintage', prompt: 'aplique um efeito de foto antiga, com grão de filme, leve dessaturação de cores e um leve tom sépia', bg: 'bg-gradient-to-br from-amber-600 to-stone-700', icon: <SparkleIcon/> },
-    { name: 'Impressionismo', prompt: 'Pintura a óleo no estilo impressionista, capturando a luz e o momento, com pinceladas visíveis.', bg: 'bg-gradient-to-br from-rose-300 to-violet-400', icon: <SparkleIcon/> },
-    { name: 'Art Déco', prompt: 'Estilo Art Déco, com formas geométricas, cores fortes e detalhes luxuosos.', bg: 'bg-gradient-to-br from-amber-400 to-gray-800', icon: <SparkleIcon/> },
-    { name: 'Esboço Carvão', prompt: 'Esboço a carvão em preto e branco, com linhas expressivas e sombreamento.', bg: 'bg-gradient-to-br from-gray-300 to-gray-600', icon: <SparkleIcon/> },
-    { name: 'Modelo 3D', prompt: 'Renderização de modelo 3D, com iluminação de estúdio e texturas suaves.', bg: 'bg-gradient-to-br from-slate-400 to-slate-600', icon: <SparkleIcon/> },
-    { name: 'Steampunk', prompt: 'Estilo Steampunk, com engrenagens de latão, vapor e estética vitoriana.', bg: 'bg-gradient-to-br from-orange-600 to-amber-800', icon: <SparkleIcon/> }
+    { name: 'Sonho', prompt: 'aplique um efeito de sonho suave e etéreo com um brilho suave e cores pastel', bg: 'bg-gradient-to-br from-pink-300 to-purple-400', icon: 'SparkleIcon' },
+    { name: 'Cinemático', prompt: 'aplique uma gradação de cor cinematográfica de teal e laranja, aumentando o contraste para um visual dramático', bg: 'bg-gradient-to-br from-teal-500 to-orange-500', icon: 'SparkleIcon' },
+    { name: 'Néon Noir', prompt: 'transforme a imagem em uma cena noturna de neon noir, com luzes de neon vibrantes e sombras profundas', bg: 'bg-gradient-to-br from-fuchsia-600 to-indigo-700', icon: 'SparkleIcon' },
+    { name: 'Surreal', prompt: 'aplique um filtro surreal e psicadélico com cores distorcidas e padrões fluidos', bg: 'bg-gradient-to-br from-lime-400 to-cyan-500', icon: 'SparkleIcon' },
+    { name: 'Fantasia', prompt: 'dê à imagem um brilho de fantasia mágica, com tons de lavanda, ouro e partículas de luz flutuantes', bg: 'bg-gradient-to-br from-violet-400 to-yellow-300', icon: 'SparkleIcon' },
+    { name: 'Vaporwave', prompt: 'aplique uma estética vaporwave, com tons de rosa e ciano, falhas e motivos nostálgicos dos anos 80', bg: 'bg-gradient-to-br from-pink-500 to-cyan-400', icon: 'SparkleIcon' },
+    { name: 'Vintage', prompt: 'aplique um efeito de foto antiga, com grão de filme, leve dessaturação de cores e um leve tom sépia', bg: 'bg-gradient-to-br from-amber-600 to-stone-700', icon: 'SparkleIcon' },
+    { name: 'Impressionismo', prompt: 'Pintura a óleo no estilo impressionista, capturando a luz e o momento, com pinceladas visíveis.', bg: 'bg-gradient-to-br from-rose-300 to-violet-400', icon: 'SparkleIcon' },
+    { name: 'Art Déco', prompt: 'Estilo Art Déco, com formas geométricas, cores fortes e detalhes luxuosos.', bg: 'bg-gradient-to-br from-amber-400 to-gray-800', icon: 'SparkleIcon' },
+    { name: 'Esboço Carvão', prompt: 'Esboço a carvão em preto e branco, com linhas expressivas e sombreamento.', bg: 'bg-gradient-to-br from-gray-300 to-gray-600', icon: 'SparkleIcon' },
+    { name: 'Modelo 3D', prompt: 'Renderização de modelo 3D, com iluminação de estúdio e texturas suaves.', bg: 'bg-gradient-to-br from-slate-400 to-slate-600', icon: 'SparkleIcon' },
+    { name: 'Steampunk', prompt: 'Estilo Steampunk, com engrenagens de latão, vapor e estética vitoriana.', bg: 'bg-gradient-to-br from-orange-600 to-amber-800', icon: 'SparkleIcon' }
 ];
 
 const NeuralFiltersPanel: React.FC = () => {

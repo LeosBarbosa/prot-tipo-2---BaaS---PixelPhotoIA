@@ -4,8 +4,9 @@
 */
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { SparkleIcon } from '../icons';
 import TipBox from '../common/TipBox';
+// FIX: Correct import path for LazyIcon
+import LazyIcon from '../LazyIcon';
 
 const UnblurPanel: React.FC = () => {
     const { handleUnblurImage, isLoading } = useEditor();
@@ -95,7 +96,7 @@ const UnblurPanel: React.FC = () => {
                 disabled={isLoading}
                 className="w-full mt-2 bg-gradient-to-br from-cyan-600 to-sky-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
             >
-                <SparkleIcon className="w-5 h-5" />
+                <LazyIcon name="SparkleIcon" className="w-5 h-5" />
                 Aplicar Correção
             </button>
         </div>

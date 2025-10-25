@@ -7,9 +7,9 @@ import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { DoubleExposureIcon, DownloadIcon, BrushIcon } from '../icons';
 import TipBox from '../common/TipBox';
 import { dataURLtoFile } from '../../utils/imageUtils';
+import LazyIcon from '../LazyIcon';
 
 const DoubleExposurePanel: React.FC = () => {
     const { 
@@ -25,26 +25,29 @@ const DoubleExposurePanel: React.FC = () => {
         setToast,
     } = useEditor();
     
-    const [portraitImage, setPortraitImage] = useState<File | null>(null);
-    const [landscapeImage, setLandscapeImage] = useState<File | null>(null);
+    const [portraitImage, setPortraitImage] = useState<File[]>([]);
+    const [landscapeImage, setLandscapeImage] = useState<File[]>([]);
     const [resultImage, setResultImage] = useState<string | null>(null);
 
     useEffect(() => {
-        if (baseImageFile && !portraitImage) {
-            setPortraitImage(baseImageFile);
+        if (baseImageFile && portraitImage.length === 0) {
+            setPortraitImage([baseImageFile]);
         }
     }, [baseImageFile, portraitImage]);
 
-    const handlePortraitFileSelect = (file: File | null) => {
-        setPortraitImage(file);
-        if (file) {
-            setInitialImage(file);
+    const handlePortraitFileSelect = (files: File[]) => {
+        setPortraitImage(files);
+        if (files[0]) {
+            setInitialImage(files[0]);
         }
         setResultImage(null);
     };
 
     const handleGenerate = async () => {
-        if (!portraitImage || !landscapeImage) {
+        const portraitFile = portraitImage[0];
+        const landscapeFile = landscapeImage[0];
+
+        if (!portraitFile || !landscapeFile) {
             setError("Por favor, carregue uma imagem de retrato e uma de paisagem.");
             return;
         }
@@ -55,7 +58,7 @@ const DoubleExposurePanel: React.FC = () => {
         setLoadingMessage("Criando efeito de dupla exposição...");
 
         try {
-            const resultDataUrl = await handleDoubleExposure(portraitImage, landscapeImage);
+            const resultDataUrl = await handleDoubleExposure(portraitFile, landscapeFile);
             setResultImage(resultDataUrl);
         } catch (err) {
              setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -63,16 +66,6 @@ const DoubleExposurePanel: React.FC = () => {
             setIsLoading(false);
             setLoadingMessage(null);
         }
-    };
-
-    const handleDownload = () => {
-        if (!resultImage) return;
-        const link = document.createElement('a');
-        link.href = resultImage;
-        link.download = `dupla-exposicao-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     };
 
     const handleUseInEditor = () => {
@@ -93,13 +86,13 @@ const DoubleExposurePanel: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                     <ImageDropzone 
-                        imageFile={portraitImage}
-                        onFileSelect={handlePortraitFileSelect}
+                        files={portraitImage}
+                        onFilesChange={handlePortraitFileSelect}
                         label="Retrato"
                     />
                     <ImageDropzone 
-                        imageFile={landscapeImage}
-                        onFileSelect={setLandscapeImage}
+                        files={landscapeImage}
+                        onFilesChange={setLandscapeImage}
                         label="Paisagem"
                     />
                 </div>
@@ -110,10 +103,10 @@ const DoubleExposurePanel: React.FC = () => {
 
                 <button
                     onClick={handleGenerate}
-                    disabled={isLoading || !portraitImage || !landscapeImage}
+                    disabled={isLoading || portraitImage.length === 0 || landscapeImage.length === 0}
                     className="w-full mt-auto bg-gradient-to-br from-purple-600 to-indigo-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <DoubleExposureIcon className="w-5 h-5" />
+                    <LazyIcon name="DoubleExposureIcon" className="w-5 h-5" />
                     Criar Dupla Exposição
                 </button>
             </aside>
@@ -124,16 +117,6 @@ const DoubleExposurePanel: React.FC = () => {
                     resultImage={resultImage}
                     loadingMessage="Criando sua obra de arte..."
                 />
-                {resultImage && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
             </main>
         </div>
     );

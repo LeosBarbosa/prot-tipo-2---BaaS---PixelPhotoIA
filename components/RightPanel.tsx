@@ -7,8 +7,8 @@ import React, { Suspense } from 'react';
 import FooterActions from './FooterActions';
 import LayersPanel from './LayersPanel';
 import Spinner from './Spinner';
-// FIX: import from ../types
 import { type ToolId, type ToolConfig } from '../types';
+import LazyIcon from './LazyIcon';
 
 interface PanelProps {
     activeToolConfig: ToolConfig | undefined;
@@ -46,11 +46,12 @@ const RightPanel: React.FC<PanelProps> = React.memo(({ activeToolConfig, panelCo
         <aside className="h-full bg-gray-800/80 border-l border-gray-700/50 flex flex-col">
             <header className="p-4 border-b border-gray-700/50 flex items-center gap-3 flex-shrink-0 h-[68px]">
                 {activeToolConfig ? (
-                    <>
-                        {/* FIX: Cast icon to React.ReactElement<any> to allow adding className prop. */}
-                        {React.cloneElement(activeToolConfig.icon as React.ReactElement<any>, { className: 'w-6 h-6 text-blue-400' })}
-                        <h2 className="text-lg font-bold text-white">{activeToolConfig.name}</h2>
-                    </>
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="text-blue-400 flex-shrink-0">
+                           <LazyIcon name={activeToolConfig.icon} className="w-6 h-6" />
+                        </div>
+                        <h2 className="text-lg font-bold text-white truncate">{activeToolConfig.name}</h2>
+                    </div>
                 ) : (
                     <h2 className="text-lg font-bold text-white">Opções</h2>
                 )}

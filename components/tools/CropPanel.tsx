@@ -4,10 +4,9 @@
 */
 
 import React from 'react';
-// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
-import { CropIcon, RotateLeftIcon, RotateRightIcon, FlipHorizontalIcon, FlipVerticalIcon, AspectRatioSquareIcon, AspectRatioLandscapeIcon, AspectRatioPortraitIcon } from '../icons';
 import TipBox from '../common/TipBox';
+import LazyIcon from '../LazyIcon';
 
 const CropPanel: React.FC = () => {
     const {
@@ -20,18 +19,18 @@ const CropPanel: React.FC = () => {
     } = useEditor();
 
     const aspectRatios = [
-        { name: 'Livre', value: undefined, icon: <CropIcon className="w-6 h-6" /> },
-        { name: '1:1', value: 1 / 1, icon: <AspectRatioSquareIcon className="w-6 h-6" /> },
-        { name: '4:3', value: 4 / 3, icon: <AspectRatioLandscapeIcon className="w-6 h-6" /> },
-        { name: '16:9', value: 16 / 9, icon: <AspectRatioLandscapeIcon className="w-6 h-6" /> },
-        { name: '3:4', value: 3 / 4, icon: <AspectRatioPortraitIcon className="w-6 h-6" /> },
+        { name: 'Livre', value: undefined, icon: 'CropIcon' },
+        { name: '1:1', value: 1 / 1, icon: 'AspectRatioSquareIcon' },
+        { name: '4:3', value: 4 / 3, icon: 'AspectRatioLandscapeIcon' },
+        { name: '16:9', value: 16 / 9, icon: 'AspectRatioLandscapeIcon' },
+        { name: '3:4', value: 3 / 4, icon: 'AspectRatioPortraitIcon' },
     ];
 
     const transforms = [
-        { name: 'Girar Esquerda', type: 'rotate-left' as const, icon: <RotateLeftIcon className="w-6 h-6" /> },
-        { name: 'Girar Direita', type: 'rotate-right' as const, icon: <RotateRightIcon className="w-6 h-6" /> },
-        { name: 'Inverter H.', type: 'flip-h' as const, icon: <FlipHorizontalIcon className="w-6 h-6" /> },
-        { name: 'Inverter V.', type: 'flip-v' as const, icon: <FlipVerticalIcon className="w-6 h-6" /> },
+        { name: 'Girar Esquerda', type: 'rotate-left' as const, icon: 'RotateLeftIcon' },
+        { name: 'Girar Direita', type: 'rotate-right' as const, icon: 'RotateRightIcon' },
+        { name: 'Inverter H.', type: 'flip-h' as const, icon: 'FlipHorizontalIcon' },
+        { name: 'Inverter V.', type: 'flip-v' as const, icon: 'FlipVerticalIcon' },
     ];
 
     return (
@@ -47,7 +46,7 @@ const CropPanel: React.FC = () => {
                             className={`p-2 rounded-md text-sm font-semibold transition-all duration-200 aspect-square flex flex-col items-center justify-center gap-1 ${aspect === value ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-800/50 hover:bg-gray-700/50 text-gray-300'}`}
                             title={name}
                         >
-                            {icon}
+                            <LazyIcon name={icon} className="w-6 h-6" />
                             <span className="text-xs">{name}</span>
                         </button>
                     ))}
@@ -65,7 +64,7 @@ const CropPanel: React.FC = () => {
                             className="p-2 rounded-md text-sm font-semibold transition-all duration-200 aspect-square flex flex-col items-center justify-center gap-1 bg-gray-800/50 hover:bg-gray-700/50 text-gray-300"
                             title={name}
                         >
-                            {icon}
+                            <LazyIcon name={icon} className="w-6 h-6" />
                             <span className="text-xs">{name}</span>
                         </button>
                     ))}
@@ -81,7 +80,7 @@ const CropPanel: React.FC = () => {
                 disabled={isLoading || !completedCrop?.width || !completedCrop?.height}
                 className="w-full mt-2 bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed active:scale-95"
             >
-                <CropIcon className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
+                <LazyIcon name="CropIcon" className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
                 {isLoading ? 'Aplicando...' : 'Aplicar Corte'}
             </button>
         </div>

@@ -5,9 +5,9 @@
 
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { ArrowUpOnSquareIcon } from '../icons';
 import ToggleSwitch from '../common/ToggleSwitch';
 import TipBox from '../common/TipBox';
+import LazyIcon from '../LazyIcon';
 
 const UpscalePanel: React.FC = () => {
   const { 
@@ -85,7 +85,7 @@ const UpscalePanel: React.FC = () => {
           disabled={isLoading}
           className="w-full mt-2 bg-gradient-to-br from-emerald-600 to-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
       >
-          <ArrowUpOnSquareIcon className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
+          <LazyIcon name="ArrowUpOnSquareIcon" className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
           {isLoading ? 'Aplicando...' : 'Aplicar Upscale'}
       </button>
     </div>

@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState } from 'react';
-// FIX: Correct import path
-import { useEditor } from '../../context/EditorContext';
-import { BrushIcon, SparkleIcon, AdjustmentsHorizontalIcon, CheckCircleIcon } from '../icons';
+import React, { useState, useEffect } from 'react';
+import { useEditor, DEFAULT_LOCAL_FILTERS } from '../../context/EditorContext';
 import TipBox from '../common/TipBox';
+import LazyIcon from '../LazyIcon';
 
 const Slider: React.FC<{
     label: string;
@@ -47,22 +46,28 @@ const LocalAdjustmentPanel: React.FC = () => {
         highlightedObject,
         setHighlightedObject,
         handleSelectObject,
-        localFilters,
-        setLocalFilters,
         handleApplyLocalAdjustments,
-        resetLocalFilters,
-        hasLocalAdjustments,
     } = useEditor();
 
-    type SelectionMode = 'brush' | 'magic';
-    const [selectionMode, setSelectionMode] = useState<SelectionMode>('brush');
+    const [localFilters, setLocalFilters] = useState(DEFAULT_LOCAL_FILTERS);
+    const [selectionMode, setSelectionMode] = useState<'brush' | 'magic'>('brush');
+    const [magicObjectPrompt, setMagicObjectPrompt] = useState('');
     const [isApplied, setIsApplied] = useState(false);
 
-    const switchMode = (mode: SelectionMode) => {
+    useEffect(() => {
+        // Reset filters when mask is cleared
+        if (!maskDataUrl) {
+            setLocalFilters(DEFAULT_LOCAL_FILTERS);
+        }
+    }, [maskDataUrl]);
+    
+    const hasAdjustments = JSON.stringify(localFilters) !== JSON.stringify(DEFAULT_LOCAL_FILTERS);
+
+    const switchMode = (mode: 'brush' | 'magic') => {
         setSelectionMode(mode);
-        clearMask();
+        clearMask(); // Clear mask when switching modes
         if (detectedObjects) {
-            setHighlightedObject(null);
+            setHighlightedObject(null); // Also clear any detected objects
         }
     };
     
@@ -71,16 +76,19 @@ const LocalAdjustmentPanel: React.FC = () => {
     };
 
     const handleApplyClick = async () => {
-        if (isLoading || !maskDataUrl || !hasLocalAdjustments) return;
+        if (isLoading || !maskDataUrl || !hasAdjustments) return;
         try {
-            await handleApplyLocalAdjustments(true);
+            await handleApplyLocalAdjustments(localFilters);
             setIsApplied(true);
             setTimeout(() => setIsApplied(false), 2000);
         } catch (e) {
             console.error("Failed to apply local adjustments from panel", e);
-            // Error toast is handled in context
         }
     };
+
+    const handleReset = () => {
+        setLocalFilters(DEFAULT_LOCAL_FILTERS);
+    }
 
     return (
         <div className="w-full flex flex-col gap-4 animate-fade-in">
@@ -91,17 +99,15 @@ const LocalAdjustmentPanel: React.FC = () => {
                 </p>
             </div>
 
-            {/* Seletor de Modo */}
             <div className="flex w-full bg-gray-900/50 border border-gray-600 rounded-lg p-1">
                 <button type="button" onClick={() => switchMode('brush')} className={`w-full text-center font-semibold py-2.5 rounded-md transition-all text-sm flex items-center justify-center gap-2 ${selectionMode === 'brush' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700/50'}`}>
-                    <BrushIcon className="w-5 h-5" /> Pincel
+                    <LazyIcon name="BrushIcon" className="w-5 h-5" /> Pincel
                 </button>
                 <button type="button" onClick={() => switchMode('magic')} className={`w-full text-center font-semibold py-2.5 rounded-md transition-all text-sm flex items-center justify-center gap-2 ${selectionMode === 'magic' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700/50'}`}>
-                    <SparkleIcon className="w-5 h-5" /> Mágica
+                    <LazyIcon name="SparkleIcon" className="w-5 h-5" /> Mágica
                 </button>
             </div>
             
-            {/* UI de Seleção */}
             {selectionMode === 'brush' && (
                 <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50 animate-fade-in flex flex-col gap-2">
                     <p className="text-xs text-center text-gray-400">Pinte sobre a área que deseja editar.</p>
@@ -114,14 +120,23 @@ const LocalAdjustmentPanel: React.FC = () => {
             )}
             {selectionMode === 'magic' && (
                  <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50 animate-fade-in flex flex-col gap-3">
-                    {!detectedObjects ? (
-                        <button type="button" onClick={() => handleDetectObjects()} disabled={isLoading} className="w-full bg-gray-800/50 hover:bg-gray-700/50 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <SparkleIcon className="w-5 h-5" />
-                            Detetar Objetos
+                    <div className="flex gap-2">
+                         <input
+                            type="text"
+                            value={magicObjectPrompt}
+                            onChange={(e) => setMagicObjectPrompt(e.target.value)}
+                            placeholder="Ex: 'céu', 'pessoa'..."
+                            className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base"
+                            disabled={isLoading}
+                        />
+                        <button type="button" onClick={() => handleDetectObjects(magicObjectPrompt)} disabled={isLoading || !magicObjectPrompt.trim()} className="bg-gray-800/50 hover:bg-gray-700/50 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                            <LazyIcon name="SparkleIcon" className="w-5 h-5" />
+                            Detectar
                         </button>
-                    ) : (
+                    </div>
+                    {detectedObjects && (
                         <div className="bg-gray-900/30 p-2 rounded-lg border border-gray-700 max-h-40 overflow-y-auto" onMouseLeave={() => setHighlightedObject(null)}>
-                            <p className="text-xs text-center text-gray-400 mb-2">Clique num objeto para o selecionar.</p>
+                            <p className="text-xs text-center text-gray-400 mb-2">Clique em um objeto para selecionar.</p>
                             <ul className="flex flex-wrap gap-2 justify-center">
                                 {detectedObjects.length > 0 ? detectedObjects.map((obj, i) => (
                                     <li key={`${obj.label}-${i}`}>
@@ -134,7 +149,7 @@ const LocalAdjustmentPanel: React.FC = () => {
                                             {obj.label}
                                         </button>
                                     </li>
-                                )) : <p className="text-sm text-gray-500">Nenhum objeto detetado.</p>}
+                                )) : <p className="text-sm text-gray-500">Nenhum objeto detectado para '{magicObjectPrompt}'.</p>}
                             </ul>
                         </div>
                     )}
@@ -149,45 +164,40 @@ const LocalAdjustmentPanel: React.FC = () => {
             >
                 Limpar Seleção
             </button>
-
-            {/* Sliders de Ajuste */}
-             <div className={`bg-gray-900/30 p-4 rounded-lg border border-gray-700/50 transition-opacity ${!maskDataUrl ? 'opacity-50 pointer-events-none' : ''}`}>
-                <h4 className="font-bold text-white text-md mb-3 flex items-center gap-2"><AdjustmentsHorizontalIcon className="w-5 h-5 text-purple-400"/> Ajustes</h4>
+            
+            <div className={`bg-gray-900/30 p-4 rounded-lg border border-gray-700/50 transition-opacity ${!maskDataUrl ? 'opacity-50 pointer-events-none' : ''}`}>
+                <h4 className="font-bold text-white text-md mb-3 flex items-center gap-2"><LazyIcon name="AdjustmentsHorizontalIcon" className="w-5 h-5 text-purple-400"/> Ajustes</h4>
                 <div className="space-y-4">
-                    <Slider label="Brilho" value={localFilters.brightness} min={0} max={200} onChange={e => handleFilterChange('brightness', Number(e.target.value))} disabled={isLoading || !maskDataUrl} />
-                    <Slider label="Contraste" value={localFilters.contrast} min={0} max={200} onChange={e => handleFilterChange('contrast', Number(e.target.value))} disabled={isLoading || !maskDataUrl} />
-                    <Slider label="Saturação" value={localFilters.saturate} min={0} max={200} onChange={e => handleFilterChange('saturate', Number(e.target.value))} disabled={isLoading || !maskDataUrl} />
+                    <div title="Ajusta o brilho da área selecionada. Valores maiores tornam a área mais clara, valores menores a tornam mais escura.">
+                        <Slider label="Brilho" value={localFilters.brightness} min={0} max={200} onChange={e => handleFilterChange('brightness', Number(e.target.value))} disabled={isLoading || !maskDataUrl} />
+                    </div>
+                    <div title="Ajusta o contraste da área selecionada. Valores maiores aumentam a diferença entre claro e escuro, valores menores a diminuem.">
+                        <Slider label="Contraste" value={localFilters.contrast} min={0} max={200} onChange={e => handleFilterChange('contrast', Number(e.target.value))} disabled={isLoading || !maskDataUrl} />
+                    </div>
+                    <div title="Ajusta a intensidade da cor na área selecionada. Valores maiores tornam as cores mais vibrantes, valores menores as tornam mais acinzentadas.">
+                        <Slider label="Saturação" value={localFilters.saturate} min={0} max={200} onChange={e => handleFilterChange('saturate', Number(e.target.value))} disabled={isLoading || !maskDataUrl} />
+                    </div>
                 </div>
             </div>
             
             <TipBox>
-                Para ajustes sutis, use o pincel. Para ajustar um objeto inteiro, como o céu ou uma pessoa, use a Seleção Mágica.
+                Para ajustes sutis, use o Pincel. Para ajustar um objeto inteiro, como o céu ou uma pessoa, use a Seleção Mágica.
             </TipBox>
 
-            {/* Botões de Ação */}
             <div className="flex gap-2 mt-2">
                 <button
-                    onClick={resetLocalFilters}
-                    disabled={isLoading || !hasLocalAdjustments}
-                    className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleReset}
+                    disabled={isLoading || !hasAdjustments}
+                    className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50"
                 >
                     Resetar
                 </button>
                 <button
                     onClick={handleApplyClick}
-                    disabled={isLoading || !maskDataUrl || !hasLocalAdjustments}
-                    className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg shadow-green-500/20 hover:shadow-xl disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    disabled={isLoading || !maskDataUrl || !hasAdjustments}
+                    className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                    {isLoading ? (
-                        <span className="animate-pulse">Aplicando...</span>
-                    ) : isApplied ? (
-                        <>
-                            <CheckCircleIcon className="w-5 h-5" />
-                            <span>Aplicado!</span>
-                        </>
-                    ) : (
-                        'Aplicar'
-                    )}
+                    {isLoading ? 'Aplicando...' : isApplied ? 'Aplicado!' : 'Aplicar'}
                 </button>
             </div>
         </div>

@@ -4,16 +4,15 @@
 */
 
 import React, { useState, useEffect } from 'react';
-// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
 import * as geminiService from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { PngIcon, SparkleIcon, DownloadIcon, BrushIcon } from '../icons';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
 import ToggleSwitch from '../common/ToggleSwitch';
 import TipBox from '../common/TipBox';
 import { dataURLtoFile } from '../../utils/imageUtils';
+import LazyIcon from '../LazyIcon';
 
 const AIPngCreatorPanel: React.FC = () => {
     const { 
@@ -26,9 +25,10 @@ const AIPngCreatorPanel: React.FC = () => {
         setLoadingMessage,
         setActiveTool,
         setToast,
+        loadingMessage,
     } = useEditor();
     
-    const [sourceImage, setSourceImage] = useState<File | null>(null);
+    const [sourceImage, setSourceImage] = useState<File[]>([]);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [isOptionsExpanded, setIsOptionsExpanded] = useState(false);
     
@@ -39,21 +39,22 @@ const AIPngCreatorPanel: React.FC = () => {
     const [backgroundType, setBackgroundType] = useState<'none' | 'color' | 'prompt'>('none');
 
     useEffect(() => {
-        if (baseImageFile && !sourceImage) {
-            setSourceImage(baseImageFile);
+        if (baseImageFile && sourceImage.length === 0) {
+            setSourceImage([baseImageFile]);
         }
     }, [baseImageFile, sourceImage]);
 
-    const handleFileSelect = (file: File | null) => {
-        setSourceImage(file);
-        if (file) {
-            setInitialImage(file);
+    const handleFileSelect = (files: File[]) => {
+        setSourceImage(files);
+        if (files[0]) {
+            setInitialImage(files[0]);
         }
         setResultImage(null);
     };
 
     const handleGenerate = async () => {
-        if (!sourceImage) {
+        const imageFile = sourceImage[0];
+        if (!imageFile) {
             setError("Por favor, carregue uma imagem para converter.");
             return;
         }
@@ -80,7 +81,7 @@ const AIPngCreatorPanel: React.FC = () => {
                 setLoadingMessage('Removendo fundo e aprimorando...');
             }
 
-            const result = await geminiService.createTransparentPng(sourceImage, options);
+            const result = await geminiService.createTransparentPng(imageFile, options, setToast);
             setResultImage(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -90,25 +91,7 @@ const AIPngCreatorPanel: React.FC = () => {
         }
     };
     
-    const handleDownload = () => {
-        if (!resultImage) return;
-        const link = document.createElement('a');
-        link.href = resultImage;
-        link.download = `png-criado-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const handleUseInEditor = () => {
-        if (!resultImage) return;
-        const file = dataURLtoFile(resultImage, `png-criado-${Date.now()}.png`);
-        setInitialImage(file);
-        setActiveTool(null);
-        setToast({ message: "Imagem carregada no editor!", type: 'success' });
-    };
-
-    const isGenerateButtonDisabled = isLoading || !sourceImage;
+    const isGenerateButtonDisabled = isLoading || sourceImage.length === 0;
 
     return (
         <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6 h-full">
@@ -118,11 +101,11 @@ const AIPngCreatorPanel: React.FC = () => {
                     <p className="text-sm text-gray-400 mt-1">Remova o fundo e aprimore sua imagem com um clique.</p>
                 </div>
                 
-                <ImageDropzone imageFile={sourceImage} onFileSelect={handleFileSelect} label="Sua Imagem"/>
+                <ImageDropzone files={sourceImage} onFilesChange={handleFileSelect} label="Sua Imagem"/>
 
                 <CollapsibleToolPanel
                     title="Opções Adicionais"
-                    icon={<SparkleIcon className="w-5 h-5" />}
+                    icon="SparkleIcon"
                     isExpanded={isOptionsExpanded}
                     onExpandToggle={() => setIsOptionsExpanded(!isOptionsExpanded)}
                 >
@@ -161,7 +144,7 @@ const AIPngCreatorPanel: React.FC = () => {
                 </TipBox>
                 
                 <button onClick={handleGenerate} disabled={isGenerateButtonDisabled} className="w-full mt-auto bg-gradient-to-br from-green-600 to-teal-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                    <PngIcon className="w-5 h-5" />
+                    <LazyIcon name="PngIcon" className="w-5 h-5" />
                     Converter para PNG
                 </button>
             </aside>
@@ -170,18 +153,8 @@ const AIPngCreatorPanel: React.FC = () => {
                     isLoading={isLoading}
                     error={error}
                     resultImage={resultImage}
-                    loadingMessage="Processando imagem..."
+                    loadingMessage={loadingMessage}
                 />
-                 {resultImage && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
             </main>
         </div>
     );

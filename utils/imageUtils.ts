@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
+import { type UploadProgressStatus, type GifFrame, type FilterState } from '../types';
 import { type PixelCrop } from 'react-image-crop';
-// FIX: import from ./types
-import { type UploadProgressStatus, type GifFrame } from '../types';
 
 /**
  * Converts a data URL string into a File object.
@@ -101,8 +100,8 @@ export const createMaskFromCrop = (crop: PixelCrop, imageWidth: number, imageHei
 };
 
 /**
- * Optimizes an image by resizing and compressing it if it's too large.
- * This ensures better performance within the editor.
+ * Optimizes an image by resizing and compressing it in a Web Worker to avoid blocking the main thread.
+ * This ensures better performance and a smoother UI during uploads.
  * @param file The image file to optimize.
  * @param onProgress A callback to report the optimization progress.
  * @param maxWidth The maximum width allowed.
@@ -117,118 +116,225 @@ export const optimizeImage = (
     maxHeight: number = 4096,
     quality: number = 0.85
 ): Promise<File> => {
+    // Modern implementation using a Web Worker
     return new Promise((resolve, reject) => {
-        const MAX_SIZE_BYTES = 15 * 1024 * 1024; // 15 MB
-
-        if (!file.type.startsWith('image/') || file.type === 'image/gif') {
-            onProgress({ progress: 100, stage: 'done' });
-            return resolve(file);
+        // Fallback for very old browsers
+        if (typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap === 'undefined') {
+            console.warn('Web Worker or OffscreenCanvas not supported, falling back to main thread for image optimization.');
+            // Fallback logic on main thread
+            return new Promise((resolveLegacy, rejectLegacy) => {
+                onProgress({ progress: 10, stage: 'reading' });
+                const objectUrl = URL.createObjectURL(file);
+                const img = new Image();
+                img.src = objectUrl;
+                img.onload = () => {
+                    try {
+                        onProgress({ progress: 50, stage: 'processing' });
+                        let { width, height } = img;
+                        if (width <= maxWidth && height <= maxHeight) {
+                           URL.revokeObjectURL(objectUrl);
+                           onProgress({ progress: 100, stage: 'done' });
+                           return resolveLegacy(file);
+                        }
+                        if (width > height) { if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
+                        } else { if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; } }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) { URL.revokeObjectURL(objectUrl); return rejectLegacy(new Error('Não foi possível obter o contexto do canvas.')); }
+                        onProgress({ progress: 75, stage: 'compressing' });
+                        ctx.drawImage(img, 0, 0, width, height);
+                        URL.revokeObjectURL(objectUrl);
+                        canvas.toBlob( (blob) => {
+                            if (!blob) return rejectLegacy(new Error('Falha ao criar blob da imagem.'));
+                            const originalFilename = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                            const newFilename = `${originalFilename}.jpg`;
+                            const newFile = new File([blob], newFilename, { type: 'image/jpeg' });
+                            onProgress({ progress: 100, stage: 'done' });
+                            resolveLegacy(newFile);
+                        }, 'image/jpeg', quality);
+                    } catch (e) { URL.revokeObjectURL(objectUrl); rejectLegacy(e); }
+                };
+                img.onerror = () => { URL.revokeObjectURL(objectUrl); rejectLegacy(new Error("Não foi possível carregar os dados da imagem.")); };
+            }).then(resolve).catch(reject);
         }
 
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
+        const workerScript = `
+        self.onmessage = async (e) => {
+            const { file, maxWidth, maxHeight, quality } = e.data;
+            
+            if (!file.type.startsWith('image/') || file.type === 'image/gif') {
+                self.postMessage({ type: 'progress', payload: { progress: 100, stage: 'done' } });
+                self.postMessage({ type: 'result', payload: file });
+                self.close();
+                return;
+            }
+
+            try {
+                self.postMessage({ type: 'progress', payload: { progress: 10, stage: 'reading' } });
+                const imageBitmap = await createImageBitmap(file);
+
+                self.postMessage({ type: 'progress', payload: { progress: 50, stage: 'processing' } });
+                
+                let { width, height } = imageBitmap;
+
+                if (width <= maxWidth && height <= maxHeight) {
+                    self.postMessage({ type: 'progress', payload: { progress: 100, stage: 'done' } });
+                    self.postMessage({ type: 'result', payload: file });
+                    self.close();
+                    return;
+                }
+                
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+
+                const canvas = new OffscreenCanvas(width, height);
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    throw new Error('Could not get OffscreenCanvas context.');
+                }
+                
+                ctx.drawImage(imageBitmap, 0, 0, width, height);
+                imageBitmap.close(); // Free memory
+
+                self.postMessage({ type: 'progress', payload: { progress: 75, stage: 'compressing' } });
+                
+                const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality });
+                
+                const originalFilename = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                const newFilename = \`\${originalFilename}.jpg\`;
+                const newFile = new File([blob], newFilename, { type: 'image/jpeg' });
+                
+                self.postMessage({ type: 'progress', payload: { progress: 100, stage: 'done' } });
+                self.postMessage({ type: 'result', payload: newFile });
+
+            } catch (err) {
+                let message = err.message;
+                if (err instanceof DOMException && (err.name === 'QuotaExceededError' || err.message.includes('Bitmap failed to allocate'))) {
+                    message = 'A resolução da imagem é muito grande para ser processada neste dispositivo. Por favor, tente uma imagem menor.';
+                }
+                self.postMessage({ type: 'error', payload: message });
+            } finally {
+                self.close(); // Terminate worker after completion
+            }
+        };
+        `;
+
+        const workerBlob = new Blob([workerScript], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(workerBlob);
+        const worker = new Worker(workerUrl);
         
-        reader.onprogress = (event) => {
-            if (event.lengthComputable) {
-                const percentLoaded = Math.round((event.loaded / event.total) * 50);
-                onProgress({ progress: percentLoaded, stage: 'reading' });
+        // Revoke the object URL immediately after creating the worker to free up memory
+        URL.revokeObjectURL(workerUrl);
+
+        worker.onmessage = (event) => {
+            const { type, payload } = event.data;
+            switch (type) {
+                case 'progress':
+                    onProgress(payload);
+                    break;
+                case 'result':
+                    resolve(payload);
+                    worker.terminate();
+                    break;
+                case 'error':
+                    reject(new Error(payload));
+                    worker.terminate();
+                    break;
             }
         };
 
-        reader.onload = (event) => {
-            onProgress({ progress: 50, stage: 'processing' });
-            const img = new Image();
-            img.src = event.target?.result as string;
-            img.onload = () => {
-                try {
-                    onProgress({ progress: 75, stage: 'processing' });
-                    let { width, height } = img;
-
-                    if (width <= maxWidth && height <= maxHeight && file.size <= MAX_SIZE_BYTES) {
-                        onProgress({ progress: 100, stage: 'done' });
-                        return resolve(file);
-                    }
-
-                    if (width > height) {
-                        if (width > maxWidth) {
-                            height = Math.round((height * maxWidth) / width);
-                            width = maxWidth;
-                        }
-                    } else {
-                        if (height > maxHeight) {
-                            width = Math.round((width * maxHeight) / height);
-                            height = maxHeight;
-                        }
-                    }
-
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-
-                    if (!ctx) {
-                        return reject(new Error('Não foi possível obter o contexto do canvas.'));
-                    }
-
-                    ctx.drawImage(img, 0, 0, width, height);
-                    onProgress({ progress: 95, stage: 'compressing' });
-
-                    const dataUrl = canvas.toDataURL('image/jpeg', quality);
-                    
-                    const originalFilename = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-                    const newFilename = `${originalFilename}.jpg`;
-
-                    onProgress({ progress: 100, stage: 'done' });
-                    resolve(dataURLtoFile(dataUrl, newFilename));
-                } catch (e) {
-                    if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.message.includes('Bitmap failed to allocate') || e.message.includes('Canvas area exceeds the maximum limit'))) {
-                         const specificError = new Error(
-                            'DIMENSION_ERROR: A resolução da imagem é muito grande para ser processada neste dispositivo. ' +
-                            'Por favor, reduza a resolução da imagem original e tente o upload novamente.'
-                        );
-                        reject(specificError);
-                    } else {
-                        reject(e);
-                    }
-                }
-            };
-            img.onerror = () => {
-                reject(new Error("Não foi possível carregar os dados da imagem. O arquivo pode estar corrompido ou não ser um formato de imagem válido."));
-            };
+        worker.onerror = (error) => {
+            reject(new Error(\`Erro no Web Worker de otimização: \${error.message}\`));
+            worker.terminate();
         };
-        reader.onerror = () => {
-            reject(new Error("Falha ao ler o arquivo. Verifique as permissões e a integridade do arquivo."));
-        };
+
+        worker.postMessage({ file, maxWidth, maxHeight, quality });
     });
 };
 
 /**
- * Creates a mask image data URL from a normalized bounding box.
- * @param box The normalized bounding box object.
- * @param imageWidth The natural width of the original image.
- * @param imageHeight The natural height of the original image.
- * @returns A data URL string of the mask image.
+ * Applies a solid background color to an image with a transparent background.
+ * @param dataUrl The data URL of the transparent image (e.g., PNG).
+ * @param color The background color to apply (e.g., '#FFFFFF').
+ * @returns A Promise that resolves with the data URL of the new image (JPEG format for solid background).
  */
-export const createMaskFromBoundingBox = (
-  box: { x_min: number; y_min: number; x_max: number; y_max: number },
-  imageWidth: number,
-  imageHeight: number
-): string => {
-  const canvas = document.createElement('canvas');
-  canvas.width = imageWidth;
-  canvas.height = imageHeight;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return '';
-  
-  const x = box.x_min * imageWidth;
-  const y = box.y_min * imageHeight;
-  const width = (box.x_max - box.x_min) * imageWidth;
-  const height = (box.y_max - box.y_min) * imageHeight;
+export const applyBackgroundColor = (dataUrl: string, color: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                return reject(new Error('Could not get canvas context.'));
+            }
+            
+            // Fill background with the specified color
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw the transparent image on top
+            ctx.drawImage(img, 0, 0);
+            
+            // Return as JPEG since it's now a solid background
+            resolve(canvas.toDataURL('image/jpeg'));
+        };
+        img.onerror = () => {
+            reject(new Error('Failed to load image for background application.'));
+        };
+        img.src = dataUrl;
+    });
+};
 
-  // Fill the selected area with white on a black background.
-  ctx.fillStyle = 'black';
-  ctx.fillRect(0, 0, imageWidth, imageHeight);
-  ctx.fillStyle = 'white';
-  ctx.fillRect(x, y, width, height);
-  return canvas.toDataURL('image/png');
+export const buildFilterString = (filters: Partial<FilterState>): string => {
+    const { brightness = 100, contrast = 100, saturate = 100, grayscale = 0, sepia = 0, hueRotate = 0, invert = 0, blur = 0 } = filters;
+    return \`brightness(\${brightness}%) contrast(\${contrast}%) saturate(\${saturate}%) grayscale(\${grayscale}%) sepia(\${sepia}%) hue-rotate(\${hueRotate}deg) invert(\${invert}%) blur(\${blur}px)\`;
+};
+
+export const getCroppedImg = (image: HTMLImageElement, crop: PixelCrop): Promise<string> => {
+    const canvas = document.createElement("canvas");
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    canvas.width = crop.width;
+    canvas.height = crop.height;
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+        return Promise.reject(new Error('Could not get canvas context'));
+    }
+
+    ctx.drawImage(
+        image,
+        crop.x * scaleX,
+        crop.y * scaleY,
+        crop.width * scaleX,
+        crop.height * scaleY,
+        0,
+        0,
+        crop.width,
+        crop.height
+    );
+
+    return new Promise((resolve) => {
+        resolve(canvas.toDataURL("image/png"));
+    });
+};
+
+export const applyFiltersToCanvas = (ctx: CanvasRenderingContext2D, image: HTMLImageElement, filters: Partial<FilterState>) => {
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.filter = buildFilterString(filters);
+    ctx.drawImage(image, 0, 0, image.naturalWidth, image.naturalHeight, 0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.filter = "none";
 };

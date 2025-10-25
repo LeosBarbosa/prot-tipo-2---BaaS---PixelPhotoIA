@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { SparkleIcon } from '../icons';
+import LazyIcon from '../LazyIcon';
 
 const WonderPanel: React.FC = () => {
     const { isLoading, handleRestorePhoto } = useEditor();
@@ -28,7 +28,7 @@ const WonderPanel: React.FC = () => {
                 disabled={isLoading}
                 className="w-full mt-4 bg-gradient-to-br from-purple-600 to-indigo-500 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/40 hover:-translate-y-px active:scale-95 text-base disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-                <SparkleIcon className="w-5 h-5" />
+                <LazyIcon name="SparkleIcon" className="w-5 h-5" />
                 Aprimorar Imagem
             </button>
         </div>

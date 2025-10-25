@@ -5,8 +5,8 @@
 
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { PixelsIcon } from '../icons';
 import TipBox from '../common/TipBox';
+import LazyIcon from '../LazyIcon';
 
 const PixelArtPanel: React.FC = () => {
     const { isLoading, handleApplyStyle } = useEditor();
@@ -26,7 +26,7 @@ const PixelArtPanel: React.FC = () => {
     };
 
     return (
-        <div className="w-full bg-gray-800/50 rounded-lg p-6 flex flex-col items-center gap-6 animate-fade-in backdrop-blur-sm">
+        <div className="w-full bg-gray-800/50 rounded-lg flex flex-col items-center gap-6 animate-fade-in backdrop-blur-sm">
             <div className="text-center">
                 <h3 className="text-xl font-bold text-gray-100">Estilo Pixel Art</h3>
                 <p className="text-sm text-gray-400 mt-1">Transforme sua foto em arte de videogame retrô.</p>
@@ -78,7 +78,7 @@ const PixelArtPanel: React.FC = () => {
                 disabled={isLoading}
                 className="w-full mt-4 bg-gradient-to-br from-gray-500 to-slate-600 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-slate-500/20 hover:shadow-xl hover:shadow-slate-500/40 hover:-translate-y-px active:scale-95 text-base disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-                <PixelsIcon className="w-5 h-5" />
+                <LazyIcon name="PixelsIcon" className="w-5 h-5" />
                 Aplicar Estilo Pixel Art
             </button>
         </div>

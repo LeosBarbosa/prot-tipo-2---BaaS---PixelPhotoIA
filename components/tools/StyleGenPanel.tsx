@@ -5,8 +5,8 @@
 
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { PixelsIcon, LowPolyIcon } from '../icons';
 import TipBox from '../common/TipBox';
+import LazyIcon from '../LazyIcon';
 
 const StyleGenPanel: React.FC = () => {
     const { isLoading, handleApplyLowPoly, handleApplyStyle } = useEditor();
@@ -20,7 +20,7 @@ const StyleGenPanel: React.FC = () => {
 
             <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 flex flex-col items-center gap-3">
                 <h4 className="font-bold text-white text-md flex items-center gap-2">
-                    <LowPolyIcon className="w-5 h-5 text-cyan-400"/>
+                    <LazyIcon name="LowPolyIcon" className="w-5 h-5 text-cyan-400"/>
                     Estilo Low Poly
                 </h4>
                 <p className="text-sm text-gray-400 text-center -mt-2">Converte a imagem para o estilo de arte poligonal.</p>
@@ -35,7 +35,7 @@ const StyleGenPanel: React.FC = () => {
             
             <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 flex flex-col items-center gap-3">
                 <h4 className="font-bold text-white text-md flex items-center gap-2">
-                    <PixelsIcon className="w-5 h-5 text-green-400"/>
+                    <LazyIcon name="PixelsIcon" className="w-5 h-5 text-green-400"/>
                     Pixel Art
                 </h4>
                 <p className="text-sm text-gray-400 text-center -mt-2">Transforma a imagem em pixel art de 16-bits.</p>

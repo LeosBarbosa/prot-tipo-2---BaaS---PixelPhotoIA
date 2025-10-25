@@ -6,12 +6,12 @@ import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { generate3DModel } from '../../services/geminiService';
 import ResultViewer from './common/ResultViewer';
-import { Model3DIcon, DownloadIcon, BrushIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import { dataURLtoFile } from '../../utils/imageUtils';
+import LazyIcon from '../LazyIcon';
 
 const Model3DGenPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, setInitialImage, setActiveTool, setToast } = useEditor();
+    const { isLoading, error, setError, setIsLoading, setInitialImage, setActiveTool, setToast, setLoadingMessage } = useEditor();
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
     const [negativePrompt, setNegativePrompt] = useState('');
@@ -29,31 +29,13 @@ const Model3DGenPanel: React.FC = () => {
             if (negativePrompt.trim()) {
                 fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
             }
-            const result = await generate3DModel(fullPrompt);
+            const result = await generate3DModel(fullPrompt, setToast, setLoadingMessage);
             setResultImage(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const handleDownload = () => {
-        if (!resultImage) return;
-        const link = document.createElement('a');
-        link.href = resultImage;
-        link.download = `modelo-3d-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const handleUseInEditor = () => {
-        if (!resultImage) return;
-        const file = dataURLtoFile(resultImage, `modelo-3d-${Date.now()}.png`);
-        setInitialImage(file);
-        setActiveTool(null);
-        setToast({ message: "Imagem carregada no editor!", type: 'success' });
     };
 
     return (
@@ -79,7 +61,7 @@ const Model3DGenPanel: React.FC = () => {
                     disabled={isLoading || !prompt.trim()}
                     className="w-full mt-auto bg-gradient-to-br from-orange-600 to-amber-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <Model3DIcon className="w-5 h-5" />
+                    <LazyIcon name="Model3DIcon" className="w-5 h-5" />
                     Gerar Modelo 3D
                 </button>
             </aside>
@@ -90,16 +72,6 @@ const Model3DGenPanel: React.FC = () => {
                     resultImage={resultImage}
                     loadingMessage="Renderizando seu modelo 3D..."
                 />
-                {resultImage && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
             </main>
         </div>
     );

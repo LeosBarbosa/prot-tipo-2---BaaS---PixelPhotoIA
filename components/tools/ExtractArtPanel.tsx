@@ -5,8 +5,8 @@
 
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { BullseyeIcon } from '../icons';
 import TipBox from '../common/TipBox';
+import LazyIcon from '../LazyIcon';
 
 const ExtractArtPanel: React.FC = () => {
     const { isLoading, handleExtractArt, activeLayerId, layers } = useEditor();
@@ -14,7 +14,7 @@ const ExtractArtPanel: React.FC = () => {
     const isDisabled = isLoading || !activeLayer || activeLayer.type !== 'image';
 
     return (
-        <div className="w-full bg-gray-800/50 rounded-lg p-6 flex flex-col items-center gap-6 animate-fade-in backdrop-blur-sm">
+        <div className="w-full bg-gray-800/50 rounded-lg flex flex-col items-center gap-6 animate-fade-in backdrop-blur-sm">
             <div className="text-center">
                 <h3 className="text-xl font-bold text-gray-100">Extrair Arte de Linha</h3>
                 <p className="text-sm text-gray-400 mt-1">Transforme sua foto em um esboço de contorno.</p>
@@ -31,7 +31,7 @@ const ExtractArtPanel: React.FC = () => {
                 disabled={isDisabled}
                 className="w-full mt-4 bg-gradient-to-br from-gray-600 to-gray-500 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-gray-500/20 hover:shadow-xl hover:shadow-gray-500/40 hover:-translate-y-px active:scale-95 text-base disabled:from-gray-700 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-                <BullseyeIcon className="w-5 h-5" />
+                <LazyIcon name="BullseyeIcon" className="w-5 h-5" />
                 Extrair Arte
             </button>
             <TipBox>

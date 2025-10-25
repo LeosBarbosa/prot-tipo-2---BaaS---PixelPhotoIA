@@ -3,14 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useMemo, useEffect } from 'react';
-// FIX: import from ../types
 import { type TabId, type ToolCategory, type ToolConfig } from '../types';
-// FIX: import from ../context/EditorContext
 import { useEditor } from '../context/EditorContext';
 import { tools } from '../config/tools';
-// FIX: Remove local config and unused icons, import from config file.
-import { ChevronDownIcon, SearchIcon } from './icons';
 import { categoryConfig } from '../config/categoryConfig';
+import LazyIcon from './LazyIcon';
 
 const categoryOrder: ToolCategory[] = ['generation', 'workflow', 'editing'];
 
@@ -30,8 +27,10 @@ const LeftPanel: React.FC = React.memo(() => {
         const lowerSearchTerm = searchTerm.toLowerCase();
         
         const filtered = tools.filter(tool => 
-            tool.name.toLowerCase().includes(lowerSearchTerm) || 
-            tool.description.toLowerCase().includes(lowerSearchTerm)
+            tool.isEditingTool && (
+                tool.name.toLowerCase().includes(lowerSearchTerm) || 
+                tool.description.toLowerCase().includes(lowerSearchTerm)
+            )
         );
 
         return filtered.reduce((acc, tool) => {
@@ -52,7 +51,7 @@ const LeftPanel: React.FC = React.memo(() => {
     
     const [expandedCategories, setExpandedCategories] = useState<Set<ToolCategory>>(() => {
         const category = findCategoryForTab(activeTab);
-        return new Set(category ? [category] : []);
+        return new Set(category ? [category] : ['editing']); // Default to editing open
     });
 
     useEffect(() => {
@@ -75,7 +74,7 @@ const LeftPanel: React.FC = React.memo(() => {
     };
     
     const handleSelectTool = (tool: ToolConfig) => {
-        if (!baseImageFile && (tool.category === 'editing' || tool.category === 'workflow')) {
+        if (!baseImageFile && (tool.isEditingTool || tool.category === 'workflow')) {
             setToast({ message: `Primeiro, carregue uma imagem para usar a ferramenta '${tool.name}'.`, type: 'info' });
             return;
         }
@@ -97,11 +96,11 @@ const LeftPanel: React.FC = React.memo(() => {
     }, [isSearching]);
 
     return (
-        <aside className="bg-gray-800/80 border-r border-gray-700/50 flex flex-col w-full h-full">
-            <div className="p-3 border-b border-gray-700">
+        <aside className="bg-gray-800/80 backdrop-blur-sm border-r border-gray-700/50 flex flex-col w-full h-full">
+            <div className="p-3 border-b border-gray-700 flex-shrink-0">
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <SearchIcon className="w-5 h-5 text-gray-400" />
+                        <LazyIcon name="SearchIcon" className="w-5 h-5 text-gray-400" />
                     </div>
                     <input
                         type="text"
@@ -128,27 +127,34 @@ const LeftPanel: React.FC = React.memo(() => {
                                 aria-expanded={isExpanded}
                             >
                                 <div className="flex items-center gap-3">
-                                    {React.cloneElement(categoryInfo.icon, { className: `w-5 h-5 ${categoryInfo.colorClasses.text}` })}
+                                    <LazyIcon name={categoryInfo.icon} className={`w-5 h-5 ${categoryInfo.colorClasses.text}`} />
                                     <span className="font-bold">{categoryInfo.title}</span>
                                 </div>
-                                <ChevronDownIcon className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                <LazyIcon name="ChevronDownIcon" className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
                             </button>
 
                             {isExpanded && (
-                                <div className="py-2 px-1 space-y-1 animate-fade-in">
+                                <div className="p-2 space-y-1 animate-fade-in">
                                     {toolsForCategory.map(tool => {
-                                        const isDisabled = !baseImageFile && (tool.category === 'editing' || tool.category === 'workflow');
-                                        const activeColorClass = categoryConfig[tool.category].colorClasses.bg;
+                                        const isDisabled = !baseImageFile && (tool.isEditingTool || tool.category === 'workflow');
+                                        const categoryInfo = categoryConfig[tool.category];
+                                        const activeColorClass = categoryInfo.colorClasses.bg;
+                                        const textColorClass = categoryInfo.colorClasses.text;
+                                        const glowFilterClass = categoryInfo.colorClasses.glowFilter;
+                                        const isActive = activeTab === tool.id;
                                         return (
                                             <button
                                                 key={tool.id}
                                                 onClick={() => handleSelectTool(tool)}
                                                 disabled={isDisabled}
-                                                className={`w-full flex items-center gap-3 p-2 rounded-md text-left transition-colors ${activeTab === tool.id ? `${activeColorClass} text-white` : 'text-gray-300 hover:bg-gray-700/80 hover:text-white'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                                                className={`group w-full flex items-center gap-3 py-3 px-2 rounded-md text-left transition-colors ${isActive ? `${activeColorClass} text-white` : 'text-gray-300 hover:bg-gray-700/80 hover:text-white'} disabled:opacity-50 disabled:cursor-not-allowed`}
                                                 title={isDisabled ? `Carregue uma imagem para usar '${tool.name}'` : tool.description}
                                             >
-                                                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400">
-                                                    {React.cloneElement(tool.icon as React.ReactElement<any>, { className: 'w-5 h-5' })}
+                                                <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 transition-transform duration-200 ease-in-out group-hover:scale-110 ${isActive ? 'scale-105' : ''}`}>
+                                                    <LazyIcon 
+                                                        name={tool.icon} 
+                                                        className={`w-6 h-6 transition-all duration-300 ${isActive ? '' : `group-hover:${textColorClass} ${glowFilterClass}`}`} 
+                                                    />
                                                 </div>
                                                 <div className="flex items-center justify-between flex-grow">
                                                     <span className="text-sm font-semibold">{tool.name}</span>

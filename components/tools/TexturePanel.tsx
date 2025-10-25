@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { TextureIcon } from '../icons';
+import LazyIcon from '../LazyIcon';
 import TipBox from '../common/TipBox';
 
 const textures = [
@@ -117,7 +117,7 @@ const TexturePanel: React.FC = () => {
                     disabled={isLoading || !texturePreview}
                     className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:cursor-not-allowed"
                 >
-                    <TextureIcon className="w-5 h-5" />
+                    <LazyIcon name="TextureIcon" className="w-5 h-5" />
                     Aplicar
                 </button>
             </div>

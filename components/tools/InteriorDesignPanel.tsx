@@ -8,11 +8,11 @@ import { useEditor } from '../../context/EditorContext';
 import { useMaskCanvas } from '../../hooks/useMaskCanvas';
 import { generateInteriorDesign } from '../../services/geminiService';
 import { dataURLtoFile } from '../../utils/imageUtils';
-import { UploadIcon, SparkleIcon, BrushIcon, AdjustmentsHorizontalIcon } from '../icons';
 import PromptEnhancer from './common/PromptEnhancer';
 import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
 import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
+import LazyIcon from '../LazyIcon';
 
 const InteriorDesignPanel: React.FC = () => {
     const [uploadedImage, setUploadedImage] = useState<File | null>(null);
@@ -25,7 +25,7 @@ const InteriorDesignPanel: React.FC = () => {
     const [isConfigExpanded, setIsConfigExpanded] = useState(true);
     const [isDetailsExpanded, setIsDetailsExpanded] = useState(true);
 
-    const { isLoading, error, setError, setIsLoading, setLoadingMessage, baseImageFile, setInitialImage, addPromptToHistory } = useEditor();
+    const { isLoading, error, setError, setIsLoading, setLoadingMessage, baseImageFile, setInitialImage, addPromptToHistory, setToast } = useEditor();
     const suggestions = usePromptSuggestions(prompt, 'interiorDesign');
 
     const imageRef = useRef<HTMLImageElement>(null);
@@ -64,7 +64,7 @@ const InteriorDesignPanel: React.FC = () => {
         addPromptToHistory(prompt);
         try {
             const maskFile = dataURLtoFile(maskDataUrl, 'mask.png');
-            const resultDataUrl = await generateInteriorDesign(uploadedImage, maskFile, roomType, roomStyle, prompt);
+            const resultDataUrl = await generateInteriorDesign(uploadedImage, maskFile, roomType, roomStyle, prompt, setToast);
             setGeneratedDesign(resultDataUrl);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -95,7 +95,7 @@ const InteriorDesignPanel: React.FC = () => {
 
                 <CollapsibleToolPanel
                     title="Configurações de Design"
-                    icon={<AdjustmentsHorizontalIcon className="w-5 h-5" />}
+                    icon="AdjustmentsHorizontalIcon"
                     isExpanded={isConfigExpanded}
                     onExpandToggle={() => setIsConfigExpanded(prev => !prev)}
                 >
@@ -110,15 +110,15 @@ const InteriorDesignPanel: React.FC = () => {
                         <div>
                             <label className="block text-sm font-medium text-gray-300">Estilo de Design</label>
                             <select value={roomStyle} onChange={e => setRoomStyle(e.target.value)} className="w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg p-3 text-base">
-                                {['Moderno', 'Minimalista', 'Industrial', 'Boêmio', 'Rústico', 'Contemporâneo', 'Escandinavo'].map(style => <option key={style} value={style}>{style}</option>)}
+                                {['Moderno', 'Minimalista', 'Industrial', 'Contemporâneo', 'Sustentável', 'Clássico', 'Rústico'].map(style => <option key={style} value={style}>{style}</option>)}
                             </select>
                         </div>
                     </div>
                 </CollapsibleToolPanel>
-
+                
                 <CollapsibleToolPanel
-                    title="Seleção e Detalhes"
-                    icon={<BrushIcon className="w-5 h-5" />}
+                    title="Detalhes e Pincel"
+                    icon="BrushIcon"
                     isExpanded={isDetailsExpanded}
                     onExpandToggle={() => setIsDetailsExpanded(prev => !prev)}
                 >
@@ -126,15 +126,7 @@ const InteriorDesignPanel: React.FC = () => {
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-300 mb-1">Instruções Adicionais</label>
                             <div className="relative">
-                                <textarea
-                                    value={prompt}
-                                    onChange={e => setPrompt(e.target.value)}
-                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                                    onFocus={() => setShowSuggestions(suggestions.length > 0)}
-                                    placeholder="Ex: adicione uma planta grande..."
-                                    className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]"
-                                    disabled={isLoading}
-                                />
+                                <textarea value={prompt} onChange={e => setPrompt(e.target.value)} onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} onFocus={() => setShowSuggestions(suggestions.length > 0)} placeholder="Ex: adicione uma janela grande..." className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]" disabled={isLoading}/>
                                 <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="interiorDesign" />
                             </div>
                             {showSuggestions && (
@@ -144,12 +136,12 @@ const InteriorDesignPanel: React.FC = () => {
                                     searchTerm={prompt}
                                 />
                             )}
-                            <p className="mt-1 text-xs text-gray-500 px-1">"adicione uma estante de livros", "troque o sofá por um de couro".</p>
+                            <p className="mt-1 text-xs text-gray-500 px-1">Ex: "adicione uma janela com vista para o oceano", "troque o piso por madeira de carvalho claro".</p>
                         </div>
                         
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-2"><BrushIcon className="w-5 h-5 text-gray-400" /><label htmlFor="brush-size" className="font-medium text-gray-300">Tamanho do Pincel</label></div>
+                                <label htmlFor="brush-size" className="font-medium text-gray-300">Tamanho do Pincel</label>
                                 <span className="font-mono text-gray-200">{brushSize}</span>
                             </div>
                             <input id="brush-size" type="range" min="10" max="150" value={brushSize} onChange={e => setBrushSize(Number(e.target.value))} className="w-full" disabled={isLoading || !uploadedImage} />
@@ -157,9 +149,10 @@ const InteriorDesignPanel: React.FC = () => {
                     </div>
                 </CollapsibleToolPanel>
 
+
                 <div className="mt-auto flex flex-col gap-2 pt-4">
                     <button onClick={handleGenerate} disabled={isLoading || !maskDataUrl} className="w-full bg-gradient-to-br from-blue-600 to-blue-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                        <SparkleIcon className="w-5 h-5" />
+                        <LazyIcon name="SparkleIcon" className="w-5 h-5" />
                         {generatedDesign ? 'Gerar Outra Variação' : 'Gerar Design'}
                     </button>
                     {generatedDesign && !isLoading && (
@@ -176,20 +169,20 @@ const InteriorDesignPanel: React.FC = () => {
                 </div>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex items-center justify-center p-4 relative">
-                 {error && !isLoading && (
+                {error && !isLoading && (
                     <div className="absolute inset-0 bg-black/70 z-30 flex flex-col items-center justify-center gap-4 animate-fade-in p-4">
-                       <div className="text-center text-red-400 bg-red-500/10 border border-red-500/20 p-4 rounded-lg">
+                        <div className="text-center text-red-400 bg-red-500/10 border border-red-500/20 p-4 rounded-lg">
                             <h3 className="font-bold text-red-300">Ocorreu um Erro</h3>
                             <p className="text-sm mt-1">{error}</p>
                         </div>
                     </div>
                 )}
                 {!uploadedImage && (
-                    <label htmlFor="interior-upload" className="text-center text-gray-400 cursor-pointer">
-                        <UploadIcon className="w-12 h-12 mx-auto text-gray-500" />
-                        <h3 className="mt-2 text-lg font-semibold text-white">Carregar Imagem do Ambiente</h3>
+                    <label htmlFor="arch-upload" className="text-center text-gray-400 cursor-pointer">
+                        <LazyIcon name="UploadIcon" className="w-12 h-12 mx-auto text-gray-500" />
+                        <h3 className="mt-2 text-lg font-semibold text-white">Carregar Imagem</h3>
                         <p className="text-sm">Clique ou arraste um arquivo</p>
-                         <input id="interior-upload" type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files && handleFileSelect(e.target.files[0])} />
+                         <input id="arch-upload" type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files && handleFileSelect(e.target.files[0])} />
                     </label>
                 )}
                 {imageUrl && (

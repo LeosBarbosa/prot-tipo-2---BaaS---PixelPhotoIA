@@ -5,10 +5,10 @@
 
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { TextToolIcon } from '../icons';
 import TipBox from '../common/TipBox';
+import LazyIcon from '../LazyIcon';
 
-const fontFamilies = [ 'Impact', 'Arial', 'Verdana', 'Georgia', 'Comic Sans MS', 'Times New Roman' ];
+const fontFamilies = [ 'Impact', 'Arial', 'Verdana', 'Georgia', 'Comic Sans MS', 'Times New Roman', 'Courier New', 'Helvetica' ];
 
 const TextPanel: React.FC = () => {
     const { 
@@ -114,7 +114,7 @@ const TextPanel: React.FC = () => {
                     disabled={isLoading || !textToolState.content.trim()}
                     className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
                 >
-                    <TextToolIcon className="w-5 h-5" />
+                    <LazyIcon name="TextToolIcon" className="w-5 h-5" />
                     Aplicar Texto
                 </button>
             </div>

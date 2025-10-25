@@ -5,13 +5,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { generateStyledPortrait } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { ShirtIcon, CloseIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import TipBox from '../common/TipBox';
-import PromptPresetPanel from '../common/PromptPresetPanel';
+import PromptPresetPanel from './common/PromptPresetPanel';
+import LazyIcon from '../LazyIcon';
 
 const StyledPortraitPanel: React.FC = () => {
     const { 
@@ -22,49 +21,33 @@ const StyledPortraitPanel: React.FC = () => {
         currentImageUrl,
         handleStyledPortrait,
     } = useEditor();
-    const [personImage, setPersonImage] = useState<File | null>(null);
-    const [styleImages, setStyleImages] = useState<(File | null)[]>([null]); // Suporte a um slot inicial
+    const [personImage, setPersonImage] = useState<File[]>([]);
+    const [styleImages, setStyleImages] = useState<File[]>([]);
     const [prompt, setPrompt] = useState(''); // Instruções adicionais
     const [negativePrompt, setNegativePrompt] = useState('');
 
     useEffect(() => {
-        if (baseImageFile && !personImage) {
-            setPersonImage(baseImageFile);
+        if (baseImageFile && personImage.length === 0) {
+            setPersonImage([baseImageFile]);
         }
     }, [baseImageFile, personImage]);
 
-    const handlePersonFileSelect = (file: File | null) => {
-        setPersonImage(file);
-        if (file) {
-            setInitialImage(file);
+    const handlePersonFileSelect = (files: File[]) => {
+        setPersonImage(files);
+        if (files[0]) {
+            setInitialImage(files[0]);
         }
-    };
-    
-    const handleStyleFileSelect = (file: File | null, index: number) => {
-        const newStyleImages = [...styleImages];
-        newStyleImages[index] = file;
-        setStyleImages(newStyleImages);
-    };
-    
-    const addStyleImageSlot = () => {
-        if (styleImages.length < 3) {
-            setStyleImages(prev => [...prev, null]);
-        }
-    };
-    
-    const removeStyleImageSlot = (index: number) => {
-        setStyleImages(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleGenerate = async () => {
-        const validStyleImages = styleImages.filter((f): f is File => f !== null);
-        if (!personImage || validStyleImages.length === 0) {
+        const personFile = personImage[0];
+        if (!personFile || styleImages.length === 0) {
             return;
         }
-        handleStyledPortrait(personImage, validStyleImages, prompt, negativePrompt);
+        handleStyledPortrait(personFile, styleImages, prompt, negativePrompt);
     };
     
-    const isGenerateDisabled = isLoading || !personImage || styleImages.filter(f => f !== null).length === 0;
+    const isGenerateDisabled = isLoading || personImage.length === 0 || styleImages.length === 0;
 
     return (
         <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6">
@@ -75,45 +58,18 @@ const StyledPortraitPanel: React.FC = () => {
                 </div>
                 
                 <ImageDropzone 
-                    imageFile={personImage}
-                    onFileSelect={handlePersonFileSelect}
+                    files={personImage}
+                    onFilesChange={handlePersonFileSelect}
                     label="Sua Foto (Pessoa)"
                 />
                 
-                <div>
-                     <h4 className="text-sm font-semibold text-gray-300 mb-2">Imagens de Estilo (Máx. 3)</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                        {styleImages.map((img, index) => (
-                            <div key={index} className="relative">
-                                <ImageDropzone 
-                                    imageFile={img}
-                                    onFileSelect={(file) => handleStyleFileSelect(file, index)}
-                                    label={`Estilo ${index + 1}`}
-                                />
-                                {styleImages.length > 1 && (
-                                    <button 
-                                        type="button"
-                                        onClick={() => removeStyleImageSlot(index)}
-                                        className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white p-1 rounded-full text-xs z-10"
-                                        title="Remover imagem de estilo"
-                                    >
-                                        <CloseIcon className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                    {styleImages.length < 3 && (
-                        <button 
-                            type="button"
-                            onClick={addStyleImageSlot}
-                            disabled={isLoading || styleImages.filter(f => f === null).length === 0 && styleImages.length === 1 && !styleImages[0]}
-                            className="mt-3 text-sm text-blue-400 hover:text-blue-300 w-full text-center py-2 border border-blue-400/50 rounded-lg hover:bg-blue-400/10 disabled:opacity-50"
-                        >
-                            + Adicionar Referência de Estilo
-                        </button>
-                    )}
-                </div>
+                <ImageDropzone 
+                    files={styleImages}
+                    onFilesChange={setStyleImages}
+                    label="Imagens de Estilo (Máx. 3)"
+                    multiple
+                    maxFiles={3}
+                />
                 
                 <CollapsiblePromptPanel
                   title="Instruções Adicionais (Modificações)"
@@ -143,7 +99,7 @@ const StyledPortraitPanel: React.FC = () => {
                     disabled={isGenerateDisabled}
                     className="w-full mt-auto bg-gradient-to-br from-teal-600 to-cyan-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <ShirtIcon className="w-5 h-5" />
+                    <LazyIcon name="ShirtIcon" className="w-5 h-5" />
                     Gerar Retrato
                 </button>
             </aside>

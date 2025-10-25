@@ -12,7 +12,6 @@ import GifTimeline from './common/GifTimeline';
 import RightPanel from './RightPanel';
 import MobileBottomNav from './MobileBottomNav';
 import { toolToTabMap, tools } from '../config/tools';
-// FIX: Correctly import 'toolComponentMap' and alias it as 'panelComponents'. Also updated relative path.
 import { toolComponentMap as panelComponents } from '../config/toolComponentMap';
 import Spinner from './Spinner';
 
@@ -21,14 +20,12 @@ const LeftPanel = lazy(() => import('./LeftPanel'));
 const EditorModalLayout: React.FC = () => {
     const { activeTool, isGif, isLeftPanelVisible, setIsLeftPanelVisible, isRightPanelVisible, setIsRightPanelVisible, activeTab, setActiveTab, setToast, isPanModeActive } = useEditor();
     
-    // When the tool from the homepage changes, update the active tab
     useEffect(() => {
         if (activeTool) {
-            const initialTab = toolToTabMap[activeTool] ?? 'adjust'; // Default to 'adjust' if not mapped
+            const initialTab = toolToTabMap[activeTool] ?? 'adjust';
             setActiveTab(initialTab);
         }
         
-        // Show a hint the first time a mobile user opens the editor
         const firstTimeMobile = localStorage.getItem('hasSeenSwipeHint') !== 'true';
         if (window.innerWidth < 1024 && firstTimeMobile) {
             setToast({ message: 'Use a barra inferior para navegar entre ferramentas e opções.', type: 'info' });
@@ -36,24 +33,20 @@ const EditorModalLayout: React.FC = () => {
         }
     }, [activeTool, setActiveTab, setToast]);
 
-    // FIX: Use the 'tools' array to find the full configuration for the active tab (ToolId).
-    // This ensures that 'activeTabConfig' is of type 'ToolConfig | undefined' as expected by RightPanel.
-    const activeTabConfig = useMemo(() => tools.find(tool => tool.id === activeTab), [activeTab]);
+    const activeToolConfig = useMemo(() => tools.find(tool => tool.id === activeTab), [activeTab]);
     const showBackdrop = isLeftPanelVisible || isRightPanelVisible;
     const touchStartRef = useRef<{ x: number, time: number } | null>(null);
-
+    
     const handleTouchStart = (e: React.TouchEvent) => {
         if (isPanModeActive) {
             touchStartRef.current = null;
             return;
         }
         const target = e.target as HTMLElement;
-        // Ignore swipes if the touch starts on an interactive element or inside a scrollable panel.
         if (target.closest('button, a, input, [role="button"], .scrollbar-thin, .ReactCrop__crop-selection, .ReactCrop__drag-handle')) {
             touchStartRef.current = null;
             return;
         }
-
         if (e.touches.length === 1) {
             touchStartRef.current = { x: e.touches[0].clientX, time: Date.now() };
         }
@@ -92,42 +85,40 @@ const EditorModalLayout: React.FC = () => {
 
     return (
         <div 
-            className="w-full h-full flex flex-row overflow-hidden relative bg-black/20 animate-fade-in"
+            className="w-full flex flex-col lg:flex-row relative bg-black/20 animate-fade-in"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
         >
-            {/* Backdrop for mobile overlays */}
+            {/* Backdrop para mobile */}
             {showBackdrop && (
                 <div
                     className="fixed inset-0 bg-black/60 z-30 lg:hidden animate-fade-in"
-                    onClick={() => {
-                        setIsLeftPanelVisible(false);
-                        setIsRightPanelVisible(false);
-                    }}
+                    onClick={() => { setIsLeftPanelVisible(false); setIsRightPanelVisible(false); }}
                     aria-hidden="true"
                 />
             )}
 
-            {/* Left Panel (com rolagem interna) */}
-            <aside className={`fixed lg:relative z-40 h-full w-full max-w-sm lg:w-80 flex-shrink-0 transition-transform duration-300 ease-in-out ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+            {/* Left Panel */}
+            <aside className={`fixed lg:relative z-40 h-screen lg:self-start lg:h-auto w-full max-w-sm lg:w-80 flex-shrink-0 transition-transform duration-300 ease-in-out ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
                 <Suspense fallback={<div className="w-full h-full flex items-center justify-center bg-gray-800/80"><Spinner /></div>}>
                     <LeftPanel />
                 </Suspense>
             </aside>
 
-            {/* Main Content (ocupa a altura total e não centraliza) */}
-            <main className="flex-grow flex flex-col h-full overflow-hidden relative pb-20 lg:pb-0">
-                {/* O wrapper do ImageViewer expande para preencher o espaço */}
-                <div className="flex-grow relative p-4">
-                    <ImageViewer />
-                    <FloatingControls />
+            {/* Main Content */}
+            <main className="flex-grow flex flex-col w-full relative pb-20 lg:pb-0">
+                <div className="lg:sticky lg:top-24 w-full lg:h-[calc(100vh-6rem)] flex flex-col">
+                    <div className="flex-grow flex items-center justify-center p-4 relative overflow-hidden">
+                        <ImageViewer />
+                        <FloatingControls />
+                    </div>
+                    {isGif && <GifTimeline />}
                 </div>
-                {isGif && <GifTimeline />}
             </main>
 
-            {/* Right Panel (com rolagem interna) */}
-            <aside className={`fixed lg:relative right-0 z-40 h-full w-full max-w-sm lg:w-96 flex-shrink-0 transition-transform duration-300 ease-in-out ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
-                <RightPanel activeToolConfig={activeTabConfig} panelComponents={panelComponents} />
+            {/* Right Panel */}
+            <aside className={`fixed lg:relative right-0 z-40 h-screen lg:self-start lg:h-auto w-full max-w-sm lg:w-96 flex-shrink-0 transition-transform duration-300 ease-in-out ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
+                <RightPanel activeToolConfig={activeToolConfig as ToolConfig | undefined} panelComponents={panelComponents} />
             </aside>
 
             <MobileBottomNav />

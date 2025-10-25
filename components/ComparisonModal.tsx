@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { CloseIcon } from './icons';
+import LazyIcon from './LazyIcon';
 import ComparisonSlider from './ComparisonSlider';
 
 interface ComparisonModalProps {
@@ -25,7 +25,7 @@ const ComparisonModal: React.FC<ComparisonModalProps> = ({ isOpen, onClose, befo
         <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-700/50">
           <h2 className="text-lg font-bold text-white">Comparar Antes e Depois</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors" aria-label="Fechar comparação">
-            <CloseIcon className="w-6 h-6" />
+            <LazyIcon name="CloseIcon" className="w-6 h-6" />
           </button>
         </div>
         

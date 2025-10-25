@@ -3,15 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-// FIX: Add useState and useEffect to the React import to resolve 'Cannot find name' errors.
 import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { ShirtIcon, DownloadIcon, BrushIcon, CameraIcon } from '../icons';
-import { dataURLtoFile } from '../../utils/imageUtils';
 import TipBox from '../common/TipBox';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
+import PromptEnhancer from './common/PromptEnhancer';
+import LazyIcon from '../LazyIcon';
 
 const scenePresets = [
     { name: 'Nenhum (Manter Fundo Original)', value: '' },
@@ -37,14 +36,13 @@ const TryOnPanel: React.FC = () => {
         error, 
         baseImageFile,
         setInitialImage, 
-        setActiveTool,
         handleVirtualTryOn,
         currentImageUrl,
     } = useEditor();
     
-    const [personImage, setPersonImage] = useState<File | null>(null);
-    const [clothingImage, setClothingImage] = useState<File | null>(null);
-    const [shoeImage, setShoeImage] = useState<File | null>(null);
+    const [personImage, setPersonImage] = useState<File[]>([]);
+    const [clothingImage, setClothingImage] = useState<File[]>([]);
+    const [shoeImage, setShoeImage] = useState<File[]>([]);
 
     // Estados para os prompts profissionais
     const [scenePrompt, setScenePrompt] = useState('');
@@ -56,34 +54,21 @@ const TryOnPanel: React.FC = () => {
     const [isOptionsExpanded, setIsOptionsExpanded] = useState(false);
 
     useEffect(() => {
-        if (baseImageFile && !personImage) setPersonImage(baseImageFile);
+        if (baseImageFile && personImage.length === 0) setPersonImage([baseImageFile]);
     }, [baseImageFile, personImage]);
     
-    const handlePersonFileSelect = (file: File | null) => {
-        setPersonImage(file);
-        if (file) setInitialImage(file);
+    const handlePersonFileSelect = (files: File[]) => {
+        setPersonImage(files);
+        if (files[0]) setInitialImage(files[0]);
     };
 
     const handleGenerate = async () => {
-        if (!personImage || !clothingImage) return;
-        handleVirtualTryOn(personImage, clothingImage, shoeImage ?? undefined, scenePrompt, posePrompt, cameraLens, cameraAngle, lightingStyle, negativePrompt);
-    };
+        const personFile = personImage[0];
+        const clothingFile = clothingImage[0];
+        const shoeFile = shoeImage[0];
 
-    const handleDownload = () => {
-        if (!currentImageUrl) return;
-        const link = document.createElement('a');
-        link.href = currentImageUrl;
-        link.download = `provador-virtual-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const handleUseInEditor = () => {
-        if (!currentImageUrl) return;
-        const file = dataURLtoFile(currentImageUrl, `provador-virtual-${Date.now()}.png`);
-        setInitialImage(file);
-        setActiveTool('adjust');
+        if (!personFile || !clothingFile) return;
+        handleVirtualTryOn(personFile, clothingFile, shoeFile ?? undefined, scenePrompt, posePrompt, cameraLens, cameraAngle, lightingStyle, negativePrompt);
     };
 
     const handlePresetChange = (setter: React.Dispatch<React.SetStateAction<string>>) => (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -94,7 +79,7 @@ const TryOnPanel: React.FC = () => {
         e.target.value = ""; // Reset select to placeholder
     };
 
-    const isGenerateButtonDisabled = isLoading || !personImage || !clothingImage;
+    const isGenerateButtonDisabled = isLoading || personImage.length === 0 || clothingImage.length === 0;
 
     return (
         <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6 h-full">
@@ -105,14 +90,14 @@ const TryOnPanel: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 gap-4">
-                   <ImageDropzone imageFile={personImage} onFileSelect={handlePersonFileSelect} label="Sua Foto (Modelo)"/>
-                   <ImageDropzone imageFile={clothingImage} onFileSelect={setClothingImage} label="Peça de Roupa"/>
-                   <ImageDropzone imageFile={shoeImage} onFileSelect={setShoeImage} label="Calçado (Opcional)"/>
+                   <ImageDropzone files={personImage} onFilesChange={handlePersonFileSelect} label="Sua Foto (Modelo)"/>
+                   <ImageDropzone files={clothingImage} onFilesChange={setClothingImage} label="Peça de Roupa"/>
+                   <ImageDropzone files={shoeImage} onFilesChange={setShoeImage} label="Calçado (Opcional)"/>
                 </div>
 
                 <CollapsibleToolPanel
                     title="Direção de Estúdio (Opcional)"
-                    icon={<CameraIcon className="w-5 h-5" />}
+                    icon="CameraIcon"
                     isExpanded={isOptionsExpanded}
                     onExpandToggle={() => setIsOptionsExpanded(!isOptionsExpanded)}
                 >
@@ -123,7 +108,10 @@ const TryOnPanel: React.FC = () => {
                                 <option value="" disabled>Escolha um preset de cenário...</option>
                                 {scenePresets.map(p => <option key={p.name} value={p.value}>{p.name}</option>)}
                             </select>
-                            <textarea value={scenePrompt} onChange={e => setScenePrompt(e.target.value)} placeholder="Ou descreva seu próprio cenário..." className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-sm" rows={2} disabled={isLoading} />
+                            <div className="relative">
+                                <textarea value={scenePrompt} onChange={e => setScenePrompt(e.target.value)} placeholder="Ou descreva seu próprio cenário..." className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 pr-12 text-sm" rows={2} disabled={isLoading} />
+                                <PromptEnhancer prompt={scenePrompt} setPrompt={setScenePrompt} toolId="tryOn" />
+                            </div>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-1">Pose</label>
@@ -176,22 +164,12 @@ const TryOnPanel: React.FC = () => {
                 </TipBox>
                 
                 <button onClick={handleGenerate} disabled={isGenerateButtonDisabled} className="w-full mt-auto bg-gradient-to-br from-pink-600 to-purple-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                    <ShirtIcon className="w-5 h-5" />
+                    <LazyIcon name="ShirtIcon" className="w-5 h-5" />
                     Gerar Look
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center p-4">
                 <ResultViewer isLoading={isLoading} error={error} resultImage={currentImageUrl} loadingMessage="Montando o estúdio e vestindo o modelo..."/>
-                {currentImageUrl && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Baixar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
             </main>
         </div>
     );

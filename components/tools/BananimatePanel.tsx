@@ -6,14 +6,14 @@ import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { generateAnimationFromImage } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
-import { BananaIcon, DownloadIcon } from '../icons';
 import PromptEnhancer from './common/PromptEnhancer';
 import Spinner from '../Spinner';
 import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
 import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import LazyIcon from '../LazyIcon';
 
 const BananimatePanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, setLoadingMessage, baseImageFile, setInitialImage, loadingMessage, addPromptToHistory } = useEditor();
+    const { isLoading, error, setError, setIsLoading, setLoadingMessage, baseImageFile, setInitialImage, loadingMessage, addPromptToHistory, setToast } = useEditor();
     const [sourceImage, setSourceImage] = useState<File | null>(null);
     const [prompt, setPrompt] = useState('');
     const [resultVideoUrl, setResultVideoUrl] = useState<string | null>(null);
@@ -35,7 +35,8 @@ const BananimatePanel: React.FC = () => {
         }
     }, [baseImageFile, sourceImage]);
 
-    const handleFileSelect = (file: File | null) => {
+    const handleFileSelect = (files: File[]) => {
+        const file = files[0] || null;
         setSourceImage(file);
         if (file) {
             setInitialImage(file);
@@ -73,7 +74,7 @@ const BananimatePanel: React.FC = () => {
         }, 8000);
 
         try {
-            const result = await generateAnimationFromImage(sourceImage, prompt);
+            const result = await generateAnimationFromImage(sourceImage, prompt, '1:1', setToast, setLoadingMessage);
             setResultVideoUrl(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -112,8 +113,8 @@ const BananimatePanel: React.FC = () => {
                     <p className="text-sm text-gray-400 mt-1">Dê vida às suas fotos com animações divertidas.</p>
                 </div>
                 <ImageDropzone
-                    imageFile={sourceImage}
-                    onFileSelect={handleFileSelect}
+                    files={sourceImage ? [sourceImage] : []}
+                    onFilesChange={handleFileSelect}
                     label="Sua Imagem"
                 />
                 <div className="relative">
@@ -122,7 +123,7 @@ const BananimatePanel: React.FC = () => {
                     <textarea
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
-                        onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                         onFocus={() => setShowSuggestions(suggestions.length > 0)}
                         placeholder="Ex: faça o gato dançar, adicione vapor saindo da xícara..."
                         className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
@@ -144,7 +145,7 @@ const BananimatePanel: React.FC = () => {
                     disabled={isLoading || !sourceImage || !prompt.trim()}
                     className="w-full mt-auto bg-gradient-to-br from-yellow-500 to-orange-400 text-gray-900 font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <BananaIcon className="w-5 h-5" />
+                    <LazyIcon name="BananaIcon" className="w-5 h-5" />
                     Gerar Animação
                 </button>
             </aside>
@@ -167,14 +168,14 @@ const BananimatePanel: React.FC = () => {
                             onClick={handleDownload}
                             className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm"
                         >
-                            <DownloadIcon className="w-5 h-5" />
+                            <LazyIcon name="DownloadIcon" className="w-5 h-5" />
                             Baixar Vídeo
                         </button>
                     </div>
                 )}
                 {!resultVideoUrl && !isLoading && !error && (
                      <div className="text-center text-gray-500 animate-fade-in">
-                        <BananaIcon className="w-16 h-16 mx-auto text-yellow-500/50" />
+                        <LazyIcon name="BananaIcon" className="w-16 h-16 mx-auto text-yellow-500/50" />
                         <p className="mt-2 font-semibold">Sua animação aparecerá aqui</p>
                     </div>
                 )}

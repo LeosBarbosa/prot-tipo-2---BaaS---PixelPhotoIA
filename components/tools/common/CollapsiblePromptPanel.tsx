@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useEffect } from 'react';
-import { ChevronDownIcon } from '../../icons';
 import { type ToolId } from '../../../types';
 import PromptEnhancer from './PromptEnhancer';
 import { usePromptSuggestions } from '../../../hooks/usePromptSuggestions';
 import PromptSuggestionsDropdown from '../../common/PromptSuggestionsDropdown';
+import LazyIcon from '../../LazyIcon';
 
 
 interface CollapsiblePromptPanelProps {
@@ -75,9 +75,10 @@ const CollapsiblePromptPanel: React.FC<CollapsiblePromptPanelProps> = ({
       <header
         className="flex items-center p-3 cursor-pointer select-none hover:bg-gray-700/60"
         onClick={() => setIsExpanded(!isExpanded)}
+        aria-expanded={isExpanded}
       >
-        <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${!isExpanded ? '-rotate-90' : ''}`} />
-        <h4 className="flex-grow font-semibold text-white ml-3">{title}</h4>
+        <h4 className="flex-grow font-semibold text-white">{title}</h4>
+        <LazyIcon name="ChevronDownIcon" className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isExpanded ? '' : '-rotate-90'}`} />
       </header>
       <div
         className={`transition-all duration-300 ease-in-out grid ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
@@ -90,7 +91,7 @@ const CollapsiblePromptPanel: React.FC<CollapsiblePromptPanelProps> = ({
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  onBlur={() => setTimeout(() => setShowPositiveSuggestions(false), 150)}
+                  onBlur={() => setTimeout(() => setShowPositiveSuggestions(false), 200)}
                   onFocus={() => setShowPositiveSuggestions(positiveSuggestions.length > 0)}
                   placeholder={promptPlaceholder || "Ex: um astronauta surfando em uma onda cósmica..."}
                   className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[120px]"
@@ -112,7 +113,7 @@ const CollapsiblePromptPanel: React.FC<CollapsiblePromptPanelProps> = ({
               <textarea
                 value={negativePrompt}
                 onChange={onNegativePromptChange}
-                onBlur={() => setTimeout(() => setShowNegativeSuggestions(false), 150)}
+                onBlur={() => setTimeout(() => setShowNegativeSuggestions(false), 200)}
                 onFocus={() => setShowNegativeSuggestions(negativeSuggestions.length > 0)}
                 placeholder={negativePromptPlaceholder || "Prompt Negativo (Opcional): o que evitar..."}
                 className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base min-h-[60px]"

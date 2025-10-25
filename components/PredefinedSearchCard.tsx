@@ -5,6 +5,7 @@
 import React from 'react';
 import { useEditor } from '../context/EditorContext';
 import { type PredefinedSearch } from '../types';
+import LazyIcon from './LazyIcon';
 
 interface PredefinedSearchCardProps {
   result: PredefinedSearch;
@@ -20,7 +21,7 @@ const PredefinedSearchCard: React.FC<PredefinedSearchCardProps> = ({ result }) =
             >
                 <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-gray-900/50 rounded-lg">
-                        {result.icon}
+                        <LazyIcon name={result.icon} className="w-8 h-8" />
                     </div>
                     <div className="flex-grow">
                         <h3 className="font-semibold text-lg text-white">{result.title}</h3>

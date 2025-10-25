@@ -3,822 +3,532 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import { GoogleGenAI, GenerateContentResponse, Part, Type, Modality } from "@google/genai";
-import { fileToDataURL, dataURLtoFile } from '../utils/imageUtils';
-import { type DetectedObject, type ToolId } from '../types';
-import { smartSearchToolDeclarations } from './smartSearchToolDeclarations';
-import { applyBackgroundColor } from '../utils/imageProcessing';
+import { GoogleGenAI, Modality, type GenerateContentResponse } from "@google/genai";
+import { fileToDataURL, dataURLtoFile } from "../utils/imageUtils";
+import * as db from '../utils/db';
+import { sha256 } from '../utils/cryptoUtils';
+import { orchestrate as orchestrateTool } from "./orchestrator";
+import { type SmartSearchResult, type ToolId, type Toast, type VideoAspectRatio, type DetectedObject } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-
-const CRITICAL_FACIAL_PRESERVATION_DIRECTIVE = `\n\n**DIRETRIZ DE EXECUÇÃO CRÍTICA: PRESERVAÇÃO DA IDENTIDADE FACIAL ORIGINAL**\nA prioridade absoluta é a preservação da identidade facial original. O sistema NÃO DEVE descaracterizar, alterar ou substituir o rosto da pessoa. A face deve ser mantida 100% fiel e inalterada em suas características essenciais: traços, expressões e singularidades (sardas, pintas, etc.). O resultado deve ser realista e respeitoso com a aparência original, evitando a geração de um 'rosto genérico'.`;
-
-export const fileToPart = async (file: File): Promise<Part> => {
-    const dataUrl = await fileToDataURL(file);
-    const arr = dataUrl.split(',');
-    if (arr.length < 2) throw new Error("URL de dados inválida");
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    if (!mimeMatch || !mimeMatch[1]) throw new Error("Não foi possível analisar o tipo MIME da URL de dados");
-    
-    const mimeType = mimeMatch[1];
-    const data = arr[1];
-    return { inlineData: { mimeType, data } };
+// Helper function to show a toast message
+const showToast = (setToast: (toast: Toast | null) => void, message: string, type: Toast['type'] = 'info') => {
+  setToast({ message, type });
 };
 
-const handleGenAIResponse = <T extends GenerateContentResponse>(response: T): T => {
-    if (response.promptFeedback?.blockReason) {
-        const reason = response.promptFeedback.blockReason;
-        if (reason === 'SAFETY') {
-            throw new Error('Seu pedido foi bloqueado por violar as políticas de segurança. Por favor, ajuste seu prompt ou imagem para evitar conteúdo sensível.');
-        }
-        // For 'OTHER' and any other reason, it's often vague.
-        throw new Error('Seu pedido não pôde ser processado. Isso pode acontecer se o prompt for ambíguo ou não estiver claro. Tente reformular seu pedido.');
+/**
+ * Parses a Gemini API error and returns a user-friendly message in Portuguese.
+ * @param error The error object caught from the API call.
+ * @returns A user-friendly error string.
+ */
+const handleGeminiError = (error: unknown): string => {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    if (message.includes('api_key_invalid') || message.includes('permission_denied')) {
+      return "Chave de API inválida ou não autorizada. Verifique suas credenciais no AI Studio.";
     }
-    return response;
-};
-
-const extractBase64Image = (response: GenerateContentResponse): string => {
-    const parts = response.candidates?.[0]?.content?.parts;
-
-    if (parts) {
-        for (const part of parts) {
-          if (part.inlineData && part.inlineData.mimeType.startsWith('image/')) {
-            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-          }
-        }
+    if (message.includes('billing not enabled')) {
+      return "A Faturação não está ativada para o seu projeto. Por favor, ative-a no Google Cloud Console.";
     }
-    
-    const textResponse = response.text?.trim();
-    if (textResponse) {
-        throw new Error(`A IA respondeu com texto em vez de uma imagem: "${textResponse}"`);
+    if (message.includes('quota_exceeded') || message.includes('resource_exhausted')) {
+      return "Você atingiu o limite de uso da API (quota). Por favor, verifique seu plano e tente novamente mais tarde.";
     }
-    throw new Error('Nenhuma imagem foi gerada pelo modelo. A resposta pode estar vazia ou bloqueada por políticas de segurança.');
-};
-
-export const generateImageFromParts = async (parts: Part[], model: string = 'gemini-2.5-flash-image', config?: { [key: string]: any }): Promise<string> => {
-    const finalConfig = {
-        responseModalities: [Modality.IMAGE],
-        ...config, // any config passed in will be merged/override
-    };
-
-    const response = await ai.models.generateContent({
-        model,
-        contents: { parts },
-        config: finalConfig,
-    });
-    handleGenAIResponse(response);
-    return extractBase64Image(response);
-};
-
-const singleImageAndTextToImage = async (image: File, prompt: string): Promise<string> => {
-    const imagePart = await fileToPart(image);
-    return generateImageFromParts([imagePart, { text: prompt }]);
-};
-
-export const validatePromptSpecificity = async (prompt: string, toolContext: string): Promise<{ isSpecific: boolean, suggestion: string }> => {
-    if (prompt.trim().split(/\s+/).length < 3) {
-        return {
-            isSpecific: false,
-            suggestion: 'Seu prompt parece um pouco vago. Tente adicionar mais detalhes para obter um resultado melhor!',
-        };
+    if (message.includes('model_not_found')) {
+      return "O modelo de IA solicitado não foi encontrado. Isso pode ser um problema temporário.";
     }
+    if (message.includes('invalid_argument')) {
+      return "Argumento inválido. A imagem pode estar corrompida ou o prompt contém conteúdo não permitido.";
+    }
+    if (message.includes('deadline_exceeded') || message.includes('timed out')) {
+      return "A solicitação demorou muito para responder (timeout). Verifique sua conexão e tente novamente.";
+    }
+    if (message.includes('requested entity was not found')) {
+         return "Entidade não encontrada. Se estiver usando a geração de vídeo, sua chave de API pode ser inválida. Tente selecionar outra.";
+    }
+    // Return a cleaned-up version of the original message if no specific case matched
+    return `Erro na API: ${error.message}`;
+  }
+  return "Ocorreu um erro desconhecido na comunicação com a IA.";
+};
 
-    const validationPrompt = `
-        Analise o prompt do usuário para uma ferramenta de imagem de IA. O prompt do usuário é: "${prompt}".
-        Sua tarefa é determinar se o prompt é específico o suficiente para uma imagem interessante e de alta qualidade e fornecer sugestões úteis, se não for.
-        Um bom prompt específico inclui detalhes sobre:
-        - Assunto e Ação: O que está acontecendo?
-        - Estilo Artístico: É uma 'fotografia', 'pintura a óleo', 'arte conceitual de fantasia'?
-        - Iluminação: 'contraluz dramático', 'luz suave da manhã', 'brilho de neon'.
-        - Composição: 'retrato em close-up', 'vista panorâmica ampla', 'tomada de baixo ângulo'.
-        Um prompt genérico é curto e vago, como "um cachorro", "uma bela paisagem".
-        Com base nisso, responda SOMENTE com um objeto JSON com dois campos:
-        1. "isSpecific": um booleano (true se o prompt for específico, false se for muito genérico).
-        2. "suggestion": uma string em português do Brasil. Se o prompt for genérico, forneça uma sugestão criativa e encorajadora para melhorá-lo. Se o prompt já for específico, pode ser uma string vazia.
-    `;
 
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: validationPrompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        isSpecific: { type: Type.BOOLEAN, description: "O prompt é específico o suficiente?" },
-                        suggestion: { type: Type.STRING, description: "Sugestão de melhoria em português do Brasil." },
-                    },
-                    required: ['isSpecific', 'suggestion'],
-                }
+// Initialize the Gemini client
+const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY! });
+
+// --- Helper Functions ---
+
+const generateCacheKey = async (model: string, contents: any, config?: any): Promise<string> => {
+    let contentHash = '';
+    if (typeof contents === 'string') {
+        contentHash = await sha256(contents);
+    } else if (contents && contents.parts) {
+        const partHashes = await Promise.all(contents.parts.map(async (part: any) => {
+            if (part.text) {
+                return await sha256(part.text);
             }
-        });
-        
-        const jsonResponse = JSON.parse(response.text);
-        return jsonResponse;
-    } catch (e) {
-        console.error("A validação do prompt falhou, assumindo como específico.", e);
-        return { isSpecific: true, suggestion: '' };
+            if (part.inlineData?.data) { // base64 string
+                return await sha256(part.inlineData.data);
+            }
+            return '';
+        }));
+        contentHash = partHashes.join('');
+    } else if (contents instanceof File) {
+        const dataUrl = await fileToDataURL(contents);
+        contentHash = await sha256(dataUrl);
     }
-};
-
-export const generateImageFromText = async (prompt: string, aspectRatio: string): Promise<string> => {
-    const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
-        prompt,
-        config: {
-            numberOfImages: 1,
-            aspectRatio: aspectRatio as "1:1" | "16:9" | "9:16" | "4:3" | "3:4",
-        },
-    });
-    const base64ImageBytes: string | undefined = response.generatedImages?.[0]?.image?.imageBytes;
-    if (!base64ImageBytes) {
-      // More user-friendly error for Imagen model.
-      throw new Error('O gerador de imagens não retornou um resultado. A causa mais comum é um prompt que viola as políticas de segurança. Por favor, tente reformular sua solicitação.');
-    }
-    return `data:image/png;base64,${base64ImageBytes}`;
-};
-
-export const renderSketch = (sketchImage: File, prompt: string) => {
-    const fullPrompt = `### COMANDO: RENDERIZAR ESBOÇO\n\n**OBJETIVO:** Transformar a imagem de esboço fornecida em uma renderização fotorrealista.\n\n**INSTRUÇÕES DO USUÁRIO:** "${prompt}"\n\n**REGRAS DE EXECUÇÃO:**\n1.  **FIDELIDADE AO ESBOÇO:** Use as linhas e formas do esboço como a base fundamental para a renderização.\n2.  **FOTORREALISMO:** Aplique texturas, iluminação e sombras realistas para dar vida ao esboço.\n3.  **COERÊNCIA:** Garanta que o resultado final seja visualmente coeso e de alta qualidade.${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
-    return singleImageAndTextToImage(sketchImage, fullPrompt);
-};
-
-export const generateCharacter = (prompt: string) => {
-    const fullPrompt = `Folha de conceito de personagem de corpo inteiro, pose dinâmica. ${prompt}. Iluminação cinematográfica, fundo detalhado, 8k, alta qualidade.`;
-    return generateImageFromText(fullPrompt, '9:16');
-};
-
-export const generateLogo = (prompt: string) => {
-    const fullPrompt = `Logotipo vetorial minimalista, ${prompt}. Linhas simples e limpas, cores planas, alto contraste, adequado para uma marca. Centrado em um fundo branco.`;
-    return generateImageFromText(fullPrompt, '1:1');
-};
-
-export const generateLogoVariation = (sourceImage: File): Promise<string> => {
-    const prompt = `### COMANDO: GERAR VARIAÇÃO DE LOGOTIPO\n\n**OBJETIVO:** Gerar uma variação sutil do logotipo fornecido.\n\n**REGRAS DE EXECUÇÃO:**\n1.  **MANTER TEMA:** O novo logotipo deve manter o mesmo tema e conceito do original.\n2.  **ESTILO CONSISTENTE:** Continue com o estilo vetorial minimalista, linhas limpas e alto contraste.\n3.  **MUDANÇA SUTIL:** Altere ligeiramente as formas, composição ou orientação dos elementos.\n4.  **SAÍDA:** O resultado deve ser centrado em um fundo branco.`;
-    return singleImageAndTextToImage(sourceImage, prompt);
-};
-
-export const generate3DModel = (prompt: string) => {
-    const fullPrompt = `Uma renderização de modelo 3D de ${prompt}. Renderização Octane, materiais fotorrealistas, iluminação de estúdio com sombras suaves, resolução 4k, em um fundo cinza simples.`;
-    return generateImageFromText(fullPrompt, '1:1');
-};
-
-export const generateSeamlessPattern = (prompt: string) => {
-    const fullPrompt = `Um padrão sem costura e repetível de ${prompt}. Design plano, estilo vetorial, cores vibrantes.`;
-    return generateImageFromText(fullPrompt, '1:1');
-};
-
-export const generateSticker = async (prompt: string, sourceImage?: File): Promise<string> => {
-    if (sourceImage) {
-        const fullPrompt = `### COMANDO: CRIAR ADESIVO A PARTIR DE IMAGEM\n\n**OBJETIVO:** Criar um adesivo de vinil cortado a partir da imagem fornecida.\n\n**INSTRUÇÕES DO USUÁRIO:** "${prompt}"\n\n**REGRAS DE EXECUÇÃO:**\n1.  **ESTILO:** O estilo deve ser ilustrativo e de desenho animado.\n2.  **BORDA:** Adicione uma borda branca espessa ao redor do assunto principal.\n3.  **FUNDO:** O resultado final deve estar em um fundo simples para contraste.`;
-        return singleImageAndTextToImage(sourceImage, fullPrompt);
-    }
-    const fullPrompt = `Um adesivo de vinil fofo cortado de ${prompt}, estilo de desenho animado ilustrativo, com uma borda branca espessa, em um fundo cinza simples para contraste.`;
-    return generateImageFromText(fullPrompt, '1:1');
-};
-
-export const applyTextEffect = (sourceImage: File, prompt: string): Promise<string> => {
-    const fullPrompt = `### COMANDO: APLICAR EFEITO DE TEXTO\n\n**OBJETIVO:** Aplicar um efeito visual ao texto existente na imagem.\n\n**INSTRUÇÕES DO USUÁRIO:** "${prompt}"\n\n**REGRAS DE EXECUÇÃO:**\n1.  **MODIFICAR APENAS TEXTO:** Apenas o texto na imagem deve ser alterado.\n2.  **PRESERVAR FUNDO:** O restante da imagem (fundo, outros elementos) deve permanecer intacto.`;
-    return singleImageAndTextToImage(sourceImage, fullPrompt);
-};
-
-export const convertToVector = (sourceImage: File, stylePrompt?: string): Promise<string> => {
-    let fullPrompt = `### COMANDO: VETORIZAR IMAGEM (ESTILO ADESIVO)\n\n**OBJETIVO:** Converter a imagem em um gráfico vetorial com estilo de adesivo cortado.\n\n**REGRAS DE EXECUÇÃO:**\n1.  **SIMPLIFICAR:** Simplifique as formas e detalhes da imagem original.\n2.  **ESTILO VETORIAL:** Use linhas limpas e paletas de cores planas.\n3.  **BORDA DE ADESIVO:** Adicione uma borda branca espessa ao redor do assunto principal para simular um adesivo de vinil.\n4.  **SAÍDA:** O resultado deve ser nítido e escalável.`;
-    if (stylePrompt && stylePrompt.trim()) {
-        fullPrompt += `\n\n**INSTRUÇÕES DE ESTILO ADICIONAIS:** "${stylePrompt}"`;
-    }
-    return singleImageAndTextToImage(sourceImage, fullPrompt);
-};
-
-export const generateMagicMontage = async (sourceImage: File, prompt: string, secondImage?: File): Promise<string> => {
-    const sourcePart = await fileToPart(sourceImage);
-    const parts: Part[] = [
-        { text: "Esta é a imagem base principal para edição:" },
-        sourcePart,
-    ];
-
-    if (secondImage) {
-        const secondPart = await fileToPart(secondImage);
-        parts.push({ text: "Esta é uma segunda imagem opcional para incorporar na edição:" });
-        parts.push(secondPart);
-    }
-
-    const fullPrompt = `### COMANDO: MONTAGEM MÁGICA\n\n**OBJETIVO:** Realize uma edição na imagem base, seguindo as instruções do usuário. Se uma segunda imagem for fornecida, incorpore-a na edição.\n\n**REGRAS DE EXECUÇÃO OBRIGATÓRIAS:**\n1.  **COERÊNCIA VISUAL:** A edição deve se integrar perfeitamente à imagem base em termos de iluminação, sombras, textura, perspectiva e estilo.\n2.  **PRESERVAÇÃO DE IDENTIDADE:** Se a edição envolver um rosto, a identidade facial original (traços, expressões) deve ser 100% preservada, a menos que o prompt solicite explicitamente uma alteração de identidade. A consistência do tom de pele entre o rosto e o corpo deve ser mantida.\n3.  **FIDELIDADE AO PROMPT:** Siga as instruções do usuário com a maior precisão possível.\n\n**INSTRUÇÕES DO USUÁRIO:** "${prompt}"\n\n${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
-    parts.push({ text: fullPrompt });
-
-    return generateImageFromParts(parts);
-};
-
-export const generateVideo = async (prompt: string, aspectRatio: string): Promise<string> => {
-    let operation = await ai.models.generateVideos({
-        model: 'veo-2.0-generate-001',
-        prompt,
-        config: { aspectRatio }
-    });
-    while (!operation.done) {
-        await new Promise(resolve => setTimeout(resolve, 10000));
-        operation = await ai.operations.getVideosOperation({ operation });
-    }
-    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-    if (!downloadLink) {
-        throw new Error('A geração de vídeo falhou ou não retornou um URI.');
-    }
-    const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
-    if (!response.ok) {
-        throw new Error(`Falha ao baixar o vídeo: ${response.statusText}`);
-    }
-    const videoBlob = await response.blob();
-    return URL.createObjectURL(videoBlob);
-};
-
-export const generateAnimationFromImage = async (sourceImage: File, prompt: string): Promise<string> => {
-    const dataUrl = await fileToDataURL(sourceImage);
-    const arr = dataUrl.split(',');
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    const mimeType = mimeMatch?.[1] || sourceImage.type;
-    const data = arr[1];
-
-    let operation = await ai.models.generateVideos({
-        model: 'veo-2.0-generate-001',
-        prompt,
-        image: { imageBytes: data, mimeType },
-    });
-    while (!operation.done) {
-        await new Promise(resolve => setTimeout(resolve, 10000));
-        operation = await ai.operations.getVideosOperation({ operation });
-    }
-    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-    if (!downloadLink) {
-        throw new Error('A geração de vídeo falhou ou não retornou um URI.');
-    }
-    const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
-    if (!response.ok) {
-        throw new Error(`Falha ao baixar o vídeo: ${response.statusText}`);
-    }
-    const videoBlob = await response.blob();
-    return URL.createObjectURL(videoBlob);
-};
-
-export const generateInteriorDesign = async (image: File, mask: File, roomType: string, roomStyle: string, prompt: string): Promise<string> => {
-    const imagePart = await fileToPart(image);
-    const maskPart = await fileToPart(mask);
-    const textPrompt = `### COMANDO: DESIGN DE INTERIORES\n\n**OBJETIVO:** Redesenhar a área mascarada da foto de um(a) ${roomType} para um estilo ${roomStyle}.\n\n**INSTRUÇÕES DO USUÁRIO:** "${prompt}"\n\n**REGRAS DE EXECUÇÃO:**\n1.  **ALTERAR APENAS A MÁSCARA:** Apenas a área mascarada deve ser alterada.\n2.  **INTEGRAÇÃO PERFEITA:** O novo design deve se integrar perfeitamente ao resto da imagem, com iluminação e sombras consistentes.\n3.  **FOTORREALISMO:** O resultado deve ser fotorrealista.`;
-    return generateImageFromParts([imagePart, maskPart, { text: textPrompt }]);
-};
-
-export const fuseImages = async (compositionImage: File, styleImages: File[]): Promise<string> => {
-    const compositionPart = await fileToPart(compositionImage);
-    const parts: Part[] = [
-        { text: "Imagem 1 (Composição): Utilize a estrutura e os objetos desta imagem como base." },
-        compositionPart,
-    ];
-
-    for (const [index, file] of styleImages.entries()) {
-        parts.push({ text: `Imagem ${index + 2} (Estilo): Aplique o estilo artístico, cores e iluminação desta imagem na Imagem 1.` });
-        parts.push(await fileToPart(file));
-    }
-
-    const fullPrompt = `### COMANDO: FUSÃO CRIATIVA\n\n**OBJETIVO:** Combinar a **composição** da Imagem 1 com o **estilo** das outras imagens, buscando um resultado final que pareça natural e integrado.\n\n**REGRAS DE EXECUÇÃO OBRIGATÓRIAS:**\n\n**PRIMEIRO VAI IDENTIFICAR O ESTILO DA IMAGEM**, analisando elementos como: cores predominantes, tipo de pincelada (se aplicável), intensidade da luz e sombras, e a atmosfera geral da imagem.\n\n1.  **MANTER COMPOSIÇÃO:** A estrutura, os objetos e o layout da **Imagem 1 (Composição)** DEVEM ser a base do resultado. Isso inclui a posição dos elementos principais, a perspectiva e o enquadramento da cena. Não alterar a essência da composição original.\n2.  **APLICAR ESTILO:** O estilo artístico, a paleta de cores, a iluminação e as texturas das **Imagens de Estilo** (Imagem 2, 3, etc.) DEVEM ser aplicados sobre a composição da Imagem 1. Prestar atenção especial à adaptação da paleta de cores para que se harmonize com a composição original, e à aplicação de texturas de forma realista e coerente.\n3.  **RESULTADO COESO:** O resultado final deve ser uma fusão harmoniosa e de alta qualidade. Evitar a sobreposição óbvia de estilos, buscando uma transição suave e uma sensação de unidade visual. O objetivo é criar uma imagem que pareça ter sido concebida originalmente com o estilo desejado, e não como uma colagem de elementos distintos.`;
-    parts.push({ text: fullPrompt });
-
-    return generateImageFromParts(parts);
-};
-
-export const generateDoubleExposure = async (portraitImage: File, landscapeImage: File): Promise<string> => {
-    const portraitPart = await fileToPart(portraitImage);
-    const landscapePart = await fileToPart(landscapeImage);
-    const parts: Part[] = [
-        { text: "Imagem 1 (Retrato): Use a silhueta desta pessoa como a forma principal." },
-        portraitPart,
-        { text: "Imagem 2 (Paisagem): Use esta imagem como a textura/preenchimento dentro da silhueta." },
-        landscapePart,
-    ];
-
-    const fullPrompt = `### COMANDO: DUPLA EXPOSIÇÃO ARTÍSTICA\n\n**OBJETIVO:** Criar um efeito de dupla exposição, mesclando a imagem de paisagem (Imagem 2) dentro da silhueta da pessoa no retrato (Imagem 1).\n\n**REGRAS DE EXECUÇÃO OBRIGATÓRIAS:**\n1.  **SILHUETA DO RETRATO:** A forma principal da imagem final deve ser a silhueta da pessoa da Imagem 1.\n2.  **PREENCHIMENTO COM PAISAGEM:** A Imagem 2 (paisagem) deve preencher a silhueta da pessoa, criando uma mescla visualmente interessante.\n3.  **ESTILO ARTÍSTICO:** O resultado deve ser coeso e artístico, com uma transição suave entre a silhueta e o fundo. Um fundo claro e minimalista é preferível.\n${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
-    parts.push({ text: fullPrompt });
-
-    return generateImageFromParts(parts);
-};
-
-export const outpaintImage = (sourceImage: File, userPrompt: string, aspectRatio: string): Promise<string> => {
-    const fullPrompt = `### COMANDO: PINTURA EXPANSIVA (OUTPAINTING)\n\n**OBJETIVO:** Expandir a imagem fornecida para uma nova proporção de ${aspectRatio}.\n\n**REGRAS DE EXECUÇÃO OBRIGATÓRIAS:**\n1.  **EXTENSÃO COERENTE:** As novas áreas geradas DEVEM estender a cena original de forma lógica e realista.\n2.  **CONSISTÊNCIA TOTAL:** Mantenha 100% de consistência com a imagem original em estilo, iluminação, sombras, textura e grão.\n3.  **TRANSIÇÃO PERFEITA:** A junção entre a imagem original e as áreas geradas deve ser imperceptível.\n4.  **INSTRUÇÃO ADICIONAL:** Se houver instruções do usuário, incorpore-as nas novas áreas: "${userPrompt}"\n\n**QUALIDADE:** O resultado deve ser de alta resolução e fotorrealista.`;
-    return singleImageAndTextToImage(sourceImage, fullPrompt);
-};
-
-export const generateProductPhoto = (sourceImage: File, prompt: string): Promise<string> => {
-    const fullPrompt = `### COMANDO: FOTOGRAFIA DE PRODUTO\n\n**OBJETIVO:** Posicionar o produto fornecido (com fundo transparente) em um novo cenário fotorrealista.\n\n**DESCRIÇÃO DO CENÁRIO DO USUÁRIO:** "${prompt}"\n\n**REGRAS DE EXECUÇÃO OBRIGATÓRIAS:**\n1.  **INTEGRAÇÃO REALISTA:** O produto deve se integrar perfeitamente ao novo cenário.\n2.  **ILUMINAÇÃO E SOMBRAS:** A iluminação no produto DEVE corresponder à iluminação do cenário. Crie sombras e reflexos realistas.\n3.  **FOCO:** O produto deve ser o ponto focal principal, nítido e atraente.\n4.  **QUALIDADE DE ESTÚDIO:** O resultado final deve ser de alta resolução e com micro-detalhes visíveis.`;
-    return singleImageAndTextToImage(sourceImage, fullPrompt);
-};
-
-export const restorePhoto = (image: File, colorize: boolean = false) => {
-    let prompt = `### COMANDO: RESTAURAÇÃO DE FOTOGRAFIA\n\n**OBJETIVO:** Restaurar completamente a imagem fornecida para uma qualidade impecável e de alta definição.\n\n**TAREFAS OBRIGATÓRIAS:**\n1.  **Remover Defeitos:** Elimine TODOS os defeitos físicos (arranhões, poeira, rasgos, manchas).\n2.  **Remover Ruído:** Elimine completamente o ruído digital e o grão do filme.\n3.  **Aumentar Nitidez:** Melhore a nitidez geral e realce os micro-detalhes e texturas.\n4.  **Aumentar Resolução:** Aumente a escala da imagem em 1.5x para melhorar a clareza.`;
-    if (colorize) {
-        prompt += "\n5.  **Colorizar:** Se a imagem for em preto e branco ou sépia, aplique cores realistas e historicamente precisas.";
-    }
-    prompt += CRITICAL_FACIAL_PRESERVATION_DIRECTIVE;
-    return singleImageAndTextToImage(image, prompt);
-};
-
-export const generateImageVariation = (sourceImage: File, strength: number): Promise<string> => singleImageAndTextToImage(sourceImage, `Gere uma variação desta imagem. A força da variação deve ser em torno de ${strength}%.`);
-export const applyStyle = (image: File, stylePrompt: string) => singleImageAndTextToImage(image, `Aplique o seguinte estilo artístico a esta imagem: ${stylePrompt}`);
-export const removeBackground = (image: File) => singleImageAndTextToImage(image, `### COMANDO: REMOVER FUNDO\n\n**OBJETIVO:** Isolar o assunto principal da imagem e remover completamente o fundo, resultando em um fundo transparente.\n\n**REGRAS DE EXECUÇÃO:**\n1.  **SEGMENTAÇÃO PRECISA:** O recorte ao redor do assunto deve ser extremamente preciso.\n2.  **PRESERVAR DETALHES FINOS:** Preste atenção especial para preservar detalhes complexos como fios de cabelo, pelos ou bordas translúcidas.\n\n${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`);
-export const generateAdjustedImage = (image: File, adjustmentPrompt: string) => singleImageAndTextToImage(image, `Ajuste esta imagem com base na seguinte descrição: ${adjustmentPrompt}${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`);
-export const reacenderImage = (image: File, prompt: string) => singleImageAndTextToImage(image, `Reacenda esta imagem de acordo com a seguinte descrição: ${prompt}${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`);
-export const generateLowPoly = (image: File) => singleImageAndTextToImage(image, "Converta esta imagem para um estilo de arte low-poly.");
-export const extractArt = (image: File) => singleImageAndTextToImage(image, "Extraia a arte de linha desta imagem, criando um esboço em preto e branco dos contornos principais.");
-export const applyDustAndScratch = (image: File) => singleImageAndTextToImage(image, `Aplique um efeito de filme antigo a esta imagem, adicionando poeira e arranhões realistas.${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`);
-export const denoiseImage = (image: File) => restorePhoto(image);
-export const applyFaceRecovery = (image: File) => restorePhoto(image);
-
-export const generateProfessionalPortrait = async (image: File): Promise<string> => {
-    const promptTemplate = "Close-up de um headshot profissional de [ASSUNTO]. A pessoa está vestindo uma roupa profissional de negócios, com um fundo de escritório desfocado. A iluminação é suave e uniforme, destacando as características faciais da pessoa. A foto deve ser tirada com uma câmera DSLR de alta qualidade, resultando em uma imagem nítida e de alta resolução.";
-    return generateImageWithDescription(image, promptTemplate);
-};
-
-export const upscaleImage = (image: File, factor: number, preserveFace: boolean) => {
-    const prompt = `### COMANDO: AUMENTAR RESOLUÇÃO (UPSCALE)\n\n**OBJETIVO:** Aumentar a resolução desta imagem por um fator de ${factor}x.\n\n**REGRAS DE EXECUÇÃO:**\n1.  **AUMENTAR NITIDEZ:** Melhore a nitidez geral e realce os detalhes finos durante o processo de aumento de escala.\n2.  **EVITAR ARTEFATOS:** Não introduza artefatos visuais ou suavidade excessiva.`;
-    const finalPrompt = `${prompt}${preserveFace ? `\n3.  **PRESERVAÇÃO FACIAL:** Preste atenção especial para preservar e aprimorar os detalhes faciais de forma realista. ${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}` : ''}`;
-    return singleImageAndTextToImage(image, finalPrompt);
-};
-
-export const unblurImage = (image: File, sharpenLevel: number, denoiseLevel: number, model: string) => {
-    const prompt = `### COMANDO: REMOVER DESFOQUE\n\n**OBJETIVO:** Corrigir o desfoque na imagem.\n\n**PARÂMETROS:**\n- **Tipo de Desfoque Identificado:** ${model}\n- **Nível de Nitidez a Aplicar:** ${sharpenLevel}%\n- **Nível de Redução de Ruído a Aplicar:** ${denoiseLevel}%\n\n**REGRAS DE EXECUÇÃO:**\n1.  **CORRIGIR DESFOQUE:** Remova o desfoque com base no modelo identificado.\n2.  **APLICAR PARÂMETROS:** Use os níveis de nitidez e redução de ruído especificados para refinar o resultado.\n${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
-    return singleImageAndTextToImage(image, prompt);
-};
-
-export const applyGenerativeSharpening = (image: File, intensity: number): Promise<string> => {
-    const prompt = `### COMANDO: NITIDEZ GENERATIVA\n\n**OBJETIVO:** Aumentar a nitidez da imagem em ${intensity}%.\n\n**REGRAS DE EXECUÇÃO:**\n1.  **FOCO EM MICRO-CONTRASTE:** A nitidez deve focar em realçar micro-contrastes e texturas sutis.\n2.  **PRIORIZAR DETALHES:** Priorize detalhes finos como fios de cabelo, texturas de tecido ou imperfeições de superfície.\n3.  **EVITAR ARTEFATOS:** Não introduza halos, artefatos visuais ou granulação excessiva.\n${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
-    return singleImageAndTextToImage(image, prompt);
-};
-
-export const enhanceResolutionAndSharpness = (image: File, factor: number, intensity: number, preserveFace: boolean) => {
-    const prompt = `### COMANDO: SUPER RESOLUÇÃO\n\n**OBJETIVO:** Aumentar a resolução da imagem por um fator de ${factor}x e aplicar nitidez generativa a uma intensidade de ${intensity}%.\n\n**REGRAS DE EXECUÇÃO:**\n1.  **AÇÃO DUPLA:** Realize o aumento de escala e a nitidez simultaneamente para um resultado coeso.\n2.  **MELHORIA SIGNIFICATIVA:** O objetivo é melhorar drasticamente tanto a resolução quanto a nitidez percebida.\n${preserveFace ? `3.  **PRESERVAÇÃO FACIAL:** Preste atenção especial para preservar e aprimorar os detalhes faciais de forma realista. ${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}` : ''}`;
-    return singleImageAndTextToImage(image, prompt);
-};
-
-export const generativeEdit = async (image: File, prompt: string, options: { maskImage?: File, secondImage?: File }): Promise<string> => {
-    const parts: Part[] = [{ text: "Esta é a imagem base para edição:" }, await fileToPart(image)];
-
-    if (options.secondImage) {
-        parts.push({ text: "Esta é uma segunda imagem para usar na composição:" }, await fileToPart(options.secondImage));
-    }
-
-    if (options.maskImage) {
-        parts.push({ text: "Esta é a máscara que define a área de edição (área branca):" }, await fileToPart(options.maskImage));
-    }
-
-    const finalPrompt = `### COMANDO: EDIÇÃO GENERATIVA\n\n**INSTRUÇÃO:** Realize uma edição na imagem base. Se uma máscara for fornecida, a edição deve ser contida APENAS na área branca da máscara.\n\n**TAREFA DO USUÁRIO:** "${prompt}"\n\n**REGRAS DE EXECUÇÃO:**\n1.  **INTEGRAÇÃO PERFEITA:** O resultado deve ser fotorrealista e se integrar perfeitamente ao resto da imagem em termos de iluminação, sombras, textura e estilo.\n2.  **PRESERVAÇÃO DO RESTANTE:** Não altere nenhuma parte da imagem fora da área de edição designada.\n3.  **FIDELIDADE AO PROMPT:** Siga a tarefa do usuário com precisão.\n${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
-    parts.push({ text: finalPrompt });
-
-    return generateImageFromParts(parts);
-};
-
-export const suggestToolFromPrompt = async (prompt: string): Promise<{name: string, args: any} | null> => {
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-            tools: [{ functionDeclarations: smartSearchToolDeclarations }],
-        }
-    });
-    handleGenAIResponse(response);
-    const functionCall = response.functionCalls?.[0];
-    if (functionCall) {
-        return { name: functionCall.name, args: functionCall.args };
-    }
-    return null;
-};
-
-export const generateMask = (image: File): Promise<string> => singleImageAndTextToImage(image, "Analise esta imagem e identifique o assunto principal. Gere uma máscara em preto e branco onde o assunto principal é branco e o fundo é preto.");
-
-export const faceSwap = async (
-    targetImage: File,
-    maskImage: File,
-    sourceImage: File,
-    userPrompt: string
-): Promise<string> => {
-    const targetPart = await fileToPart(targetImage);
-    const maskPart = await fileToPart(maskImage);
-    const sourcePart = await fileToPart(sourceImage);
-
-    const parts: Part[] = [
-        { text: "IMAGEM DE DESTINO (BASE): O rosto nesta imagem será substituído." },
-        targetPart,
-        { text: "IMAGEM DE ORIGEM (NOVO ROSTO): O rosto desta imagem será usado para a substituição." },
-        sourcePart,
-        { text: "MÁSCARA DE EDIÇÃO: A área branca indica onde o novo rosto deve ser colocado na imagem de destino." },
-        maskPart,
-    ];
-
-    const finalPrompt = `### COMANDO: COMPOSIÇÃO FACIAL FOTORREALISTA
-
-**OBJETIVO:** Substituir o rosto na área mascarada da IMAGEM DE DESTINO pelo rosto da IMAGEM DE ORIGEM, criando uma composição natural e realista.
-
-**REGRAS DE EXECUÇÃO CRÍTICAS:**
-
-1.  **PRESERVAÇÃO DA IDENTIDADE DE ORIGEM:** A identidade facial completa (traços, expressão, características únicas) da IMAGEM DE ORIGEM deve ser transferida para a IMAGEM DE DESTINO. O resultado DEVE ser reconhecível como a pessoa da IMAGEM DE ORIGEM.
-
-2.  **INTEGRAÇÃO PERFEITA:** O novo rosto deve se integrar perfeitamente à imagem de destino. Isso inclui:
-    * **Correspondência de Iluminação:** A iluminação no novo rosto (direção, dureza, cor da luz) DEVE corresponder exatamente à iluminação do corpo e do ambiente na IMAGEM DE DESTINO.
-    * **Harmonização do Tom de Pele:** O tom de pele do novo rosto e do pescoço (da imagem de destino) DEVE ser perfeitamente harmonizado para parecer natural.
-    * **Consistência de Ângulo e Perspectiva:** O ângulo e a perspectiva do novo rosto devem ser ajustados para corresponder à pose da cabeça na IMAGEM DE DESTINO.
-    * **Fusão de Bordas:** A transição entre o novo rosto e o pescoço/cabelo deve ser imperceptível, sem linhas de recorte visíveis.
-
-3.  **INSTRUÇÕES ADICIONAIS DO USUÁRIO:** ${userPrompt || "Nenhuma."}
-
-**FALHA SERÁ CONSIDERADA SE:**
-- O resultado parecer uma colagem ou recorte.
-- A iluminação ou o tom de pele forem inconsistentes.
-- A identidade facial da pessoa de origem for alterada.`;
     
-    parts.push({ text: finalPrompt });
-
-    return generateImageFromParts(parts);
+    const configString = config ? JSON.stringify(config) : '';
+    const keyString = `${model}:${contentHash}:${configString}`;
+    return await sha256(keyString);
 };
 
-export const detectObjects = async (image: File, prompt: string = "Detect up to 3 of the most prominent objects in this image, ranked by visual importance (size, focus, centrality). Provide their labels and normalized bounding boxes."): Promise<DetectedObject[]> => {
-    const imagePart = await fileToPart(image);
+
+/**
+ * Converts a File to a GenerativePart for the Gemini API.
+ */
+export const fileToPart = async (file: File) => {
+  const dataUrl = await fileToDataURL(file);
+  const base64Data = dataUrl.split(',')[1];
+  return {
+    inlineData: {
+      mimeType: file.type,
+      data: base64Data,
+    },
+  };
+};
+
+/**
+ * A generic function to handle Gemini API calls that return an image.
+ */
+export const generateImageWithGemini = async (
+  model: string,
+  contents: any,
+  setToast: (toast: Toast | null) => void,
+  config?: any
+): Promise<string> => {
+  const cacheKey = await generateCacheKey(model, contents, config);
+  const cachedBlob = await db.loadImageFromCache(cacheKey);
+  if (cachedBlob) {
+    showToast(setToast, 'Resultado carregado do cache.', 'info');
+    return fileToDataURL(new File([cachedBlob], 'cached.png', { type: cachedBlob.type }));
+  }
+
+  try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: { parts: [imagePart, {text: prompt}] },
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              objects: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    label: { type: Type.STRING, description: 'The name of the detected object.' },
-                    box: {
-                      type: Type.OBJECT,
-                      description: 'The normalized bounding box coordinates (0.0 to 1.0).',
-                      properties: {
-                        x_min: { type: Type.NUMBER },
-                        y_min: { type: Type.NUMBER },
-                        x_max: { type: Type.NUMBER },
-                        y_max: { type: Type.NUMBER },
-                      },
-                      required: ['x_min', 'y_min', 'x_max', 'y_max'],
-                    },
-                  },
-                  required: ['label', 'box'],
-                },
-              },
-            },
-            required: ['objects'],
-          },
-        },
+      model,
+      contents,
+      config,
     });
-    handleGenAIResponse(response);
+
+    const part = response.candidates?.[0]?.content?.parts?.[0];
+    if (part?.inlineData?.data) {
+      const mimeType = part.inlineData.mimeType;
+      const dataUrl = `data:${mimeType};base64,${part.inlineData.data}`;
+      
+      const resultFile = dataURLtoFile(dataUrl, 'cached-result.png');
+      await db.saveImageToCache(cacheKey, resultFile);
+
+      return dataUrl;
+    } else if (part?.text) {
+        // Fallback for models that might return text errors instead of images
+        throw new Error(`API returned text instead of an image: ${part.text}`);
+    }
+
+    throw new Error("A imagem gerada não foi encontrada na resposta da API.");
+  } catch (error) {
+    console.error("Erro na chamada da API Gemini:", error);
+    const userFriendlyError = handleGeminiError(error);
+    showToast(setToast, userFriendlyError, 'error');
+    throw error;
+  }
+};
+
+
+// --- Service Functions ---
+
+export const analyzeImage = async (imageFile: File, question: string, setToast: (toast: Toast | null) => void): Promise<string | undefined> => {
+  try {
+    const ai = getAI();
+    const imagePart = await fileToPart(imageFile);
+    const textPart = { text: question };
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-pro', // A good model for multimodal tasks
+      contents: { parts: [imagePart, textPart] },
+    });
+    return response.text;
+  } catch (error) {
+    console.error("Erro na análise da imagem:", error);
+    const userFriendlyError = handleGeminiError(error);
+    showToast(setToast, userFriendlyError, 'error');
+    return undefined;
+  }
+};
+
+export const generateImageFromText = async (prompt: string, aspectRatio: string, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void): Promise<string> => {
+    setLoadingMessage("Gerando imagem com Imagen...");
+
+    const cacheKey = await sha256(`imagen-4.0-generate-001:${prompt}:${aspectRatio}`);
+    const cachedBlob = await db.loadImageFromCache(cacheKey);
+    if (cachedBlob) {
+        setLoadingMessage(null);
+        showToast(setToast, 'Imagem carregada do cache.', 'info');
+        return fileToDataURL(new File([cachedBlob], "cached.png", { type: cachedBlob.type }));
+    }
+
     try {
-        const jsonResponse = JSON.parse(response.text);
-        return (jsonResponse.objects as DetectedObject[]) || [];
-    } catch (e) {
-        console.error("Failed to parse JSON from object detection", e);
-        return [];
+        const ai = getAI();
+        const response = await ai.models.generateImages({
+            model: 'imagen-4.0-generate-001',
+            prompt: prompt,
+            config: {
+              numberOfImages: 1,
+              aspectRatio: aspectRatio as any,
+            },
+        });
+
+        const base64ImageBytes = response.generatedImages[0].image.imageBytes;
+        const dataUrl = `data:image/png;base64,${base64ImageBytes}`;
+        
+        const resultFile = dataURLtoFile(dataUrl, 'cached-imagen.png');
+        await db.saveImageToCache(cacheKey, resultFile);
+
+        return dataUrl;
+    } catch (error) {
+        console.error("Erro na geração de imagem com Imagen:", error);
+        const userFriendlyError = handleGeminiError(error);
+        showToast(setToast, userFriendlyError, 'error');
+        throw error; // Re-throw to allow UI to handle loading state
     }
 };
 
-export const detectFaces = (image: File): Promise<DetectedObject[]> => {
-    return detectObjects(image, "Detect all human faces in this image and provide their labels and normalized bounding boxes.");
-};
-
-export const retouchFace = async (image: File, mask: File): Promise<string> => {
-    const imagePart = await fileToPart(image);
-    const maskPart = await fileToPart(mask);
-    const textPrompt = `### COMANDO: RETOQUE FACIAL PROFISSIONAL\n\n**OBJETIVO:** Realizar um retoque facial de alta qualidade na área mascarada da imagem original.\n\n**TAREFAS (APENAS NA ÁREA MASCARADA):**\n1.  **Suavização da Pele:** Suavize sutilmente a textura da pele para reduzir linhas finas e imperfeições, preservando os poros naturais (evitar aparência de plástico).\n2.  **Remoção de Manchas:** Remova pequenas manchas, espinhas ou acne.\n3.  **Melhora dos Olhos:** Clareie suavemente o branco dos olhos e realce ligeiramente a cor e a nitidez da íris.\n4.  **Clareamento dos Dentes:** Se os dentes estiverem visíveis e amarelados, clareie-os para um tom natural.\n5.  **Redução de Sombras:** Reduza levemente as sombras fortes sob os olhos.\n\n**REGRAS DE EXECUÇÃO:**\n- O resultado deve parecer natural, realista e perfeitamente integrado com as partes não mascaradas da imagem.\n${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
-    
-    return generateImageFromParts([imagePart, maskPart, { text: textPrompt }]);
-};
-
-export const generateCaricature = async (images: File[], prompt: string): Promise<string> => {
-    const imageParts = await Promise.all(images.map(fileToPart));
-    const textPart = { text: `Crie uma única caricatura combinando as características das pessoas de todas as imagens fornecidas. Instruções de estilo: ${prompt}` };
-    return generateImageFromParts([...imageParts, textPart]);
-};
-
-export const applyDisneyPixarStyle = (image: File, prompt: string): Promise<string> => singleImageAndTextToImage(image, `Transforme este retrato em um personagem no estilo de animação 3D da Disney Pixar. Instruções adicionais: ${prompt}.${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`);
-export const generate3DMiniature = (image: File, prompt:string): Promise<string> => singleImageAndTextToImage(image, `Transforme a pessoa nesta foto em uma miniatura de brinquedo 3D. Instruções adicionais: ${prompt}.${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`);
-export const generate90sYearbookPortrait = (image: File, prompt: string): Promise<string> => singleImageAndTextToImage(image, `Transforme esta foto em um retrato de anuário dos anos 90. Deve ter o foco suave, a iluminação de estúdio e o fundo característicos daquela época. Instruções adicionais: ${prompt}.${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`);
-
-export const generateStyledPortrait = async (personImage: File, styleImages: File[], prompt: string, negativePrompt: string): Promise<string> => {
-    const personPart = await fileToPart(personImage);
-    const parts: Part[] = [
-        { text: "Imagem 1 (Pessoa): O rosto e a identidade desta pessoa devem ser preservados em 100%." },
-        personPart,
-    ];
-    
-    for (const [index, file] of styleImages.entries()) {
-        const stylePart = await fileToPart(file);
-        parts.push({ text: `Imagem ${index + 2} (Estilo ${index + 1}): Aplique o cenário, a iluminação e as roupas desta imagem na Pessoa (Imagem 1).` });
-        parts.push(stylePart);
-    }
-
-    let textPrompt = `**Instrução principal:** Aplique o estilo (roupa, fundo, iluminação) de TODAS as imagens de estilo na pessoa da Imagem 1, garantindo que o rosto e cabelo não sejam alterados.`;
-    
-    if (prompt) textPrompt += ` **Instruções de refinamento:** ${prompt}.`;
-    if (negativePrompt) textPrompt += ` **Evite o seguinte:** ${negativePrompt}.`;
-
-    textPrompt += `${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
-    parts.push({ text: textPrompt });
-    
-    return generateImageFromParts(parts);
-};
-
-export const generateStudioPortrait = (personImage: File, mainPrompt: string, negativePrompt: string): Promise<string> => {
-    const fullPrompt = `${mainPrompt} ${negativePrompt ? `Evite os seguintes elementos: ${negativePrompt}.` : ''}${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
-    return singleImageAndTextToImage(personImage, fullPrompt);
-};
-
-export const generatePolaroidWithCelebrity = async (personImage: File, celebrityImage: File, negativePrompt: string): Promise<string> => {
-    const personPart = await fileToPart(personImage);
-    const celebrityPart = await fileToPart(celebrityImage);
-    const textPrompt = `### COMANDO: FOTO POLAROID COM CELEBRIDADE\n\n**OBJETIVO:** Criar uma foto realista no estilo Polaroid com a pessoa da Imagem 1 e a celebridade da Imagem 2 juntas.\n\n**REGRAS DE EXECUÇÃO:**\n1.  **INTEGRAÇÃO NATURAL:** As duas pessoas devem parecer estar na mesma foto, interagindo naturalmente.\n2.  **ESTILO POLAROID:** O resultado deve ter a aparência de uma foto Polaroid (bordas, cores, etc.).\n3.  **PROMPT NEGATIVO:** Evite o seguinte: ${negativePrompt}.\n\n**Diretriz de Execução de Nível Máximo: Preservação da Identidade Facial Original de AMBAS as pessoas.**\nA prioridade absoluta é a preservação da identidade facial original de AMBAS as pessoas nas fotos. O sistema NÃO deve descaracterizar NENHUM dos rostos.`;
-    return generateImageFromParts([personPart, celebrityPart, { text: textPrompt }]);
-};
-
-export const generateImageWithDescription = async (image: File, promptTemplate: string): Promise<string> => {
-    const imagePartForDesc = await fileToPart(image);
-    const descriptionPrompt = { text: "Descreva de forma concisa o assunto principal nesta imagem (por exemplo, 'um homem de cabelo castanho vestindo uma jaqueta azul' ou 'um cachorro golden retriever'). A descrição deve ser curta e direta, adequada para ser inserida em outro prompt." };
-
-    const descriptionResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: { parts: [imagePartForDesc, descriptionPrompt] },
-    });
-    handleGenAIResponse(descriptionResponse);
-    const subjectDescription = descriptionResponse.text.trim();
-
-    const finalPrompt = `${promptTemplate.replace(/\[ASSUNTO\]/g, subjectDescription)}${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
-    
-    const imagePartForGen = await fileToPart(image);
-    const textPartForGen = { text: finalPrompt };
-    
-    return generateImageFromParts([imagePartForGen, textPartForGen]);
-};
-
-// FIX: Add generateFunkoPop function
-export const generateFunkoPop = async (
-    mainImage: File, 
-    personImage: File | null, 
-    bg: string, 
-    obj: string, 
-    light: string, 
-    type: string, 
-    finish: string
-): Promise<string> => {
-
-    const parts: Part[] = [
-        { text: "IMAGEM_BASE (para estilo/assunto):" },
-        await fileToPart(mainImage),
-    ];
-
-    if (personImage) {
-        parts.push({ text: "IMAGEM_PESSOA (para características faciais):" }, await fileToPart(personImage));
-    }
-
-    const fullPrompt = `### COMANDO: GERADOR DE FUNKO POP
-
-**OBJETIVO:** Transformar a(s) imagem(ns) fornecida(s) em uma renderização 3D de um boneco colecionável Funko Pop, seguindo as especificações.
-
-**REGRAS DE EXECUÇÃO CRÍTICAS:**
-1.  **ESTILO FUNKO POP:** O resultado DEVE ter o estilo icônico dos bonecos Funko Pop: cabeça grande, corpo pequeno, olhos grandes e pretos, sem boca.
-2.  **FIDELIDADE AO ASSUNTO:**
-    *   Se uma "IMAGEM_PESSOA" for fornecida, a identidade facial (cabelo, formato do rosto, características únicas como barba ou óculos) DEVE ser adaptada para o estilo Funko Pop, mas ainda ser reconhecível.
-    *   Use a "IMAGEM_BASE" para inspirar as roupas, a pose e o tema geral.
-3.  **ESPECIFICAÇÕES DO USUÁRIO:**
-    *   **Tipo de Funko:** ${type}. Se for 'Deluxe' ou 'Moment', crie um cenário elaborado. Se for 'Rides', inclua um veículo.
-    *   **Acabamento Especial:** ${finish}. Se for 'Metálico', 'Brilhante', etc., aplique a textura correspondente no boneco.
-    *   **Objeto:** Se especificado, coloque o seguinte objeto na mão do Funko: "${obj}".
-    *   **Cenário:** Crie o seguinte fundo: "${bg}". Se em branco, crie um fundo de estúdio simples.
-    *   **Iluminação:** Aplique a seguinte iluminação: "${light}".
-    
-**SAÍDA:** Uma renderização 3D fotorrealista de alta qualidade, como se fosse uma foto do produto final.`;
-    
-    parts.push({ text: fullPrompt });
-    return generateImageFromParts(parts);
-};
-
-export const virtualTryOn = async (
-    personImage: File,
-    clothingImage: File,
-    shoeImage: File | undefined,
-    scenePrompt: string,
-    posePrompt: string,
-    cameraLens: string,
-    cameraAngle: string,
-    lightingStyle: string,
-    negativePrompt: string
-): Promise<string> => {
-    const personPart = await fileToPart(personImage);
-    const clothingPart = await fileToPart(clothingImage);
-    
-    const parts: Part[] = [
-        { text: "Imagem da Pessoa (userPhoto):" },
-        personPart,
-        { text: "Imagem da Peça de Roupa (garmentPhoto):" },
-        clothingPart,
-    ];
-
-    if (shoeImage) {
-        const shoePart = await fileToPart(shoeImage);
-        parts.push({ text: "Imagem do Calçado (shoePhoto):" });
-        parts.push(shoePart);
-    }
-    
-    const isStudioMode = scenePrompt.trim() !== '';
-
-    let finalInstruction = `### COMANDO: PROVADOR VIRTUAL${isStudioMode ? ': MODO ESTÚDIO' : ''}\n\n`;
-
-    if (isStudioMode) {
-        finalInstruction += `**OBJETIVO:** Criar uma foto de estúdio completa, vestindo a pessoa na 'userPhoto' com a roupa/calçado fornecidos e colocando-a em um novo cenário com pose, câmera e iluminação profissionais.\n\n`;
-    } else {
-        finalInstruction += `**OBJETIVO:** Vestir a pessoa na 'userPhoto' com a roupa da 'garmentPhoto' (e o calçado da 'shoePhoto', se fornecido), mantendo o fundo original.\n\n`;
-    }
-
-    finalInstruction += `**REGRAS DE EXECUÇÃO OBRIGATÓRIAS:**\n\n`;
-    finalInstruction += `1.  **PRESERVAÇÃO DA IDENTIDADE 100%:** O rosto, cabelo, tom de pele e tipo de corpo da pessoa na 'userPhoto' DEVEM SER MANTIDOS 100% FIÉIS E RECONHECÍVEIS. Transfira as características exatas para o resultado final. NÃO substitua o rosto ou o corpo.\n`;
-    finalInstruction += `2.  **APLICAÇÃO DA ROUPA/CALÇADO:** A(s) peça(s) de roupa/calçado fornecida(s) ('garmentPhoto', 'shoePhoto') devem ser realisticamente ajustadas ao corpo da pessoa. A textura, cor e forma devem ser transferidas fielmente.\n`;
-
-    if (isStudioMode) {
-        finalInstruction += `3.  **CRIAÇÃO DE CENA (MODO ESTÚDIO):**\n`;
-        finalInstruction += `    - **Cenário:** Crie um novo cenário fotorrealista com base na seguinte descrição: "${scenePrompt}".\n`;
-        finalInstruction += `    - **Pose:** Coloque a pessoa na seguinte pose: "${posePrompt}".\n`;
-        finalInstruction += `    - **Câmera:** Simule a foto com uma ${cameraLens}, tirada de um ângulo ${cameraAngle}.\n`;
-        finalInstruction += `    - **Iluminação:** Aplique um estilo de ${lightingStyle} que seja coeso com o cenário.\n`;
-        finalInstruction += `4.  **INTEGRAÇÃO E REALISMO:** A pessoa e as roupas devem se integrar perfeitamente ao novo cenário. Sombras, reflexos e perspectiva devem ser consistentes para um resultado fotorrealista e de alta qualidade, como uma foto de revista.\n`;
-    } else {
-        finalInstruction += `3.  **PRESERVAÇÃO DO FUNDO (MODO SIMPLES):** O cenário de fundo da 'userPhoto' DEVE PERMANECER 100% INTACTO. Nenhuma alteração no fundo é permitida.\n`;
-        finalInstruction += `4.  **INTEGRAÇÃO REALISTA:** Ajuste a iluminação e as sombras na roupa para que correspondam perfeitamente ao ambiente existente na 'userPhoto'.\n`;
-    }
-
-    if (negativePrompt.trim()) {
-        finalInstruction += `5.  **PROMPT NEGATIVO:** Evite estritamente os seguintes elementos: "${negativePrompt}".\n`;
-    }
-
-    finalInstruction += `\n**FALHA SERÁ CONSIDERADA SE:**\n`;
-    finalInstruction += `- O rosto ou corpo da pessoa original for alterado ou descaracterizado.\n`;
-    finalInstruction += `- A roupa não for aplicada corretamente no corpo.\n`;
-    if (isStudioMode) {
-        finalInstruction += `- O resultado parecer uma colagem amadora em vez de uma cena integrada e fotorrealista.\n`;
-    } else {
-        finalInstruction += `- O fundo original da 'userPhoto' for modificado.\n`;
-    }
-
-    finalInstruction += `\n${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}`;
-
-    parts.push({ text: finalInstruction });
-
-    return generateImageFromParts(
-        parts,
+export const generateImageVariation = async (imageFile: File, strength: number, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini(
         'gemini-2.5-flash-image',
-        { responseModalities: [Modality.IMAGE] }
+        { parts: [imagePart] },
+        setToast,
+        {
+          responseModalities: [Modality.IMAGE],
+          // Strength is not a direct parameter, this is a conceptual mapping.
+          // We can't directly control variation strength this way.
+          // This will just generate a similar image.
+        }
     );
 };
 
-interface PngCreatorBackgroundOptions {
-    type: 'color' | 'prompt';
-    value: string;
-}
 
-interface PngCreatorOptions {
-    enhance?: boolean;
-    background?: PngCreatorBackgroundOptions;
-}
+export const validatePromptSpecificity = async (prompt: string, toolName: string): Promise<{ isSpecific: boolean; suggestion: string }> => {
+  const validationPrompt = `Analise o seguinte prompt de usuário para uma ferramenta de IA chamada "${toolName}": "${prompt}". O prompt é específico o suficiente para gerar um resultado de alta qualidade? Responda com um objeto JSON com duas chaves: "isSpecific" (um booleano) e "suggestion" (uma string em português que sugere como melhorar o prompt se ele não for específico, ou uma mensagem de confirmação se for).`;
 
-export const createTransparentPng = async (image: File, options: PngCreatorOptions = {}): Promise<string> => {
-    // 1. Remove background
-    let transparentDataUrl = await removeBackground(image);
-    let imageToProcessFile = dataURLtoFile(transparentDataUrl, 'transparent.png');
-    
-    // 2. Enhance if requested
-    if (options.enhance) {
-        // restorePhoto handles enhancement. colorize=false
-        const enhancedDataUrl = await restorePhoto(imageToProcessFile, false); 
-        transparentDataUrl = enhancedDataUrl;
-        imageToProcessFile = dataURLtoFile(transparentDataUrl, 'enhanced_transparent.png');
-    }
-
-    // 3. Apply background if requested
-    if (options.background) {
-        if (options.background.type === 'color') {
-            return applyBackgroundColor(transparentDataUrl, options.background.value);
-        } else if (options.background.type === 'prompt') {
-            return generateProductPhoto(imageToProcessFile, options.background.value);
+  try {
+    const ai = getAI();
+    const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: validationPrompt,
+        config: {
+            responseMimeType: 'application/json'
         }
-    }
-
-    // 4. Return the transparent image
-    return transparentDataUrl;
+    });
+    
+    const jsonText = response.text.trim();
+    const result = JSON.parse(jsonText);
+    return {
+        isSpecific: result.isSpecific ?? false,
+        suggestion: result.suggestion ?? "Não foi possível validar o prompt."
+    };
+  } catch(e) {
+      console.error("Error validating prompt:", e);
+      // Proceed without validation on error
+      return { isSpecific: true, suggestion: "Validação falhou; prosseguindo." };
+  }
 };
 
+export const removeBackground = async (imageFile: File, options: any, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = `Remova o fundo desta imagem, preservando todos os detalhes do objeto principal, incluindo cabelos finos ou pelos. O resultado deve ser um PNG com fundo transparente.`;
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
 
-export const suggestCreativeEdits = async (image: File): Promise<{ message: string, acceptLabel: string, toolId: ToolId, args?: any } | null> => {
-    const imagePart = await fileToPart(image);
-    const prompt = `
-    Analise a imagem fornecida e sugira uma única, criativa e interessante edição acionável que pode ser realizada nela usando uma das ferramentas de IA disponíveis.
-    A sugestão deve ser inspiradora e indicar claramente o que o usuário pode fazer.
-    
-    Ferramentas disponíveis para sugestões: 'outpainting', 'style', 'relight', 'generativeEdit', 'photoRestoration', 'unblur'.
+export const createTransparentPng = async (imageFile: File, options: any, setToast: (toast: Toast | null) => void): Promise<string> => {
+    return removeBackground(imageFile, options, setToast); // It's the same core operation
+};
 
-    Com base no conteúdo da imagem, escolha a ferramenta MAIS relevante e empolgante. Por exemplo:
-    - Se for uma bela paisagem, mas parecer cortada, sugira 'outpainting'.
-    - Se for uma foto simples, sugira aplicar um 'style' interessante como 'Estilo de anime dos anos 90'.
-    - Se a iluminação for plana, sugira 'relight' com uma instrução específica como 'luz quente e dourada do final da tarde'.
-    - Se houver um elemento óbvio para adicionar/alterar, sugira 'generativeEdit' com um prompt como 'adicione um pequeno barco no lago'.
-    - Se for uma foto antiga ou com ruído, sugira 'photoRestoration'.
-    - Se estiver embaçada, sugira 'unblur'.
+export const reacenderImage = async (imageFile: File, prompt: string, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const fullPrompt = `Reacenda esta foto. A nova iluminação deve ser: ${prompt}. Mantenha o conteúdo da imagem original, alterando apenas a luz e as sombras.`;
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: fullPrompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
 
-    Responda SOMENTE com um objeto JSON com quatro campos:
-    1. "toolId": uma string, o ID da ferramenta a ser usada (ex: 'outpainting').
-    2. "message": uma string em português do Brasil, a mensagem para o usuário (ex: 'Que tal expandir o céu nesta paisagem?').
-    3. "acceptLabel": uma string em português do Brasil, o texto do botão de aceitar (ex: 'Expandir Céu').
-    4. "args": um objeto opcional com argumentos para a ferramenta (ex: {"prompt": "adicione um céu estrelado"}). Se não houver argumentos, omita este campo.
-    `;
-    
+export const generateLowPoly = async (imageFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = 'Transforme esta imagem em uma arte de estilo low poly, usando uma malha de polígonos geométricos e cores simplificadas.';
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const extractArt = async (imageFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = 'Extraia a arte de linha desta imagem, criando um esboço de contorno em preto e branco com um fundo branco limpo.';
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const applyDustAndScratches = async (imageFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = 'Adicione um efeito realista de poeira, arranhões e grão de filme a esta imagem para dar uma aparência vintage.';
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const denoiseImage = async (imageFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = 'Remova o ruído e a granulação desta imagem, preservando os detalhes finos e a nitidez.';
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const applyFaceRecovery = async (imageFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = 'Restaure e melhore os detalhes faciais nesta imagem. Aumente a clareza, corrija imperfeições e melhore a qualidade geral do rosto.';
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const generateProfessionalPortrait = async (imageFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = 'Transforme esta foto em um retrato profissional de negócios. Mantenha o rosto da pessoa, mas gere roupas de negócios, um fundo de escritório desfocado e iluminação de estúdio.';
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const restorePhoto = async (imageFile: File, colorize: boolean, setToast: (toast: Toast | null) => void): Promise<string> => {
+    let prompt = 'Restaure esta foto antiga. Remova arranhões, rasgos e ruído. Melhore a nitidez e os detalhes, especialmente nos rostos.';
+    if (colorize) {
+        prompt += ' Se a foto for em preto e branco, adicione cores realistas.';
+    }
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const upscaleImage = async (imageFile: File, factor: number, preserveFace: boolean, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = `Aumente a resolução desta imagem em ${factor}x. Melhore a nitidez e os detalhes. ${preserveFace ? 'Preste atenção especial para preservar e aprimorar os detalhes faciais de forma realista.' : ''}`;
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const unblurImage = async (imageFile: File, sharpenLevel: number, denoiseLevel: number, model: string, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = `Corrija o desfoque nesta imagem usando o modelo '${model}'. Aplique ${sharpenLevel}% de nitidez e ${denoiseLevel}% de redução de ruído.`;
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const applyStyle = async (imageFile: File, stylePrompt: string, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = `Reimagine esta imagem no seguinte estilo: ${stylePrompt}. Preserve os elementos principais, mas aplique a estética descrita.`;
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const generativeEdit = async (imageFile: File, prompt: string, mode: 'fill' | 'remove', options: { maskImage: File }, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const fullPrompt = mode === 'remove'
+        ? 'Remova o objeto ou área indicada pela máscara e preencha o espaço de forma realista e coerente com o resto da imagem.'
+        : `Na área indicada pela máscara, preencha com o seguinte: ${prompt}. O resultado deve se misturar perfeitamente com o resto da imagem.`;
+
+    const imagePart = await fileToPart(imageFile);
+    const maskPart = await fileToPart(options.maskImage);
+    const parts = [imagePart, maskPart, { text: fullPrompt }];
+    return generateImageWithGemini('gemini-2.5-pro', { parts }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const applyStyleToImage = async (imageFile: File, prompt: string, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const detectObjects = async (imageFile: File, prompt?: string): Promise<DetectedObject[]> => {
+    const ai = getAI();
+    const imagePart = await fileToPart(imageFile);
+    const textPart = { text: `Detecte os seguintes objetos na imagem: ${prompt || 'todos os objetos principais'}. Para cada objeto, forneça um 'label' (rótulo em português) e uma 'box' (caixa delimitadora com coordenadas normalizadas x_min, y_min, x_max, y_max). Retorne um array de objetos JSON.` };
+    const response = await ai.models.generateContent({ model: 'gemini-2.5-pro', contents: { parts: [imagePart, textPart] }, config: { responseMimeType: 'application/json' } });
+    const result = JSON.parse(response.text);
+    return Array.isArray(result) ? result : [];
+};
+
+export const detectFaces = async (imageFile: File): Promise<DetectedObject[]> => {
+    return detectObjects(imageFile, 'todos os rostos de pessoas');
+};
+
+export const retouchFace = async (imageFile: File, maskFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = 'Na área indicada pela máscara, retoque a pele do rosto. Suavize imperfeições, uniformize o tom de pele e reduza o brilho, mantendo uma aparência natural e preservando a textura da pele.';
+    const imagePart = await fileToPart(imageFile);
+    const maskPart = await fileToPart(maskFile);
+    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, maskPart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const faceSwap = async (targetImageFile: File, sourceImageFile: File, userPrompt: string, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = `Troque o rosto da pessoa na primeira imagem (imagem alvo) pelo rosto da pessoa na segunda imagem (imagem fonte). Misture os tons de pele e a iluminação para um resultado realista. ${userPrompt}`;
+    const targetPart = await fileToPart(targetImageFile);
+    const sourcePart = await fileToPart(sourceImageFile);
+    return generateImageWithGemini('gemini-2.5-pro', { parts: [targetPart, sourcePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const generateVideo = async (imageFile: File, prompt: string, aspectRatio: VideoAspectRatio, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void): Promise<string> => {
+    const ai = getAI();
+    let operation;
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: { parts: [imagePart, { text: prompt }] },
+        const imagePart = await fileToPart(imageFile);
+        operation = await ai.models.generateVideos({
+            model: 'veo-3.1-fast-generate-preview',
+            prompt,
+            image: { imageBytes: imagePart.inlineData.data, mimeType: imagePart.inlineData.mimeType },
             config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        toolId: { type: Type.STRING, description: "O ID da ferramenta a ser usada." },
-                        message: { type: Type.STRING, description: "A mensagem para o usuário." },
-                        acceptLabel: { type: Type.STRING, description: "O texto do botão de aceitar." },
-                        args: { 
-                            type: Type.OBJECT, 
-                            properties: {}, // Allows any object properties
-                            nullable: true, 
-                            description: "Argumentos opcionais para a ferramenta." 
-                        },
-                    },
-                    required: ['toolId', 'message', 'acceptLabel'],
-                },
+                numberOfVideos: 1,
+                resolution: '720p',
+                aspectRatio: aspectRatio,
             },
         });
 
-        handleGenAIResponse(response);
-        const jsonResponse = JSON.parse(response.text);
-        
-        // Basic validation of the response
-        if (jsonResponse.toolId && jsonResponse.message && jsonResponse.acceptLabel) {
-            return jsonResponse as { message: string, acceptLabel: string, toolId: ToolId, args?: any };
+        while (!operation.done) {
+            await new Promise(resolve => setTimeout(resolve, 10000));
+            operation = await ai.operations.getVideosOperation({ operation: operation });
         }
-        return null;
 
-    } catch (e) {
-        console.error("Falha ao sugerir edições criativas:", e);
-        return null;
+        const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+        if (!downloadLink) throw new Error("Link para download do vídeo não encontrado.");
+        
+        const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+    } catch (error) {
+        console.error("Erro na geração de vídeo:", error);
+        const userFriendlyError = handleGeminiError(error);
+        showToast(setToast, userFriendlyError, 'error');
+        throw error;
     }
 };
 
-export const generateSuperheroFusion = async (userImage: File, heroImage: File): Promise<string> => {
-    const userPart = await fileToPart(userImage);
-    const heroPart = await fileToPart(heroImage);
+export const suggestToolFromPrompt = async (prompt: string): Promise<SmartSearchResult | null> => {
+    return orchestrateTool(prompt);
+};
 
-    const parts: Part[] = [
-        { text: "IMAGEM_BASE (Rosto do Usuário):" },
-        userPart,
-        { text: "IMAGEM_ALVO (Corpo e Cenário do Herói):" },
-        heroPart,
-    ];
+export const generateAdjustedImage = async (imageFile: File, prompt: string, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const fullPrompt = `Ajuste esta imagem com base na seguinte descrição: "${prompt}". Mantenha o conteúdo da imagem, alterando apenas as cores e a luz.`;
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: fullPrompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
 
-    // PROMPT FINAL E OTIMIZADO: Atribui um papel à IA e detalha o processo de composição.
-    const finalInstruction = `
-### COMANDO: COMPOSIÇÃO DE EFEITOS VISUAIS (VFX) - SUBSTITUIÇÃO FACIAL
+export const outpaintImage = async (imageFile: File, prompt: string, aspectRatio: string, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const fullPrompt = `Expanda esta imagem para uma proporção de ${aspectRatio}. Preencha as novas áreas com o seguinte conteúdo: ${prompt || 'continue a imagem de forma coerente'}.`;
+    const imagePart = await fileToPart(imageFile);
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: fullPrompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
 
-**PAPEL:** Você é um artista de VFX profissional especializado em composição digital fotorrealista para cinema.
+export const generateImageFromParts = async (parts: any[], setToast: (toast: Toast | null) => void): Promise<string> => {
+    return generateImageWithGemini('gemini-2.5-pro', { parts }, setToast, { responseModalities: [Modality.IMAGE] });
+};
 
-**TAREFA:** Sua tarefa é compor o rosto da "IMAGEM_BASE" no corpo do personagem na "IMAGEM_ALVO", criando uma imagem final com qualidade cinematográfica e indistinguível de uma fotografia real.
+export const generateImageWithDescription = async (imageFile: File, description: string, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const imagePart = await fileToPart(imageFile);
+    const textPart = { text: description };
+    return generateImageFromParts([imagePart, textPart], setToast);
+};
 
-**CHECKLIST DE EXECUÇÃO OBRIGATÓRIO:**
+export const generateSuperheroFusion = (person: File, hero: File, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = "Faça a fusão da pessoa na primeira imagem com o super-herói na segunda imagem. Mantenha o rosto da primeira pessoa, mas aplique o traje e o estilo do herói.";
+    return generateImageFromParts([fileToPart(person), fileToPart(hero), { text: prompt }], setToast);
+};
 
-1.  **PRESERVAÇÃO DE IDENTIDADE:** Transfira o rosto da "IMAGEM_BASE" para a "IMAGEM_ALVO", mantendo 100% de fidelidade às características faciais originais. O traje, a pose e o cenário da "IMAGEM_ALVO" devem permanecer intactos.
+export const generateCreativeFusion = (compositionFile: File, styleFiles: File[], setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = "Use a composição da primeira imagem e aplique o estilo das imagens seguintes.";
+    const parts = Promise.all([fileToPart(compositionFile), ...styleFiles.map(fileToPart)]);
+    return parts.then(p => generateImageFromParts([...p, { text: prompt }], setToast));
+};
 
-2.  **ANÁLISE DE CENA:** Analise a "IMAGEM_ALVO" para determinar:
-    * **Fonte de Luz Principal:** A direção (ex: de cima, lateral direita), a cor (quente, fria, neutra) e a dureza (suave, dura) da iluminação principal.
-    * **Luz de Preenchimento e Ambiente:** A cor e a intensidade da luz ambiente que preenche as sombras.
-    * **Grão e Textura:** A quantidade de grão de filme ou ruído de sensor presente na imagem.
-    * **Gradação de Cor (Color Grading Global):** A paleta de cores geral da cena (ex: tons azuis, dessaturado, contraste elevado).
+export const generateAIPortrait = (style: string, personImages: File[], prompt: string, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const fullPrompt = `Crie um retrato no estilo '${style}' usando a(s) pessoa(s) da(s) imagem(ns). Instruções adicionais: ${prompt}`;
+    const parts = Promise.all(personImages.map(fileToPart));
+    return parts.then(p => generateImageFromParts([...p, { text: fullPrompt }], setToast));
+};
 
-3.  **INTEGRAÇÃO FOTORREALISTA (CRÍTICO):** Renderize o rosto transferido para que ele se integre perfeitamente à cena, executando as seguintes ações:
-    * **ILUMINAÇÃO CORRESPONDENTE:** Aplique luz e sombra no rosto que correspondam EXATAMENTE à análise de cena. Se a luz principal vem da esquerda, o lado esquerdo do rosto deve estar mais iluminado.
-    * **FUSÃO DE BORDAS:** Garanta uma transição suave e imperceptível entre o pescoço do herói e a mandíbula/queixo do rosto transferido. Não deve haver nenhuma linha de recorte visível.
-    * **HARMONIZAÇÃO GLOBAL DE COR E TEXTURA:** Este é o passo mais crítico. O resultado final NÃO PODE ter uma discrepância de cor entre o rosto, pescoço e corpo. Execute uma etapa final de **color grading em toda a figura fundida (rosto e corpo)** para garantir que ambos os elementos respondam à luz e à cor do ambiente de forma unificada e coesa. O tom de pele do rosto e de qualquer parte do corpo visível (como o pescoço) deve ser perfeitamente harmonizado.
+export const generateMagicMontage = (imageFile: File, prompt: string, sourceImageFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const fullPrompt = `Execute a seguinte montagem: ${prompt}. Use a primeira imagem como base e a segunda imagem como fonte, se necessário.`;
+    const parts = Promise.all([fileToPart(imageFile), fileToPart(sourceImageFile)]);
+    return parts.then(p => generateImageFromParts([...p, { text: fullPrompt }], setToast));
+};
 
-**FALHA CRÍTICA (RESULTADO INACEITÁVEL):**
--   Qualquer resultado que se pareça com uma colagem, um recorte, um "adesivo" ou uma montagem "chapada".
--   Inconsistência de iluminação, cor ou textura entre o rosto e o corpo.
--   Qualquer alteração na identidade facial da "IMAGEM_BASE".
-${CRITICAL_FACIAL_PRESERVATION_DIRECTIVE}
-`;
+export const generateDoubleExposure = (portraitFile: File, landscapeFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = "Crie um efeito de dupla exposição. Mescle a imagem de paisagem (segunda imagem) dentro da silhueta do retrato (primeira imagem).";
+    const parts = Promise.all([fileToPart(portraitFile), fileToPart(landscapeFile)]);
+    return parts.then(p => generateImageFromParts([...p, { text: prompt }], setToast));
+};
 
-    parts.push({ text: finalInstruction });
-    return generateImageFromParts(parts);
+export const getSceneryDescription = async (sceneryPrompt: string, location: { latitude: number, longitude: number }, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const ai = getAI();
+    const prompt = `O usuário quer colocar um objeto em um cenário. O prompt dele é: "${sceneryPrompt}". A localização atual dele é latitude ${location.latitude}, longitude ${location.longitude}. Transforme o prompt do usuário em uma descrição de cenário rica e detalhada para um gerador de imagens. Se ele mencionar 'perto de mim' ou um local, use as coordenadas para inferir o ambiente. Retorne apenas a descrição do cenário.`;
+    try {
+        const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+        return response.text;
+    } catch(error) {
+        showToast(setToast, handleGeminiError(error), 'error');
+        throw error;
+    }
+};
+
+export const generateProductPhoto = async (objectFile: File, sceneryPrompt: string, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void): Promise<string> => {
+    const prompt = `Coloque o objeto da imagem em um novo cenário descrito por: "${sceneryPrompt}". A iluminação no objeto deve corresponder à iluminação do novo cenário. O resultado deve ser fotorrealista.`;
+    const imagePart = await fileToPart(objectFile);
+    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+};
+
+export const generateAnimationFromImage = async (imageFile: File, prompt: string, aspectRatio: VideoAspectRatio, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void): Promise<string> => {
+    const cacheKey = await generateCacheKey('veo-3.1-fast-generate-preview', imageFile, { prompt, aspectRatio });
+    const cachedBlob = await db.loadImageFromCache(cacheKey);
+    if (cachedBlob) {
+        showToast(setToast, 'Animação carregada do cache.', 'info');
+        return URL.createObjectURL(cachedBlob);
+    }
+    const resultUrl = await generateVideo(imageFile, prompt, aspectRatio, setToast, setLoadingMessage);
+    const response = await fetch(resultUrl);
+    const blob = await response.blob();
+    await db.saveImageToCache(cacheKey, blob);
+    URL.revokeObjectURL(resultUrl); // Clean up the initial blob URL
+    return URL.createObjectURL(blob);
+};
+
+export const generateCharacter = (prompt: string, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void) => generateImageFromText(prompt, '9:16', setToast, setLoadingMessage);
+export const generateLogo = (prompt: string, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void) => generateImageFromText(`logotipo vetorial minimalista, linhas simples e limpas, cores chapadas, alto contraste, adequado para uma marca, centrado em um fundo branco. Conceito: ${prompt}`, '1:1', setToast, setLoadingMessage);
+export const generateSeamlessPattern = (prompt: string, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void) => generateImageFromText(`padrão sem costura repetitivo. ${prompt}`, '1:1', setToast, setLoadingMessage);
+export const generate3DModel = (prompt: string, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void) => generateImageFromText(`renderização de modelo 3D fotorrealista de ${prompt}, iluminação de estúdio, fundo neutro.`, '1:1', setToast, setLoadingMessage);
+
+export const generateSticker = (prompt: string, imageFile: File | undefined, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void): Promise<string> => {
+    const fullPrompt = `Crie um adesivo de vinil em estilo cartoon com uma borda branca espessa e um leve sombreamento. ${prompt}`;
+    if (imageFile) {
+        const imagePart = fileToPart(imageFile);
+        return imagePart.then(part => generateImageWithGemini('gemini-2.5-flash-image', { parts: [part, { text: fullPrompt }] }, setToast, { responseModalities: [Modality.IMAGE] }));
+    }
+    return generateImageFromText(fullPrompt, '1:1', setToast, setLoadingMessage);
+};
+
+export const applyTextEffect = (imageFile: File, prompt: string, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const fullPrompt = `Aplique o seguinte efeito apenas ao texto na imagem: ${prompt}. Não altere o fundo ou outras partes da imagem.`;
+    const imagePart = fileToPart(imageFile);
+    return imagePart.then(part => generateImageWithGemini('gemini-2.5-flash-image', { parts: [part, { text: fullPrompt }] }, setToast, { responseModalities: [Modality.IMAGE] }));
+};
+
+export const convertToVector = (imageFile: File, prompt: string, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const fullPrompt = `Converta a imagem em uma ilustração vetorial limpa com um contorno branco espesso, como um adesivo. Instruções de estilo adicionais: ${prompt}`;
+    const imagePart = fileToPart(imageFile);
+    return imagePart.then(part => generateImageWithGemini('gemini-2.5-flash-image', { parts: [part, { text: fullPrompt }] }, setToast, { responseModalities: [Modality.IMAGE] }));
+};
+
+export const generateInteriorDesign = (imageFile: File, maskFile: File, roomType: string, roomStyle: string, prompt: string, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const fullPrompt = `Você é um designer de interiores de IA. Na área da imagem indicada pela máscara, redesenhe o espaço. Tipo de ambiente: ${roomType}. Estilo de design: ${roomStyle}. Instruções adicionais: ${prompt}. O resultado deve se misturar perfeitamente com as partes não mascaradas da imagem.`;
+    const imagePart = fileToPart(imageFile);
+    const maskPart = fileToPart(maskFile);
+    return Promise.all([imagePart, maskPart]).then(([img, mask]) => generateImageWithGemini('gemini-2.5-pro', { parts: [img, mask, { text: fullPrompt }] }, setToast, { responseModalities: [Modality.IMAGE] }));
+};
+
+export const renderSketch = (sketchFile: File, prompt: string, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void): Promise<string> => {
+    const fullPrompt = `Transforme este esboço em uma imagem final com base na seguinte descrição: ${prompt}.`;
+    const imagePart = fileToPart(sketchFile);
+    return imagePart.then(part => generateImageWithGemini('gemini-2.5-pro', { parts: [part, { text: fullPrompt }] }, setToast, { responseModalities: [Modality.IMAGE] }));
+};
+
+export const generateLogoVariation = (logoFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
+    const prompt = 'Gere uma variação deste logotipo, mantendo o conceito principal, mas explorando diferentes formas e arranjos.';
+    const imagePart = fileToPart(logoFile);
+    return imagePart.then(part => generateImageWithGemini('gemini-2.5-flash-image', { parts: [part, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] }));
 };

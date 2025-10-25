@@ -7,10 +7,10 @@ import { useEditor } from '../../context/EditorContext';
 import { convertToVector } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { VectorIcon, DownloadIcon, BrushIcon } from '../icons';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
 import PromptEnhancer from './common/PromptEnhancer';
 import { dataURLtoFile } from '../../utils/imageUtils';
+import LazyIcon from '../LazyIcon';
 
 const VectorConverterPanel: React.FC = () => {
     const { isLoading, error, setError, setIsLoading, baseImageFile, setInitialImage, setActiveTool, setToast } = useEditor();
@@ -25,7 +25,8 @@ const VectorConverterPanel: React.FC = () => {
         }
     }, [baseImageFile, sourceImage]);
 
-    const handleFileSelect = (file: File | null) => {
+    const handleFileSelect = (files: File[]) => {
+        const file = files[0] || null;
         setSourceImage(file);
         if (file) {
             setInitialImage(file);
@@ -42,31 +43,13 @@ const VectorConverterPanel: React.FC = () => {
         setError(null);
         setResultImage(null);
         try {
-            const result = await convertToVector(sourceImage, prompt);
+            const result = await convertToVector(sourceImage, prompt, setToast);
             setResultImage(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const handleDownload = () => {
-        if (!resultImage) return;
-        const link = document.createElement('a');
-        link.href = resultImage;
-        link.download = `vetor-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const handleUseInEditor = () => {
-        if (!resultImage) return;
-        const file = dataURLtoFile(resultImage, `vetor-${Date.now()}.png`);
-        setInitialImage(file);
-        setActiveTool(null);
-        setToast({ message: "Imagem carregada no editor!", type: 'success' });
     };
 
     return (
@@ -77,13 +60,13 @@ const VectorConverterPanel: React.FC = () => {
                     <p className="text-sm text-gray-400 mt-1">Cria um vetor com contorno de adesivo.</p>
                 </div>
                 <ImageDropzone
-                    imageFile={sourceImage}
-                    onFileSelect={handleFileSelect}
+                    files={sourceImage ? [sourceImage] : []}
+                    onFilesChange={handleFileSelect}
                     label="Imagem Original"
                 />
                  <CollapsibleToolPanel
                     title="Detalhes do Estilo (Opcional)"
-                    icon={<VectorIcon className="w-5 h-5" />}
+                    icon="VectorIcon"
                     isExpanded={isOptionsExpanded}
                     onExpandToggle={() => setIsOptionsExpanded(!isOptionsExpanded)}
                 >
@@ -107,7 +90,7 @@ const VectorConverterPanel: React.FC = () => {
                     disabled={isLoading || !sourceImage}
                     className="w-full mt-auto bg-gradient-to-br from-orange-600 to-red-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <VectorIcon className="w-5 h-5" />
+                    <LazyIcon name="VectorIcon" className="w-5 h-5" />
                     Criar Adesivo Vetorizado
                 </button>
             </aside>
@@ -118,16 +101,6 @@ const VectorConverterPanel: React.FC = () => {
                     resultImage={resultImage}
                     loadingMessage="Criando seu adesivo vetorizado..."
                 />
-                {resultImage && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
             </main>
         </div>
     );

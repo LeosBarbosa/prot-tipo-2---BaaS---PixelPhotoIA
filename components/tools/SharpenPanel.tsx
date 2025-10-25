@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
-// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
-import { SharpenIcon } from '../icons';
 import TipBox from '../common/TipBox';
+import LazyIcon from '../LazyIcon';
 
 const SharpenPanel: React.FC = () => {
     const { isLoading, handleApplySharpen, layers, activeLayerId } = useEditor();
@@ -20,7 +19,7 @@ const SharpenPanel: React.FC = () => {
     };
 
     return (
-        <div className="w-full bg-gray-800/50 rounded-lg p-6 flex flex-col items-center gap-6 animate-fade-in backdrop-blur-sm">
+        <div className="w-full bg-gray-800/50 rounded-lg flex flex-col items-center gap-6 animate-fade-in backdrop-blur-sm">
             <div className="text-center">
                 <h3 className="text-xl font-bold text-gray-100">Nitidez Generativa</h3>
                 <p className="text-sm text-gray-400 mt-1">Realce detalhes e contornos com nitidez inteligente de IA.</p>
@@ -54,7 +53,7 @@ const SharpenPanel: React.FC = () => {
                 disabled={isDisabled}
                 className="w-full mt-4 bg-gradient-to-br from-cyan-600 to-sky-500 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-cyan-500/20 hover:shadow-xl hover:shadow-cyan-500/40 hover:-translate-y-px active:scale-95 text-base disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-                <SharpenIcon className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
+                <LazyIcon name="SharpenIcon" className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
                 {isLoading ? 'Aplicando...' : 'Aplicar Nitidez'}
             </button>
         </div>

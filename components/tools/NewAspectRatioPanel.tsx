@@ -4,41 +4,55 @@
 */
 
 import React from 'react';
-// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
-import { ExpandIcon } from '../icons';
 import TipBox from '../common/TipBox';
+import LazyIcon from '../LazyIcon';
+import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 
 const NewAspectRatioPanel: React.FC = () => {
-    const { isLoading, handleApplyNewAspectRatio, activeLayerId, layers } = useEditor();
-
-    const activeLayer = layers.find(l => l.id === activeLayerId);
-    const isDisabled = isLoading || !activeLayer || activeLayer.type !== 'image';
+    const { 
+        isLoading, 
+        handleApplyNewAspectRatio, 
+        prompt, 
+        setPrompt,
+        baseImageFile
+    } = useEditor();
+    
+    const isDisabled = isLoading || !baseImageFile;
 
     return (
-        <div className="w-full bg-gray-800/50 rounded-lg p-6 flex flex-col items-center gap-6 animate-fade-in backdrop-blur-sm">
+        <div className="w-full flex flex-col gap-4">
             <div className="text-center">
-                <h3 className="text-xl font-bold text-gray-100">Nova Proporção 16:9</h3>
-                <p className="text-sm text-gray-400 mt-1">Expanda sua imagem para a proporção de paisagem (16:9) usando IA.</p>
+                <h3 className="text-lg font-semibold text-gray-300">Nova Proporção (16:9)</h3>
+                <p className="text-sm text-gray-400 -mt-1">
+                    Expanda sua imagem para a proporção de paisagem 16:9.
+                </p>
             </div>
-            
-            <div className="w-full border-t border-gray-700/50 my-2"></div>
 
-            <p className="text-sm text-gray-300 text-center">
-                A IA irá gerar conteúdo adicional para preencher o novo espaço, mantendo o estilo e o contexto da imagem original. Esta ação será aplicada à camada de imagem selecionada.
-            </p>
+            <CollapsiblePromptPanel
+                title="Descrição da Expansão (Opcional)"
+                prompt={prompt}
+                setPrompt={setPrompt}
+                negativePrompt="" // Not used here but required by component
+                onNegativePromptChange={() => {}} // Not used
+                isLoading={isLoading}
+                toolId="newAspectRatio"
+                promptPlaceholder="Descreva o que adicionar no espaço expandido..."
+                promptHelperText='Ex: "um céu estrelado com uma lua cheia", "continue a praia com areia e ondas".'
+            />
+            
+            <TipBox>
+                A IA irá expandir sua imagem para preencher uma tela 16:9. Descreva o que você gostaria de ver nas novas áreas para guiar a geração.
+            </TipBox>
 
             <button
                 onClick={handleApplyNewAspectRatio}
                 disabled={isDisabled}
-                className="w-full mt-4 bg-gradient-to-br from-indigo-600 to-purple-500 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/40 hover:-translate-y-px active:scale-95 text-base disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full mt-2 bg-gradient-to-br from-indigo-600 to-purple-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
             >
-                <ExpandIcon className="w-5 h-5" />
+                <LazyIcon name="ExpandIcon" className="w-5 h-5" />
                 Aplicar Proporção 16:9
             </button>
-            <TipBox>
-                Este processo é semelhante à "Pintura Expansiva (Outpainting)". A IA criará novas partes da imagem para se ajustar à proporção de paisagem.
-            </TipBox>
         </div>
     );
 };

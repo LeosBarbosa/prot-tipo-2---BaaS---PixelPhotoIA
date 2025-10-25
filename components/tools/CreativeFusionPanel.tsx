@@ -9,7 +9,8 @@ import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { CombineIcon, DownloadIcon, BrushIcon } from '../icons';
+// FIX: Correct the import path for LazyIcon
+import LazyIcon from '../LazyIcon';
 
 const CreativeFusionPanel: React.FC = () => {
     const { 
@@ -17,13 +18,14 @@ const CreativeFusionPanel: React.FC = () => {
         error, 
         setInitialImage,
         baseImageFile,
+        // FIX: Property 'handleCreativeFusion' does not exist on type 'EditorContextType'. This will be added to the context.
         handleCreativeFusion,
         currentImageUrl,
         setActiveTool,
     } = useEditor();
 
     const [compositionImage, setCompositionImage] = useState<File | null>(null);
-    const [styleImage, setStyleImage] = useState<File | null>(null);
+    const [styleImages, setStyleImages] = useState<File[]>([]);
 
     useEffect(() => {
         if (baseImageFile && !compositionImage) {
@@ -31,7 +33,8 @@ const CreativeFusionPanel: React.FC = () => {
         }
     }, [baseImageFile, compositionImage]);
 
-    const handleCompositionFileSelect = (file: File | null) => {
+    const handleCompositionFileSelect = (files: File[]) => {
+        const file = files[0] || null;
         setCompositionImage(file);
         if (file) {
             setInitialImage(file);
@@ -39,10 +42,10 @@ const CreativeFusionPanel: React.FC = () => {
     };
 
     const handleGenerate = async () => {
-        if (!compositionImage || !styleImage) {
+        if (!compositionImage || styleImages.length === 0) {
             return;
         }
-        handleCreativeFusion(compositionImage, [styleImage]);
+        handleCreativeFusion(compositionImage, styleImages);
     };
     
     const handleDownload = () => {
@@ -69,22 +72,24 @@ const CreativeFusionPanel: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <ImageDropzone 
-                        imageFile={compositionImage}
-                        onFileSelect={handleCompositionFileSelect}
+                        files={compositionImage ? [compositionImage] : []}
+                        onFilesChange={handleCompositionFileSelect}
                         label="Imagem de Composição"
                     />
                     <ImageDropzone 
-                        imageFile={styleImage}
-                        onFileSelect={setStyleImage}
-                        label="Imagem de Estilo"
+                        files={styleImages}
+                        onFilesChange={setStyleImages}
+                        label="Imagens de Estilo"
+                        multiple
+                        maxFiles={3}
                     />
                 </div>
                 <button
                     onClick={handleGenerate}
-                    disabled={isLoading || !compositionImage || !styleImage}
+                    disabled={isLoading || !compositionImage || styleImages.length === 0}
                     className="w-full mt-auto bg-gradient-to-br from-pink-600 to-purple-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <CombineIcon className="w-5 h-5" />
+                    <LazyIcon name="CombineIcon" className="w-5 h-5" />
                     Criar Fusão
                 </button>
             </aside>
@@ -98,10 +103,10 @@ const CreativeFusionPanel: React.FC = () => {
                 {currentImageUrl && !isLoading && (
                     <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
                         <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
+                            <LazyIcon name="DownloadIcon" className="w-5 h-5" /> Salvar Imagem
                         </button>
                         <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Continuar Editando
+                            <LazyIcon name="BrushIcon" className="w-5 h-5" /> Continuar Editando
                         </button>
                     </div>
                 )}

@@ -4,15 +4,14 @@
 */
 
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-// FIX: import from ../../context/EditorContext
 import { useEditor } from '../../context/EditorContext';
 import { useMaskCanvas } from '../../hooks/useMaskCanvas';
 import { generateInteriorDesign } from '../../services/geminiService';
 import { dataURLtoFile } from '../../utils/imageUtils';
-import { UploadIcon, SparkleIcon, BrushIcon } from '../icons';
 import PromptEnhancer from './common/PromptEnhancer';
 import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
 import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import LazyIcon from '../LazyIcon';
 
 const ArchitecturalVizPanel: React.FC = () => {
     const [uploadedImage, setUploadedImage] = useState<File | null>(null);
@@ -23,7 +22,7 @@ const ArchitecturalVizPanel: React.FC = () => {
     const [brushSize, setBrushSize] = useState(40);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
-    const { isLoading, error, setError, setIsLoading, setLoadingMessage, baseImageFile, setInitialImage, addPromptToHistory } = useEditor();
+    const { isLoading, error, setError, setIsLoading, setLoadingMessage, baseImageFile, setInitialImage, addPromptToHistory, setToast } = useEditor();
     const suggestions = usePromptSuggestions(prompt, 'architecturalViz');
 
     const imageRef = useRef<HTMLImageElement>(null);
@@ -63,7 +62,7 @@ const ArchitecturalVizPanel: React.FC = () => {
         addPromptToHistory(prompt);
         try {
             const maskFile = dataURLtoFile(maskDataUrl, 'mask.png');
-            const resultDataUrl = await generateInteriorDesign(uploadedImage, maskFile, roomType, roomStyle, prompt);
+            const resultDataUrl = await generateInteriorDesign(uploadedImage, maskFile, roomType, roomStyle, prompt, setToast);
             setGeneratedDesign(resultDataUrl);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -105,7 +104,7 @@ const ArchitecturalVizPanel: React.FC = () => {
                     <div className="relative">
                         <label className="block text-sm font-medium text-gray-300 mb-1">Instruções Adicionais</label>
                         <div className="relative">
-                            <textarea value={prompt} onChange={e => setPrompt(e.target.value)} onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} onFocus={() => setShowSuggestions(suggestions.length > 0)} placeholder="Ex: adicione uma janela grande..." className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]" disabled={isLoading}/>
+                            <textarea value={prompt} onChange={e => setPrompt(e.target.value)} onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} onFocus={() => setShowSuggestions(suggestions.length > 0)} placeholder="Ex: adicione uma janela grande..." className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 pr-12 text-base min-h-[100px]" disabled={isLoading}/>
                             <PromptEnhancer prompt={prompt} setPrompt={setPrompt} toolId="architecturalViz" />
                         </div>
                         {showSuggestions && (
@@ -120,7 +119,7 @@ const ArchitecturalVizPanel: React.FC = () => {
                     
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2"><BrushIcon className="w-5 h-5 text-gray-400" /><label htmlFor="brush-size" className="font-medium text-gray-300">Tamanho do Pincel</label></div>
+                            <div className="flex items-center gap-2"><LazyIcon name="BrushIcon" className="w-5 h-5 text-gray-400" /><label htmlFor="brush-size" className="font-medium text-gray-300">Tamanho do Pincel</label></div>
                             <span className="font-mono text-gray-200">{brushSize}</span>
                         </div>
                         <input id="brush-size" type="range" min="10" max="150" value={brushSize} onChange={e => setBrushSize(Number(e.target.value))} className="w-full" disabled={isLoading || !uploadedImage} />
@@ -129,7 +128,7 @@ const ArchitecturalVizPanel: React.FC = () => {
 
                 <div className="mt-auto flex flex-col gap-2 pt-4">
                     <button onClick={handleGenerate} disabled={isLoading || !maskDataUrl} className="w-full bg-gradient-to-br from-blue-600 to-blue-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                        <SparkleIcon className="w-5 h-5" />
+                        <LazyIcon name="SparkleIcon" className="w-5 h-5" />
                         {generatedDesign ? 'Gerar Outra Variação' : 'Gerar Design'}
                     </button>
                     {generatedDesign && !isLoading && (
@@ -156,7 +155,7 @@ const ArchitecturalVizPanel: React.FC = () => {
                 )}
                 {!uploadedImage && (
                     <label htmlFor="arch-upload" className="text-center text-gray-400 cursor-pointer">
-                        <UploadIcon className="w-12 h-12 mx-auto text-gray-500" />
+                        <LazyIcon name="UploadIcon" className="w-12 h-12 mx-auto text-gray-500" />
                         <h3 className="mt-2 text-lg font-semibold text-white">Carregar Imagem</h3>
                         <p className="text-sm">Clique ou arraste um arquivo</p>
                          <input id="arch-upload" type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files && handleFileSelect(e.target.files[0])} />

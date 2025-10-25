@@ -97,68 +97,61 @@ const ToneCurve: React.FC<ToneCurveProps> = ({ histogram, onCurveChange, onReset
     
     // Draw histogram
     if (histogram) {
-      const allChannels = new Array(256).fill(0);
-      for(let i = 0; i < 256; i++) {
-        allChannels[i] = (histogram.r[i] + histogram.g[i] + histogram.b[i]) / 3;
-      }
-      const maxVal = Math.max(...allChannels);
-      
-      // Use a logarithmic scale for better visualization of darker/lighter tones
-      const logMax = Math.log10(maxVal > 1 ? maxVal : 1);
-
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-      ctx.beginPath();
-      ctx.moveTo(PADDING, CANVAS_SIZE - PADDING);
-      allChannels.forEach((val, i) => {
-        const x = PADDING + (i / 255) * GRAPH_SIZE;
-        const logVal = Math.log10(val > 1 ? val : 1);
-        const height = logMax > 0 ? (logVal / logMax) * GRAPH_SIZE : 0;
-        const y = CANVAS_SIZE - PADDING - height;
-        ctx.lineTo(x, y);
-      });
-      ctx.lineTo(CANVAS_SIZE - PADDING, CANVAS_SIZE - PADDING);
-      ctx.closePath();
-      ctx.fill();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        const { r, g, b } = histogram;
+        const maxVal = Math.max(...r, ...g, ...b);
+        for (let i = 0; i < 256; i++) {
+            const x = PADDING + (i / 255) * GRAPH_SIZE;
+            const height = ((r[i] + g[i] + b[i]) / 3 / maxVal) * GRAPH_SIZE;
+            ctx.fillRect(x, CANVAS_SIZE - PADDING - height, 1, height);
+        }
     }
-    
+
     // Draw curve
-    const p0 = { x: PADDING, y: CANVAS_SIZE - PADDING };
-    const p3 = { x: CANVAS_SIZE - PADDING, y: PADDING };
-    const p1 = { x: PADDING + controlPoints[0].x * GRAPH_SIZE, y: PADDING + controlPoints[0].y * GRAPH_SIZE };
-    const p2 = { x: PADDING + controlPoints[1].x * GRAPH_SIZE, y: PADDING + controlPoints[1].y * GRAPH_SIZE };
-    
-    ctx.strokeStyle = '#3B82F6';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(p0.x, p0.y);
-    ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+    ctx.moveTo(PADDING, CANVAS_SIZE - PADDING);
+    const p0 = { x: 0, y: 1 };
+    const p3 = { x: 1, y: 0 };
+    ctx.bezierCurveTo(
+        PADDING + controlPoints[0].x * GRAPH_SIZE,
+        PADDING + controlPoints[0].y * GRAPH_SIZE,
+        PADDING + controlPoints[1].x * GRAPH_SIZE,
+        PADDING + controlPoints[1].y * GRAPH_SIZE,
+        PADDING + p3.x * GRAPH_SIZE,
+        PADDING + p3.y * GRAPH_SIZE
+    );
     ctx.stroke();
 
-    // Draw points
-    [p1, p2].forEach(p => {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.strokeStyle = '#3B82F6';
-        ctx.lineWidth = 3;
+    // Draw control points
+    controlPoints.forEach((p, i) => {
+        const x = PADDING + p.x * GRAPH_SIZE;
+        const y = PADDING + p.y * GRAPH_SIZE;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, POINT_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = draggingPointIndex === i ? '#3B82F6' : '#FFFFFF';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.arc(x, y, POINT_RADIUS, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
     });
 
-  }, [histogram, controlPoints]);
+  }, [histogram, controlPoints, draggingPointIndex]);
 
   return (
-    <div className="flex flex-col items-center gap-4">
-        <canvas
-            ref={canvasRef}
-            width={CANVAS_SIZE}
-            height={CANVAS_SIZE}
-            className={`bg-gray-900/50 border border-gray-700 rounded-lg ${disabled ? 'cursor-not-allowed' : 'cursor-crosshair'}`}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-        />
+    <div className="flex flex-col items-center gap-2">
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_SIZE}
+        height={CANVAS_SIZE}
+        className={`bg-gray-900/50 rounded-md border border-gray-700 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      />
+      <button onClick={handleReset} disabled={disabled} className="text-xs text-gray-400 hover:text-white disabled:opacity-50">Redefinir Curva</button>
     </div>
   );
 };

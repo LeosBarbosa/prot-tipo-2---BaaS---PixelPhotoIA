@@ -4,11 +4,10 @@
 */
 import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import * as geminiService from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { ToyIcon } from '../icons';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
+import LazyIcon from '../LazyIcon';
 
 const funkoTypes = ['Padrão', 'Deluxe (com cenário)', 'Moment (cena épica)', 'Rides (com veículo)', 'Buddy (com companheiro)'];
 const specialFinishes = ['Nenhum', 'Metálico', 'Brilhante (Glitter)', 'Aveludado (Flocked)', 'Brilha no Escuro'];
@@ -24,8 +23,8 @@ const FunkoPopStudioPanel: React.FC = () => {
         handleFunkoPop,
     } = useEditor();
     
-    const [mainImage, setMainImage] = useState<File | null>(null);
-    const [personImage, setPersonImage] = useState<File | null>(null);
+    const [mainImage, setMainImage] = useState<File[]>([]);
+    const [personImage, setPersonImage] = useState<File[]>([]);
     const [bgDescription, setBgDescription] = useState('');
     const [objectDescription, setObjectDescription] = useState('');
     const [lightingDescription, setLightingDescription] = useState('estúdio suave com luz difusa e sombras sutis');
@@ -36,23 +35,25 @@ const FunkoPopStudioPanel: React.FC = () => {
 
 
     useEffect(() => {
-        if (baseImageFile && !mainImage) {
-            setMainImage(baseImageFile);
+        if (baseImageFile && mainImage.length === 0) {
+            setMainImage([baseImageFile]);
         }
     }, [baseImageFile, mainImage]);
 
-    const handleMainFileSelect = (file: File | null) => {
-        setMainImage(file);
-        if (file) {
-            setInitialImage(file);
+    const handleMainFileSelect = (files: File[]) => {
+        setMainImage(files);
+        if (files[0]) {
+            setInitialImage(files[0]);
         }
     };
-
+    
     const handleGenerate = async () => {
-        if (!mainImage) return;
+        const mainImageFile = mainImage[0];
+        if (!mainImageFile) return;
+
         handleFunkoPop(
-            mainImage, 
-            personImage, 
+            mainImageFile, 
+            personImage[0] || null, 
             bgDescription, 
             objectDescription, 
             lightingDescription, 
@@ -61,7 +62,7 @@ const FunkoPopStudioPanel: React.FC = () => {
         );
     };
 
-    const isGenerateButtonDisabled = isLoading || !mainImage;
+    const isGenerateButtonDisabled = isLoading || mainImage.length === 0;
     
     return (
         <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6 h-full">
@@ -71,11 +72,15 @@ const FunkoPopStudioPanel: React.FC = () => {
                     <p className="text-sm text-gray-400 mt-1">Transforme sua foto em um colecionável 3D.</p>
                 </div>
                 
-                <ImageDropzone imageFile={mainImage} onFileSelect={handleMainFileSelect} label="Sua Foto Principal"/>
+                <ImageDropzone 
+                    files={mainImage}
+                    onFilesChange={handleMainFileSelect}
+                    label="Sua Foto Principal"
+                />
 
                 <CollapsibleToolPanel
                     title="Ajustes Opcionais"
-                    icon={<ToyIcon className="w-5 h-5" />}
+                    icon="ToyIcon"
                     isExpanded={isOptionalExpanded}
                     onExpandToggle={() => setIsOptionalExpanded(!isOptionalExpanded)}
                 >
@@ -100,7 +105,11 @@ const FunkoPopStudioPanel: React.FC = () => {
                             <textarea value={bgDescription} onChange={e => setBgDescription(e.target.value)} placeholder="Ex: quarto dos anos 80 com pôsteres..." className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-base min-h-[80px]" disabled={isLoading}/>
                             <p className="mt-1 text-xs text-gray-500 px-1">Se deixado em branco, a IA usará o fundo original como inspiração.</p>
                         </div>
-                         <ImageDropzone imageFile={personImage} onFileSelect={setPersonImage} label="Adicionar Pessoa (Opcional)"/>
+                         <ImageDropzone 
+                            files={personImage}
+                            onFilesChange={setPersonImage}
+                            label="Adicionar Pessoa (Opcional)"
+                        />
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-1">Descrição de Objeto</label>
                             <textarea value={objectDescription} onChange={e => setObjectDescription(e.target.value)} placeholder="Ex: carrinho de bebê vintage..." className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-base min-h-[80px]" disabled={isLoading}/>
@@ -116,19 +125,20 @@ const FunkoPopStudioPanel: React.FC = () => {
                 </div>
 
                 <button onClick={handleGenerate} disabled={isGenerateButtonDisabled} className="w-full mt-auto bg-gradient-to-br from-stone-600 to-stone-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                    <ToyIcon className="w-5 h-5" />
+                    <LazyIcon name="ToyIcon" className="w-5 h-5" />
                     Gerar Funko Pop
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center p-4">
-                <ResultViewer
+                 <ResultViewer
                     isLoading={isLoading}
                     error={error}
                     resultImage={currentImageUrl}
-                    loadingMessage="Criando seu colecionável..."
+                    loadingMessage="Criando seu Funko Pop..."
                 />
             </main>
         </div>
     );
 };
+
 export default FunkoPopStudioPanel;

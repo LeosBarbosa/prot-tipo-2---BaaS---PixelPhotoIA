@@ -4,12 +4,11 @@
 */
 
 import React, { useState } from 'react';
-// FIX: Correct import path
 import { useEditor } from '../../context/EditorContext';
-import { BrushIcon, SparkleIcon } from '../icons';
 import TipBox from '../common/TipBox';
 import { validatePromptSpecificity } from '../../services/geminiService';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
+import LazyIcon from '../LazyIcon';
 
 const GenerativeEditPanel: React.FC = () => {
     const {
@@ -84,10 +83,10 @@ const GenerativeEditPanel: React.FC = () => {
 
             <div className="flex w-full bg-gray-900/50 border border-gray-600 rounded-lg p-1">
                 <button type="button" onClick={() => switchMode('brush')} className={`w-full text-center font-semibold py-2.5 rounded-md transition-all text-sm flex items-center justify-center gap-2 ${selectionMode === 'brush' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700/50'}`}>
-                    <BrushIcon className="w-5 h-5" /> Pincel
+                    <LazyIcon name="BrushIcon" className="w-5 h-5" /> Pincel
                 </button>
                 <button type="button" onClick={() => switchMode('magic')} className={`w-full text-center font-semibold py-2.5 rounded-md transition-all text-sm flex items-center justify-center gap-2 ${selectionMode === 'magic' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700/50'}`}>
-                    <SparkleIcon className="w-5 h-5" /> Mágica
+                    <LazyIcon name="SparkleIcon" className="w-5 h-5" /> Mágica
                 </button>
             </div>
 
@@ -114,8 +113,8 @@ const GenerativeEditPanel: React.FC = () => {
                             disabled={isLoading}
                         />
                         <button type="button" onClick={() => handleDetectObjects(magicObjectPrompt)} disabled={isLoading} className="bg-gray-800/50 hover:bg-gray-700/50 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <SparkleIcon className="w-5 h-5" />
-                            Detetar
+                            <LazyIcon name="SparkleIcon" className="w-5 h-5" />
+                            Detectar
                         </button>
                     </div>
 
@@ -173,7 +172,7 @@ const GenerativeEditPanel: React.FC = () => {
                             className="w-full bg-gradient-to-br from-fuchsia-600 to-purple-500 text-white font-bold py-3 px-4 rounded-lg transition-transform flex items-center justify-center gap-2 disabled:from-gray-600 disabled:cursor-not-allowed active:scale-95"
                             disabled={isGenerateDisabled}
                         >
-                            <BrushIcon className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
+                            <LazyIcon name="BrushIcon" className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
                             {isLoading ? 'Gerando...' : 'Gerar'}
                         </button>
                     </div>
@@ -184,7 +183,7 @@ const GenerativeEditPanel: React.FC = () => {
                         ? 'Selecione uma camada de imagem para editar.'
                         : selectionMode === 'brush' 
                         ? 'Selecione uma área para começar'
-                        : 'Digite um prompt e clique em "Detetar" para começar'
+                        : 'Digite um prompt e clique em "Detectar" para começar'
                     }
                 </div>
             )}

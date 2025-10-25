@@ -4,9 +4,7 @@
 */
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import ReactCrop, { type Crop } from 'react-image-crop';
-// FIX: Correct import path
 import { useEditor } from '../context/EditorContext';
-// FIX: Correct import path
 import { type DetectedObject } from '../types';
 import ComparisonSlider from './ComparisonSlider';
 
@@ -54,18 +52,44 @@ const ImageViewer: React.FC = () => {
         isInlineComparisonActive,
         texturePreview,
         brushSize,
+        handleSetCloneSource,
+        cloneSource,
+        cloneStrokeStart,
+        isEditCompleted,
+        setIsEditCompleted,
     } = useEditor();
 
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const textOverlayRef = useRef<HTMLDivElement>(null);
     const imageContainerRef = useRef<HTMLDivElement>(null);
+    const imageWrapperRef = useRef<HTMLDivElement>(null);
     const [cropDimensions, setCropDimensions] = useState<string | null>(null);
     const [brushPreview, setBrushPreview] = useState<{ x: number; y: number; size: number } | null>(null);
+    const [cloneSourcePreview, setCloneSourcePreview] = useState<{ x: number; y: number; size: number } | null>(null);
     const [isHoveringObject, setIsHoveringObject] = useState(false);
     const [textBbox, setTextBbox] = useState({ width: 0, height: 0, x: 0, y: 0 });
 
     const cssFilter = hasLocalAdjustments ? buildFilterString(localFilters) : 'none';
     const displayedImageUrl = currentImageUrl;
+
+    useEffect(() => {
+        if (isEditCompleted) {
+            const wrapper = imageWrapperRef.current;
+            if (wrapper) {
+                // Aplica a animação
+                wrapper.classList.add('animate-edit-success');
+                // Remove a classe após a animação terminar para permitir que seja reacendida
+                const timer = setTimeout(() => {
+                    wrapper.classList.remove('animate-edit-success');
+                    setIsEditCompleted(false); // Reseta o gatilho
+                }, 600); // Duração da animação em ms
+                return () => clearTimeout(timer);
+            } else {
+                // Se o wrapper não estiver pronto por algum motivo, apenas reseta o gatilho
+                setIsEditCompleted(false);
+            }
+        }
+    }, [isEditCompleted, setIsEditCompleted]);
 
     // Reset crop when image changes
     useEffect(() => {
@@ -237,7 +261,7 @@ const ImageViewer: React.FC = () => {
 
 
     const isCropping = activeTab === 'crop';
-    const isDrawingOnCanvas = ['generativeEdit', 'objectRemover', 'localAdjust'].includes(activeTab) && !detectedObjects;
+    const isDrawingOnCanvas = ['generativeEdit', 'objectRemover', 'localAdjust', 'clone'].includes(activeTab) && !detectedObjects;
     const isTextToolActive = activeTab === 'text';
     const showComparisonSlider = isInlineComparisonActive && originalImageUrl && displayedImageUrl && !isCropping;
 
@@ -257,11 +281,13 @@ const ImageViewer: React.FC = () => {
     const handleMouseMoveForBrush = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!isDrawingOnCanvas || isPanModeActive || isCurrentlyPanning) {
             if (brushPreview) setBrushPreview(null);
+            if (cloneSourcePreview) setCloneSourcePreview(null);
             return;
         }
         const image = imgRef.current;
         if (!image) {
             setBrushPreview(null);
+            setCloneSourcePreview(null);
             return;
         }
 
@@ -281,20 +307,63 @@ const ImageViewer: React.FC = () => {
             e.clientY <= imageRect.bottom
         ) {
             setBrushPreview({ x, y, size: previewSize });
+
+            if (activeTab === 'clone' && cloneSource) {
+                // Convert brush preview coords (container space) to image natural space
+                const destNaturalX = (x - imageRect.left) / imageRect.width * image.naturalWidth;
+                const destNaturalY = (y - imageRect.top) / imageRect.height * image.naturalHeight;
+        
+                // The offset is calculated from the start of the stroke for consistency
+                const offsetX = (cloneStrokeStart?.x ?? destNaturalX) - cloneSource.x;
+                const offsetY = (cloneStrokeStart?.y ?? destNaturalY) - cloneSource.y;
+        
+                // Calculate source pos in natural space
+                const sourceNaturalX = destNaturalX - offsetX;
+                const sourceNaturalY = destNaturalY - offsetY;
+        
+                // Convert back to container space for display
+                const sourceContainerX = (sourceNaturalX / image.naturalWidth) * imageRect.width + imageRect.left;
+                const sourceContainerY = (sourceNaturalY / image.naturalHeight) * imageRect.height + imageRect.top;
+                
+                setCloneSourcePreview({ x: sourceContainerX, y: sourceContainerY, size: previewSize });
+            } else {
+                setCloneSourcePreview(null);
+            }
+
         } else {
             setBrushPreview(null);
+            setCloneSourcePreview(null);
         }
     };
 
     const handleMouseLeaveForBrush = () => {
         setBrushPreview(null);
+        setCloneSourcePreview(null);
+    };
+
+    const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (activeTab !== 'clone' || !e.altKey || !imgRef.current) return;
+        
+        const image = imgRef.current;
+        const rect = image.getBoundingClientRect();
+        
+        // Coordinates relative to the displayed image
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Convert to coordinates relative to the natural image dimensions
+        const naturalX = (x / image.clientWidth) * image.naturalWidth;
+        const naturalY = (y / image.clientHeight) * image.naturalHeight;
+        
+        handleSetCloneSource({ x: naturalX, y: naturalY });
     };
 
     const cursorStyle = useMemo(() => {
         if (isPanModeActive) return isCurrentlyPanning ? 'grabbing' : 'grab';
+        if (activeTab === 'clone' && !cloneSource) return 'crosshair';
         if (isDrawingOnCanvas) return 'none'; // Hide cursor when brush preview is active
         return 'default';
-    }, [isPanModeActive, isCurrentlyPanning, isDrawingOnCanvas]);
+    }, [isPanModeActive, isCurrentlyPanning, isDrawingOnCanvas, activeTab, cloneSource]);
 
 
     const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -375,6 +444,7 @@ const ImageViewer: React.FC = () => {
             className="relative w-full h-full flex items-center justify-center overflow-hidden"
             onWheel={handleWheel}
             onMouseDown={handlePanStart}
+            onClick={handleContainerClick}
             onTouchStart={handleTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -390,6 +460,7 @@ const ImageViewer: React.FC = () => {
             
             {!generatedVideoUrl && currentImageUrl && (
                  <div
+                    ref={imageWrapperRef}
                     className="relative"
                     style={{
                         transform: `scale(${zoom}) translate(${panOffset.x / zoom}px, ${panOffset.y / zoom}px)`,
@@ -512,6 +583,20 @@ const ImageViewer: React.FC = () => {
                         height: `${brushPreview.size}px`,
                         transform: 'translate(-50%, -50%)',
                         zIndex: 20,
+                    }}
+                    aria-hidden="true"
+                />
+            )}
+             {cloneSourcePreview && (
+                <div
+                    className="absolute rounded-full border border-dashed border-white pointer-events-none"
+                    style={{
+                        left: `${cloneSourcePreview.x}px`,
+                        top: `${cloneSourcePreview.y}px`,
+                        width: `${cloneSourcePreview.size}px`,
+                        height: `${cloneSourcePreview.size}px`,
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 21,
                     }}
                     aria-hidden="true"
                 />

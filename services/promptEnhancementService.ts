@@ -29,6 +29,7 @@ const enhancementInstructions: Partial<Record<ToolId, string>> = {
     bananimate: 'Enhance this prompt for animating a still image. Be more descriptive about the desired motion. Specify which parts of the image should move and how (e.g., "make the clouds drift slowly from left to right", "make the person\'s eyes blink naturally").',
     aiPortraitStudio: 'Enhance this prompt for a stylized AI portrait. Depending on the chosen style (e.g., caricature, Pixar), add relevant details about expression, accessories, or background to complement the transformation.',
     vectorConverter: 'Enhance this prompt for converting a bitmap to a vector style. Add details about line weight, color palette (e.g., flat, gradient), level of abstraction, and specific vector art styles (e.g., flat illustration, geometric, cartoon).',
+    tryOn: 'Enhance this prompt for a virtual try-on photoshoot scene. Add specific, creative details about the location, mood, background elements, and overall atmosphere to create a professional and compelling fashion shot.',
 };
 
 export const enhancePrompt = async (prompt: string, toolId: ToolId): Promise<string> => {

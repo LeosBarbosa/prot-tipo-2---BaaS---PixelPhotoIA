@@ -4,9 +4,8 @@
 */
 
 import React from 'react';
-// FIX: import from ../context/EditorContext
 import { useEditor } from '../context/EditorContext';
-import { CloseIcon } from './icons';
+import LazyIcon from './LazyIcon';
 
 interface ToolModalProps {
     title: string;
@@ -28,7 +27,7 @@ const ToolModal: React.FC<ToolModalProps> = ({ title, children }) => {
                 <header className="flex items-center justify-between p-4 border-b border-gray-700 flex-shrink-0">
                     <h2 className="text-lg font-bold text-white">{title}</h2>
                     <button onClick={() => setActiveTool(null)} className="text-gray-400 hover:text-white transition-colors">
-                        <CloseIcon className="w-6 h-6" />
+                        <LazyIcon name="CloseIcon" className="w-6 h-6" />
                     </button>
                 </header>
                 <div className="flex-grow overflow-y-auto">

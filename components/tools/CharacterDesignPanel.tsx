@@ -4,18 +4,16 @@
 */
 
 import React, { useState } from 'react';
-// FIX: import from ../../context/EditorContext
 import { useEditor } from '../../context/EditorContext';
 import { generateCharacter } from '../../services/geminiService';
 import ResultViewer from './common/ResultViewer';
-import { SparkleIcon, FaceSmileIcon, DownloadIcon, BrushIcon } from '../icons';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import PromptPresetPanel from './common/PromptPresetPanel';
-import { dataURLtoFile } from '../../utils/imageUtils';
+import LazyIcon from '../LazyIcon';
 
 const CharacterDesignPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, addPromptToHistory, setInitialImage, setActiveTool, setToast } = useEditor();
+    const { isLoading, error, setError, setIsLoading, addPromptToHistory, setInitialImage, setActiveTool, setToast, setLoadingMessage } = useEditor();
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [style, setStyle] = useState('Fantasia Realista');
     const [charClass, setCharClass] = useState('Guerreiro');
@@ -39,7 +37,7 @@ const CharacterDesignPanel: React.FC = () => {
         addPromptToHistory(fullPrompt);
 
         try {
-            const result = await generateCharacter(fullPrompt);
+            const result = await generateCharacter(fullPrompt, setToast, setLoadingMessage);
             setResultImage(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -47,25 +45,7 @@ const CharacterDesignPanel: React.FC = () => {
             setIsLoading(false);
         }
     };
-
-    const handleDownload = () => {
-        if (!resultImage) return;
-        const link = document.createElement('a');
-        link.href = resultImage;
-        link.download = `personagem-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const handleUseInEditor = () => {
-        if (!resultImage) return;
-        const file = dataURLtoFile(resultImage, `personagem-${Date.now()}.png`);
-        setInitialImage(file);
-        setActiveTool(null);
-        setToast({ message: "Imagem carregada no editor!", type: 'success' });
-    };
-
+    
     return (
         <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6">
             <aside className="w-full md:w-96 flex-shrink-0 bg-gray-900/30 rounded-lg p-4 flex flex-col gap-4 border border-gray-700/50">
@@ -76,7 +56,7 @@ const CharacterDesignPanel: React.FC = () => {
 
                 <CollapsibleToolPanel
                     title="Atributos do Personagem"
-                    icon={<FaceSmileIcon className="w-5 h-5" />}
+                    icon="FaceSmileIcon"
                     isExpanded={isDetailsExpanded}
                     onExpandToggle={() => setIsDetailsExpanded(!isDetailsExpanded)}
                 >
@@ -120,7 +100,7 @@ const CharacterDesignPanel: React.FC = () => {
                     disabled={isLoading || !details.trim()}
                     className="w-full mt-auto bg-gradient-to-br from-cyan-600 to-teal-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <SparkleIcon className="w-5 h-5" />
+                    <LazyIcon name="SparkleIcon" className="w-5 h-5" />
                     Gerar Personagem
                 </button>
             </aside>
@@ -131,16 +111,6 @@ const CharacterDesignPanel: React.FC = () => {
                     resultImage={resultImage}
                     loadingMessage="Criando seu personagem..."
                 />
-                {resultImage && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
             </main>
         </div>
     );

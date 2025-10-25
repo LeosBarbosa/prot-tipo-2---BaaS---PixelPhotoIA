@@ -7,9 +7,9 @@ import { useEditor } from '../../context/EditorContext';
 import { applyTextEffect } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { TextEffectsIcon, DownloadIcon, BrushIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import { dataURLtoFile } from '../../utils/imageUtils';
+import LazyIcon from '../LazyIcon';
 
 const TextEffectsPanel: React.FC = () => {
     const { isLoading, error, setError, setIsLoading, baseImageFile, setInitialImage, setActiveTool, setToast } = useEditor();
@@ -24,7 +24,8 @@ const TextEffectsPanel: React.FC = () => {
         }
     }, [baseImageFile, sourceImage]);
 
-    const handleFileSelect = (file: File | null) => {
+    const handleFileSelect = (files: File[]) => {
+        const file = files[0] || null;
         setSourceImage(file);
         if (file) {
             setInitialImage(file);
@@ -49,31 +50,13 @@ const TextEffectsPanel: React.FC = () => {
             if (negativePrompt.trim()) {
                 fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
             }
-            const result = await applyTextEffect(sourceImage, fullPrompt);
+            const result = await applyTextEffect(sourceImage, fullPrompt, setToast);
             setResultImage(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const handleDownload = () => {
-        if (!resultImage) return;
-        const link = document.createElement('a');
-        link.href = resultImage;
-        link.download = `efeito-texto-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const handleUseInEditor = () => {
-        if (!resultImage) return;
-        const file = dataURLtoFile(resultImage, `efeito-texto-${Date.now()}.png`);
-        setInitialImage(file);
-        setActiveTool(null);
-        setToast({ message: "Imagem carregada no editor!", type: 'success' });
     };
 
     return (
@@ -84,8 +67,8 @@ const TextEffectsPanel: React.FC = () => {
                     <p className="text-sm text-gray-400 mt-1">Aplique efeitos visuais a um texto a partir de uma imagem.</p>
                 </div>
                 <ImageDropzone
-                    imageFile={sourceImage}
-                    onFileSelect={handleFileSelect}
+                    files={sourceImage ? [sourceImage] : []}
+                    onFilesChange={handleFileSelect}
                     label="Imagem com Texto"
                 />
                 <CollapsiblePromptPanel
@@ -105,7 +88,7 @@ const TextEffectsPanel: React.FC = () => {
                     disabled={isLoading || !sourceImage || !prompt.trim()}
                     className="w-full mt-auto bg-gradient-to-br from-amber-600 to-yellow-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <TextEffectsIcon className="w-5 h-5" />
+                    <LazyIcon name="TextEffectsIcon" className="w-5 h-5" />
                     Aplicar Efeito
                 </button>
             </aside>
@@ -116,16 +99,6 @@ const TextEffectsPanel: React.FC = () => {
                     resultImage={resultImage}
                     loadingMessage="Aplicando efeito ao seu texto..."
                 />
-                {resultImage && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
             </main>
         </div>
     );

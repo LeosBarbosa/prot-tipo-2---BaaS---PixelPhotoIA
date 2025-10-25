@@ -5,7 +5,7 @@
 import React from 'react';
 import { useEditor } from '../context/EditorContext';
 import { type SmartSearchResult } from '../types';
-import { SparkleIcon } from './icons';
+import LazyIcon from './LazyIcon';
 
 interface SmartSearchResultCardProps {
   result: SmartSearchResult;
@@ -25,7 +25,7 @@ const SmartSearchResultCard: React.FC<SmartSearchResultCardProps> = ({ result })
             className="group relative bg-gray-800/50 border-2 border-blue-500/50 rounded-xl p-6 text-center transition-all duration-300 transform animate-zoom-rise shadow-lg shadow-blue-500/10 max-w-2xl mx-auto"
         >
             <div className="flex items-center justify-center gap-2 mb-3">
-                <SparkleIcon className="w-6 h-6 text-blue-400" />
+                <LazyIcon name="SparkleIcon" className="w-6 h-6 text-blue-400" />
                 <h2 className="text-xl font-bold text-white">Sugestão da IA</h2>
             </div>
             
@@ -33,7 +33,7 @@ const SmartSearchResultCard: React.FC<SmartSearchResultCardProps> = ({ result })
 
             <div className="flex flex-col md:flex-row items-center gap-6 text-left bg-gray-900/40 p-6 rounded-lg">
                 <div className="flex-shrink-0 w-20 h-20 flex items-center justify-center bg-gray-900/50 rounded-lg transition-all duration-300 group-hover:scale-110 group-hover:bg-blue-500/20">
-                    {tool.icon}
+                    <LazyIcon name={tool.icon} className="w-10 h-10 text-blue-400" />
                 </div>
                 <div className="flex-grow text-center md:text-left">
                     <h3 className="font-bold text-2xl text-white">{tool.name}</h3>

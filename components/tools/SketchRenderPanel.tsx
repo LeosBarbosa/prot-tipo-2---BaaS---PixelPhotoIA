@@ -8,14 +8,14 @@ import { useEditor } from '../../context/EditorContext';
 import { renderSketch } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { BrushIcon, DownloadIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import * as db from '../../utils/db';
 import { dataURLtoFile } from '../../utils/imageUtils';
 import { hashFile, sha256 } from '../../utils/cryptoUtils';
+import LazyIcon from '../LazyIcon';
 
 const SketchRenderPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage, setToast, setLoadingMessage, setActiveTool } = useEditor();
+    const { isLoading, error, setError, setIsLoading, addPromptToHistory, baseImageFile, setInitialImage, setToast, setLoadingMessage, setActiveTool, loadingMessage } = useEditor();
     const [sketchImage, setSketchImage] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('');
@@ -36,7 +36,8 @@ const SketchRenderPanel: React.FC = () => {
         };
     }, [resultImage]);
 
-    const handleFileSelect = (file: File | null) => {
+    const handleFileSelect = (files: File[]) => {
+        const file = files[0] || null;
         setSketchImage(file);
         if (file) {
             setInitialImage(file);
@@ -58,59 +59,18 @@ const SketchRenderPanel: React.FC = () => {
         setResultImage(null);
         addPromptToHistory(prompt);
         try {
-            const imageHash = await hashFile(sketchImage);
-            const promptHash = await sha256(`${prompt}:${negativePrompt}`);
-            const cacheKey = `sketchRender:${imageHash}:${promptHash}`;
-            
-            setLoadingMessage('Verificando cache...');
-            const cachedBlob = await db.loadImageFromCache(cacheKey);
-            if (cachedBlob) {
-                setResultImage(URL.createObjectURL(cachedBlob));
-                setToast({ message: 'Imagem carregada do cache!', type: 'info' });
-                setIsLoading(false);
-                setLoadingMessage(null);
-                return;
-            }
-
-            setLoadingMessage('Renderizando seu esboço...');
             let fullPrompt = prompt;
             if (negativePrompt.trim()) {
                 fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
             }
-            const resultDataUrl = await renderSketch(sketchImage, fullPrompt);
+            const resultDataUrl = await renderSketch(sketchImage, fullPrompt, setToast, setLoadingMessage);
             setResultImage(resultDataUrl);
-
-            try {
-                const resultFile = dataURLtoFile(resultDataUrl, `cache-${cacheKey}.png`);
-                await db.saveImageToCache(cacheKey, resultFile);
-            } catch (cacheError) {
-                console.warn("Falha ao salvar a imagem no cache:", cacheError);
-            }
-
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
         } finally {
             setIsLoading(false);
             setLoadingMessage(null);
         }
-    };
-
-    const handleDownload = () => {
-        if (!resultImage) return;
-        const link = document.createElement('a');
-        link.href = resultImage;
-        link.download = `esboco-renderizado-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const handleUseInEditor = () => {
-        if (!resultImage) return;
-        const file = dataURLtoFile(resultImage, `esboco-renderizado-${Date.now()}.png`);
-        setInitialImage(file);
-        setActiveTool(null);
-        setToast({ message: "Imagem carregada no editor!", type: 'success' });
     };
 
     return (
@@ -121,8 +81,8 @@ const SketchRenderPanel: React.FC = () => {
                     <p className="text-sm text-gray-400 mt-1">Transforme desenhos em imagens realistas.</p>
                 </div>
                 <ImageDropzone
-                    imageFile={sketchImage}
-                    onFileSelect={handleFileSelect}
+                    files={sketchImage ? [sketchImage] : []}
+                    onFilesChange={handleFileSelect}
                     label="Seu Esboço"
                 />
                 <CollapsiblePromptPanel
@@ -142,7 +102,7 @@ const SketchRenderPanel: React.FC = () => {
                     disabled={isLoading || !sketchImage || !prompt.trim()}
                     className="w-full mt-auto bg-gradient-to-br from-blue-600 to-indigo-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <BrushIcon className="w-5 h-5" />
+                    <LazyIcon name="BrushIcon" className="w-5 h-5" />
                     Renderizar Esboço
                 </button>
             </aside>
@@ -151,18 +111,8 @@ const SketchRenderPanel: React.FC = () => {
                     isLoading={isLoading}
                     error={error}
                     resultImage={resultImage}
-                    loadingMessage="Renderizando seu esboço..."
+                    loadingMessage={loadingMessage}
                 />
-                {resultImage && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
             </main>
         </div>
     );

@@ -4,15 +4,13 @@
 */
 
 import React, { useState, useEffect } from 'react';
-// FIX: import from ../../context/EditorContext
 import { useEditor } from '../../context/EditorContext';
 import { generateImageVariation } from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
-import { LayersIcon, SparkleIcon } from '../icons';
 import Spinner from '../Spinner';
 import { dataURLtoFile } from '../../utils/imageUtils';
-// FIX: import from ../../types
 import { type Layer } from '../../types';
+import LazyIcon from '../LazyIcon';
 
 
 const ImageVariationPanel: React.FC = () => {
@@ -31,26 +29,27 @@ const ImageVariationPanel: React.FC = () => {
         setToast
     } = useEditor();
     
-    const [sourceImage, setSourceImage] = useState<File | null>(null);
+    const [sourceImage, setSourceImage] = useState<File[]>([]);
     const [resultImages, setResultImages] = useState<string[] | null>(null);
     const [strength, setStrength] = useState(50);
 
     useEffect(() => {
-        if (baseImageFile && !sourceImage) {
-            setSourceImage(baseImageFile);
+        if (baseImageFile && sourceImage.length === 0) {
+            setSourceImage([baseImageFile]);
         }
     }, [baseImageFile, sourceImage]);
 
-    const handleFileSelect = (file: File | null) => {
-        setSourceImage(file);
-        if (file) {
-            setInitialImage(file);
+    const handleFileSelect = (files: File[]) => {
+        setSourceImage(files);
+        if (files[0]) {
+            setInitialImage(files[0]);
         }
         setResultImages(null);
     };
 
     const handleGenerate = async () => {
-        if (!sourceImage) {
+        const imageFile = sourceImage[0];
+        if (!imageFile) {
             setError("Por favor, carregue uma imagem para gerar variações.");
             return;
         }
@@ -60,9 +59,9 @@ const ImageVariationPanel: React.FC = () => {
         setResultImages(null);
         try {
             const variationPromises = [
-                generateImageVariation(sourceImage, strength),
-                generateImageVariation(sourceImage, strength),
-                generateImageVariation(sourceImage, strength),
+                generateImageVariation(imageFile, strength, setToast),
+                generateImageVariation(imageFile, strength, setToast),
+                generateImageVariation(imageFile, strength, setToast),
             ];
             const results = await Promise.all(variationPromises);
             setResultImages(results);
@@ -102,8 +101,8 @@ const ImageVariationPanel: React.FC = () => {
                     <p className="text-sm text-gray-400 mt-1">Gere novas versões da sua imagem.</p>
                 </div>
                 <ImageDropzone 
-                    imageFile={sourceImage}
-                    onFileSelect={handleFileSelect}
+                    files={sourceImage}
+                    onFilesChange={handleFileSelect}
                     label="Imagem Original"
                 />
                 <div className="flex flex-col gap-2">
@@ -124,10 +123,10 @@ const ImageVariationPanel: React.FC = () => {
                 </div>
                 <button
                     onClick={handleGenerate}
-                    disabled={isLoading || !sourceImage}
+                    disabled={isLoading || sourceImage.length === 0}
                     className="w-full mt-auto bg-gradient-to-br from-green-600 to-teal-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    <LayersIcon className="w-5 h-5" />
+                    <LazyIcon name="LayersIcon" className="w-5 h-5" />
                     {resultImages ? 'Gerar Novamente' : 'Gerar Variações'}
                 </button>
             </aside>
@@ -165,7 +164,7 @@ const ImageVariationPanel: React.FC = () => {
                 )}
                  {!isLoading && !error && !resultImages && (
                     <div className="text-center text-gray-500 animate-fade-in">
-                        <SparkleIcon className="w-16 h-16 mx-auto" />
+                        <LazyIcon name="SparkleIcon" className="w-16 h-16 mx-auto" />
                         <p className="mt-2 font-semibold">As variações geradas aparecerão aqui</p>
                     </div>
                 )}

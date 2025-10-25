@@ -5,11 +5,10 @@
 import React, { useState } from 'react';
 import { enhancePrompt } from '../../services/promptEnhancementService';
 import { type ToolId } from '../../types';
-import { MagicWandIcon } from '../icons';
+import LazyIcon from '../LazyIcon';
 
 interface PromptEnhancerProps {
   prompt: string;
-  // Use a functional update to be safe
   setPrompt: React.Dispatch<React.SetStateAction<string>>;
   toolId: ToolId;
 }
@@ -46,7 +45,7 @@ const PromptEnhancer: React.FC<PromptEnhancerProps> = ({ prompt, setPrompt, tool
                 className="p-2 rounded-full bg-gray-700/50 hover:bg-blue-600/50 text-gray-300 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Melhorar prompt com IA"
             >
-                <MagicWandIcon className={`w-5 h-5 ${isEnhancing ? 'animate-pulse text-blue-400' : ''}`} />
+                <LazyIcon name="MagicWandIcon" className={`w-5 h-5 ${isEnhancing ? 'animate-pulse text-blue-400' : ''}`} />
             </button>
         </div>
     );

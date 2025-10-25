@@ -4,11 +4,11 @@
 */
 
 import React from 'react';
-import { ChevronDownIcon } from './icons';
+import LazyIcon from './LazyIcon';
 
 interface CollapsibleToolPanelProps {
   title: string;
-  icon: React.ReactNode;
+  icon: string;
   children: React.ReactNode;
   isExpanded: boolean;
   onExpandToggle: () => void;
@@ -28,9 +28,9 @@ const CollapsibleToolPanel: React.FC<CollapsibleToolPanelProps> = ({
         onClick={onExpandToggle}
         aria-expanded={isExpanded}
       >
-        <div className="text-blue-400">{icon}</div>
+        <div className="text-blue-400"><LazyIcon name={icon} className="w-5 h-5" /></div>
         <h4 className="flex-grow font-semibold text-white ml-3">{title}</h4>
-        <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+        <LazyIcon name="ChevronDownIcon" className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isExpanded ? '' : '-rotate-90'}`} />
       </header>
       <div
         className={`transition-all duration-300 ease-in-out grid ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}

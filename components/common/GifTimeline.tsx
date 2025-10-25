@@ -4,8 +4,8 @@
 */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { PlayIcon, PauseIcon } from '../icons';
 import { frameToDataURL } from '../../utils/imageUtils';
+import LazyIcon from '../LazyIcon';
 
 const GifTimeline: React.FC = () => {
     const { gifFrames, currentFrameIndex, setCurrentFrameIndex } = useEditor();
@@ -76,7 +76,7 @@ const GifTimeline: React.FC = () => {
                 className="p-2 rounded-md bg-white/10 hover:bg-white/20 transition-colors"
                 aria-label={isPlaying ? 'Pausar animação' : 'Reproduzir animação'}
             >
-                {isPlaying ? <PauseIcon className="w-6 h-6 text-white" /> : <PlayIcon className="w-6 h-6 text-white" />}
+                {isPlaying ? <LazyIcon name="PauseIcon" className="w-6 h-6 text-white" /> : <LazyIcon name="PlayIcon" className="w-6 h-6 text-white" />}
             </button>
             <div className="text-sm font-mono text-white w-24 text-center border-l border-r border-gray-600 px-2">
                 Frame {currentFrameIndex + 1} / {gifFrames.length}

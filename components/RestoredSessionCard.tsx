@@ -5,10 +5,10 @@
 
 import React from 'react';
 import { useEditor } from '../context/EditorContext';
-import { SparkleIcon } from './icons';
+import LazyIcon from './LazyIcon';
 
 const RestoredSessionCard: React.FC = () => {
-    const { handleTriggerUpload, setIsEditingSessionActive, currentImageUrl } = useEditor();
+    const { handleUploadNew, setIsEditingSessionActive, currentImageUrl } = useEditor();
 
     const handleContinue = () => {
         setIsEditingSessionActive(true);
@@ -16,38 +16,30 @@ const RestoredSessionCard: React.FC = () => {
 
     return (
         <div className="max-w-2xl mx-auto mb-8 animate-zoom-rise">
-            <div
-                className="group relative bg-gray-800/60 border-2 border-blue-500/50 rounded-xl p-6 text-left transition-all duration-300 shadow-lg shadow-blue-500/10"
-            >
-                <div className="flex flex-col sm:flex-row items-center gap-6">
-                    {currentImageUrl && (
-                        <img 
-                            src={currentImageUrl} 
-                            alt="Pré-visualização da sessão restaurada"
-                            className="w-24 h-24 rounded-lg object-cover bg-gray-900 flex-shrink-0"
-                        />
-                    )}
-                    <div className="flex-grow text-center sm:text-left">
-                        <h3 className="font-semibold text-lg text-white flex items-center justify-center sm:justify-start gap-2">
-                            <SparkleIcon className="w-5 h-5 text-blue-400" />
-                            Bem-vindo de volta!
-                        </h3>
-                        <p className="text-sm text-gray-400 mt-1">Sua sessão de edição anterior foi restaurada.</p>
+            <div className="group relative bg-gray-800/60 border-2 border-blue-500/50 rounded-xl p-6 text-center shadow-lg shadow-blue-500/10">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                    <LazyIcon name="SparkleIcon" className="w-6 h-6 text-blue-400" />
+                    <h2 className="text-xl font-bold text-white">Sessão Anterior Encontrada</h2>
+                </div>
+                <p className="text-gray-300 mb-4">Deseja continuar de onde parou?</p>
+                {currentImageUrl && (
+                    <div className="mb-4">
+                        <img src={currentImageUrl} alt="Sessão anterior" className="w-32 h-32 object-contain mx-auto rounded-lg bg-black/20" />
                     </div>
-                     <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0 w-full sm:w-auto">
-                        <button
-                            onClick={handleTriggerUpload}
-                            className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-md transition-colors text-sm"
-                        >
-                            Iniciar Nova
-                        </button>
-                        <button
-                            onClick={handleContinue}
-                            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm"
-                        >
-                            Continuar Editando
-                        </button>
-                    </div>
+                )}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button
+                        onClick={handleUploadNew}
+                        className="w-full sm:w-auto flex-1 bg-gray-700/60 hover:bg-gray-600/80 text-white font-semibold py-3 px-6 rounded-lg transition-all"
+                    >
+                        Iniciar Nova Sessão
+                    </button>
+                    <button
+                        onClick={handleContinue}
+                        className="w-full sm:w-auto flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-all"
+                    >
+                        Continuar Sessão
+                    </button>
                 </div>
             </div>
         </div>

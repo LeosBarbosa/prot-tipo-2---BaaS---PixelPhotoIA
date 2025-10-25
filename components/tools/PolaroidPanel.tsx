@@ -4,10 +4,9 @@
 */
 import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import * as geminiService from '../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { PolaroidIcon, InformationCircleIcon } from '../icons';
+import LazyIcon from '../LazyIcon';
 
 interface Artist {
     id: string;
@@ -33,44 +32,46 @@ const PolaroidPanel: React.FC = () => {
         currentImageUrl,
     } = useEditor();
     
-    const [personImage, setPersonImage] = useState<File | null>(null);
-    const [celebrityImage, setCelebrityImage] = useState<File | null>(null);
+    const [personImage, setPersonImage] = useState<File[]>([]);
+    const [celebrityImage, setCelebrityImage] = useState<File[]>([]);
     const [negativePrompt, setNegativePrompt] = useState('');
 
     useEffect(() => {
-        if (baseImageFile && !personImage) {
-            setPersonImage(baseImageFile);
+        if (baseImageFile && personImage.length === 0) {
+            setPersonImage([baseImageFile]);
         }
     }, [baseImageFile, personImage]);
 
-    const handlePersonFileSelect = (file: File | null) => {
-        setPersonImage(file);
-        if (file) {
-            setInitialImage(file);
+    const handlePersonFileSelect = (files: File[]) => {
+        setPersonImage(files);
+        if (files[0]) {
+            setInitialImage(files[0]);
         }
     };
-
+    
     const handleArtistSelect = async (artist: Artist) => {
         if (isLoading) return;
         try {
             const response = await fetch(artist.imageUrl);
             const blob = await response.blob();
             const file = new File([blob], `${artist.id}.jpg`, { type: blob.type });
-            setCelebrityImage(file);
+            setCelebrityImage([file]);
         } catch (err) {
             setError("Não foi possível carregar a imagem do artista. Por favor, tente novamente ou carregue uma imagem manualmente.");
         }
     };
 
     const handleGenerate = async () => {
-        if (!personImage || !celebrityImage) {
+        const personFile = personImage[0];
+        const celebrityFile = celebrityImage[0];
+        if (!personFile || !celebrityFile) {
             setError("Por favor, carregue a sua foto e a foto do artista.");
             return;
         }
-        handlePolaroid(personImage, celebrityImage, negativePrompt);
+        handlePolaroid(personFile, celebrityFile, negativePrompt);
     };
 
-    const isGenerateButtonDisabled = isLoading || !personImage || !celebrityImage;
+    const isGenerateButtonDisabled = isLoading || personImage.length === 0 || celebrityImage.length === 0;
 
     return (
         <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6">
@@ -81,8 +82,16 @@ const PolaroidPanel: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
-                    <ImageDropzone imageFile={personImage} onFileSelect={handlePersonFileSelect} label="Sua Foto"/>
-                    <ImageDropzone imageFile={celebrityImage} onFileSelect={setCelebrityImage} label="Foto do Artista"/>
+                    <ImageDropzone 
+                        files={personImage}
+                        onFilesChange={handlePersonFileSelect}
+                        label="Sua Foto"
+                    />
+                    <ImageDropzone 
+                        files={celebrityImage}
+                        onFilesChange={setCelebrityImage}
+                        label="Foto do Artista"
+                    />
                 </div>
 
                 <div>
@@ -106,12 +115,12 @@ const PolaroidPanel: React.FC = () => {
                 
                 <div className="mt-auto flex flex-col gap-3">
                     <div className="flex items-start gap-2 p-2 rounded-md bg-yellow-900/20 border border-yellow-700/30 text-yellow-300">
-                        <InformationCircleIcon className="w-5 h-5 mt-0.5 flex-shrink-0"/>
+                        <LazyIcon name="InformationCircleIcon" className="w-5 h-5 mt-0.5 flex-shrink-0"/>
                         <p className="text-xs">O uso de imagens de celebridades pode estar sujeito a direitos de imagem. Esta ferramenta é destinada para uso pessoal e criativo.</p>
                     </div>
 
                     <button onClick={handleGenerate} disabled={isGenerateButtonDisabled} className="w-full bg-gradient-to-br from-stone-600 to-stone-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                        <PolaroidIcon className="w-5 h-5" />
+                        <LazyIcon name="PolaroidIcon" className="w-5 h-5" />
                         Gerar Polaroid
                     </button>
                 </div>

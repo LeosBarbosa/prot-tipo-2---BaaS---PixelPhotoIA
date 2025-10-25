@@ -4,7 +4,7 @@
 */
 
 import React, { useState, useRef, useCallback } from 'react';
-import { CompareArrowsIcon } from './icons';
+import LazyIcon from './LazyIcon';
 
 interface ComparisonSliderProps {
   originalSrc: string;
@@ -108,7 +108,7 @@ const ComparisonSlider: React.FC<ComparisonSliderProps> = ({ originalSrc, modifi
         aria-hidden="true"
       >
         <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white rounded-full p-1.5 shadow-lg border-2 border-gray-800 transition-transform group-hover:scale-110">
-          <CompareArrowsIcon className="w-5 h-5 text-gray-800" />
+          <LazyIcon name="CompareArrowsIcon" className="w-5 h-5 text-gray-800" />
         </div>
       </div>
     </div>

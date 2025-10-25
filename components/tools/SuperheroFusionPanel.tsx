@@ -7,9 +7,10 @@ import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { SuperheroIcon, DownloadIcon, BrushIcon } from '../icons';
 import { dataURLtoFile } from '../../utils/imageUtils';
 import TipBox from '../common/TipBox';
+// FIX: Correct import path for LazyIcon
+import LazyIcon from '../LazyIcon';
 
 interface Hero {
     id: string;
@@ -34,6 +35,7 @@ const SuperheroFusionPanel: React.FC = () => {
         isLoading,
         error,
         setError,
+        // FIX: Property 'handleSuperheroFusion' does not exist on type 'EditorContextType'. This will be added to the context.
         handleSuperheroFusion,
         currentImageUrl,
         setLoadingMessage,
@@ -50,7 +52,8 @@ const SuperheroFusionPanel: React.FC = () => {
         }
     }, [baseImageFile, personImage]);
     
-    const handlePersonFileSelect = (file: File | null) => {
+    const handlePersonFileSelect = (files: File[]) => {
+        const file = files[0] || null;
         setPersonImage(file);
         if (file) {
             setInitialImage(file);
@@ -81,23 +84,6 @@ const SuperheroFusionPanel: React.FC = () => {
         await handleSuperheroFusion(personImage, heroImage);
     };
 
-    const handleDownload = () => {
-        if (!resultImage) return;
-        const link = document.createElement('a');
-        link.href = resultImage;
-        link.download = `superhero-fusion-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const handleUseInEditor = () => {
-        if (!resultImage) return;
-        const file = dataURLtoFile(resultImage, `superhero-fusion-${Date.now()}.png`);
-        setInitialImage(file);
-        setActiveTool('adjust');
-    };
-
     const isGenerateButtonDisabled = isLoading || !personImage || !heroImage;
 
     return (
@@ -109,8 +95,8 @@ const SuperheroFusionPanel: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
-                    <ImageDropzone imageFile={personImage} onFileSelect={handlePersonFileSelect} label="Sua Foto"/>
-                    <ImageDropzone imageFile={heroImage} onFileSelect={setHeroImage} label="Foto do Herói"/>
+                    <ImageDropzone files={personImage ? [personImage] : []} onFilesChange={handlePersonFileSelect} label="Sua Foto"/>
+                    <ImageDropzone files={heroImage ? [heroImage] : []} onFilesChange={(files) => setHeroImage(files[0] || null)} label="Foto do Herói"/>
                 </div>
                 
                 <div>
@@ -137,22 +123,12 @@ const SuperheroFusionPanel: React.FC = () => {
                 </TipBox>
                 
                 <button onClick={handleGenerate} disabled={isGenerateButtonDisabled} className="w-full mt-auto bg-gradient-to-br from-red-600 to-blue-600 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                    <SuperheroIcon className="w-5 h-5" />
+                    <LazyIcon name="SuperheroIcon" className="w-5 h-5" />
                     Gerar Fusão
                 </button>
             </aside>
             <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center p-4">
                 <ResultViewer isLoading={isLoading} error={error} resultImage={resultImage} loadingMessage="Realizando a fusão heroica..."/>
-                 {resultImage && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Baixar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                             <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
             </main>
         </div>
     );

@@ -3,19 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useMemo, useCallback, useEffect } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef } from 'react';
 import { useEditor } from '../context/EditorContext';
-import VirtualizedList from './VirtualizedList';
 import { LayerStateSnapshot, ImageLayer } from '../types';
-
-// Set item height to 80px (h-16 is 4rem/64px, p-2 is 0.5rem/8px top and bottom, so 64+16=80)
-const ITEM_HEIGHT = 80;
-// Add padding to simulate gap between items
-const ITEM_PADDING = 8;
-// Total item height for virtual list calculation
-const TOTAL_ITEM_HEIGHT = ITEM_HEIGHT + ITEM_PADDING;
-// Max height for the virtualized container. Adjust as needed.
-const CONTAINER_HEIGHT = 400; 
 
 const HistoryItem: React.FC<{ snapshot: LayerStateSnapshot; index: number; isCurrent: boolean; onSelect: (index: number) => void; }> = React.memo(({ snapshot, index, isCurrent, onSelect }) => {
     const file = useMemo(() => {
@@ -39,19 +29,17 @@ const HistoryItem: React.FC<{ snapshot: LayerStateSnapshot; index: number; isCur
     return (
         <button
             onClick={() => onSelect(index)}
-            className={`w-full h-full flex items-center gap-3 p-2 rounded-lg transition-colors ${isCurrent ? 'bg-blue-600/30 border border-blue-500/50' : 'hover:bg-white/5'}`}
+            className={`flex-shrink-0 flex flex-col items-center gap-2 w-24 p-2 rounded-lg transition-colors ${isCurrent ? 'bg-blue-600/30' : 'hover:bg-white/5'}`}
             aria-current={isCurrent}
         >
             {thumbnailUrl ? (
-                <img src={thumbnailUrl} alt={`History state ${index}`} className="w-16 h-16 object-contain rounded-md bg-black/20 flex-shrink-0" />
+                <img src={thumbnailUrl} alt={`History state ${index}`} className={`w-20 h-20 object-contain rounded-md bg-black/20 border-2 ${isCurrent ? 'border-blue-500' : 'border-transparent'}`} />
             ) : (
-                <div className="w-16 h-16 rounded-md bg-black/20 flex-shrink-0 flex items-center justify-center text-gray-500 text-xs">No Preview</div>
+                <div className={`w-20 h-20 rounded-md bg-black/20 flex-shrink-0 flex items-center justify-center text-gray-500 text-xs border-2 ${isCurrent ? 'border-blue-500' : 'border-transparent'}`}>No Preview</div>
             )}
-            <div className="text-left">
-                <p className={`font-semibold ${isCurrent ? 'text-white' : 'text-gray-300'}`}>
-                    {index === 0 ? 'Imagem Original' : `Edição ${index}`}
-                </p>
-            </div>
+            <p className={`text-xs font-semibold truncate w-full ${isCurrent ? 'text-white' : 'text-gray-300'}`}>
+                {index === 0 ? 'Original' : `Edição ${index}`}
+            </p>
         </button>
     );
 });
@@ -59,8 +47,17 @@ const HistoryItem: React.FC<{ snapshot: LayerStateSnapshot; index: number; isCur
 
 const HistoryPanel: React.FC = () => {
     const { history, historyIndex, jumpToState } = useEditor();
+    const activeItemRef = useRef<HTMLDivElement>(null);
 
-    // Show a message if there are no edits yet.
+    // Scroll the active item into view when history changes
+    useEffect(() => {
+        activeItemRef.current?.scrollIntoView({
+            behavior: 'smooth',
+            inline: 'center',
+            block: 'nearest'
+        });
+    }, [historyIndex]);
+
     if (history.length <= 1) {
         return (
             <div className="text-center text-gray-400 p-4">
@@ -69,36 +66,23 @@ const HistoryPanel: React.FC = () => {
         );
     }
     
-    // The renderItem function passed to VirtualizedList.
-    // It's wrapped in useCallback for optimization.
-    const renderItem = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
-        // History is displayed in reverse order (most recent at the top)
-        const reversedIndex = history.length - 1 - index;
-        const item = history[reversedIndex];
-        
-        return (
-            <div style={{ ...style, height: `${ITEM_HEIGHT}px`, paddingBottom: `${ITEM_PADDING}px` }} key={reversedIndex}>
-                <HistoryItem
-                    snapshot={item}
-                    index={reversedIndex}
-                    isCurrent={reversedIndex === historyIndex}
-                    onSelect={jumpToState}
-                />
-            </div>
-        );
-    }, [history, historyIndex, jumpToState]);
-
-    const containerHeight = Math.min(CONTAINER_HEIGHT, history.length * TOTAL_ITEM_HEIGHT);
-
-    // The history is displayed in reverse order (most recent at the top)
     return (
-        <div className="w-full p-2" style={{ height: `${containerHeight}px` }}>
-             <VirtualizedList
-                numItems={history.length}
-                itemHeight={TOTAL_ITEM_HEIGHT}
-                renderItem={renderItem}
-                windowHeight={containerHeight}
-            />
+        <div className="p-2">
+            <div className="flex gap-3 overflow-x-auto scrollbar-thin pb-2">
+                {history.map((snapshot, index) => {
+                    const isCurrent = index === historyIndex;
+                    return (
+                        <div ref={isCurrent ? activeItemRef : null} key={index}>
+                            <HistoryItem
+                                snapshot={snapshot}
+                                index={index}
+                                isCurrent={isCurrent}
+                                onSelect={jumpToState}
+                            />
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 };

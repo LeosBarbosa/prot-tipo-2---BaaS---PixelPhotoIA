@@ -107,6 +107,24 @@ body {
   animation: zoom-rise 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
+@keyframes edit-success-flash {
+  0% {
+    filter: brightness(100%);
+    box-shadow: none;
+  }
+  50% {
+    filter: brightness(120%);
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.4); /* blue-500 com transparência */
+  }
+  100% {
+    filter: brightness(100%);
+    box-shadow: none;
+  }
+}
+.animate-edit-success {
+  animation: edit-success-flash 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
 @keyframes fade-in-text {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -264,6 +282,64 @@ body {
 }
 .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background-color: #718096;
+}
+
+/* Custom Slider Styles for better UX */
+input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    background: transparent;
+    cursor: pointer;
+}
+input[type=range]:focus {
+    outline: none; 
+}
+
+/* Webkit (Chrome, Safari) Track */
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    background: #4A5568; /* gray-600 */
+    border-radius: 4px;
+}
+/* Webkit Thumb */
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 18px;
+    width: 18px;
+    border-radius: 50%;
+    background: #E2E8F0; /* gray-200 */
+    margin-top: -5px; /* (thumb height - track height) / 2 */
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+/* Webkit Active Thumb */
+input[type=range]:active::-webkit-slider-thumb {
+    transform: scale(1.25);
+    background: #60A5FA; /* blue-400 */
+}
+
+/* Firefox Track */
+input[type=range]::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    background: #4A5568;
+    border-radius: 4px;
+    border: none;
+}
+/* Firefox Thumb */
+input[type=range]::-moz-range-thumb {
+    height: 18px;
+    width: 18px;
+    border-radius: 50%;
+    background: #E2E8F0;
+    border: none;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+/* Firefox Active Thumb */
+input[type=range]:active::-moz-range-thumb {
+    transform: scale(1.25);
+    background: #60A5FA;
 }
 
 /* Custom Crop Styles */

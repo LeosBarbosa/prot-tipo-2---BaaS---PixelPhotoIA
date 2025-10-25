@@ -6,8 +6,8 @@
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
 import ComparisonSlider from '../ComparisonSlider';
-import { CheckCircleIcon, CloseIcon } from '../icons';
 import Spinner from '../Spinner';
+import LazyIcon from '../LazyIcon';
 
 const StylePreview: React.FC = () => {
     const { 
@@ -57,7 +57,7 @@ const StylePreview: React.FC = () => {
                         disabled={isLoading}
                         className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
-                        <CloseIcon className="w-5 h-5" />
+                        <LazyIcon name="CloseIcon" className="w-5 h-5" />
                         Cancelar
                     </button>
                     <button
@@ -65,7 +65,7 @@ const StylePreview: React.FC = () => {
                         disabled={isLoading}
                         className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
                     >
-                        <CheckCircleIcon className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
+                        <LazyIcon name="CheckCircleIcon" className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
                         {isLoading ? 'Aplicando...' : 'Aplicar Estilo'}
                     </button>
                 </div>

@@ -5,13 +5,14 @@
 
 import React from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { FaceSmileIcon } from '../icons';
+// FIX: Correct import path for LazyIcon
+import LazyIcon from '../LazyIcon';
 
 const FaceRecoveryPanel: React.FC = () => {
     const { isLoading, handleApplyFaceRecovery } = useEditor();
 
     return (
-        <div className="w-full bg-gray-800/50 rounded-lg p-6 flex flex-col items-center gap-6 animate-fade-in backdrop-blur-sm">
+        <div className="w-full bg-gray-800/50 rounded-lg flex flex-col items-center gap-6 animate-fade-in backdrop-blur-sm">
             <div className="text-center">
                 <h3 className="text-xl font-bold text-gray-100">Recuperação de Rosto com IA</h3>
                 <p className="text-sm text-gray-400 mt-1">Restaure detalhes faciais e melhore a qualidade de retratos.</p>
@@ -28,7 +29,7 @@ const FaceRecoveryPanel: React.FC = () => {
                 disabled={isLoading}
                 className="w-full mt-4 bg-gradient-to-br from-pink-600 to-rose-500 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-rose-500/20 hover:shadow-xl hover:shadow-rose-500/40 hover:-translate-y-px active:scale-95 text-base disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-                <FaceSmileIcon className="w-5 h-5" />
+                <LazyIcon name="FaceSmileIcon" className="w-5 h-5" />
                 Aplicar Recuperação de Rosto
             </button>
         </div>

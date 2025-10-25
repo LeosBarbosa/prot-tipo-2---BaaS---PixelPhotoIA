@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { SearchIcon, SparkleIcon } from './icons';
 import { type ToolConfig, type ToolId } from '../types';
+import LazyIcon from './LazyIcon';
 
 interface SearchModuleProps {
   searchTerm: string;
@@ -37,9 +37,9 @@ const SearchModule: React.FC<SearchModuleProps> = ({
       >
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
           {isSearching ? (
-            <SparkleIcon className="w-5 h-5 text-blue-400 animate-pulse" />
+            <LazyIcon name="SparkleIcon" className="w-5 h-5 text-blue-400 animate-pulse" />
           ) : (
-            <SearchIcon className="w-5 h-5 text-gray-400" />
+            <LazyIcon name="SearchIcon" className="w-5 h-5 text-gray-400" />
           )}
         </div>
         <input
@@ -67,7 +67,7 @@ const SearchModule: React.FC<SearchModuleProps> = ({
                   className="w-full flex items-center gap-4 p-3 text-left hover:bg-blue-500/20 transition-colors"
                 >
                   <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
-                    {tool.icon}
+                    <LazyIcon name={tool.icon} className="w-5 h-5 text-gray-300" />
                   </div>
                   <div>
                     <p className="font-semibold text-white">{tool.name}</p>

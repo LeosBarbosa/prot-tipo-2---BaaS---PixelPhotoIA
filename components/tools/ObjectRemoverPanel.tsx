@@ -5,8 +5,8 @@
 
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { EraserIcon, BrushIcon, SparkleIcon } from '../icons';
 import TipBox from '../common/TipBox';
+import LazyIcon from '../LazyIcon';
 
 const ObjectRemoverPanel: React.FC = () => {
     const {
@@ -53,10 +53,10 @@ const ObjectRemoverPanel: React.FC = () => {
             {/* Seletor de Modo */}
             <div className="flex w-full bg-gray-900/50 border border-gray-600 rounded-lg p-1">
                 <button type="button" onClick={() => switchMode('brush')} className={`w-full text-center font-semibold py-2.5 rounded-md transition-all text-sm flex items-center justify-center gap-2 ${selectionMode === 'brush' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700/50'}`}>
-                    <BrushIcon className="w-5 h-5" /> Pincel
+                    <LazyIcon name="BrushIcon" className="w-5 h-5" /> Pincel
                 </button>
                 <button type="button" onClick={() => switchMode('magic')} className={`w-full text-center font-semibold py-2.5 rounded-md transition-all text-sm flex items-center justify-center gap-2 ${selectionMode === 'magic' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700/50'}`}>
-                    <SparkleIcon className="w-5 h-5" /> Mágica
+                    <LazyIcon name="SparkleIcon" className="w-5 h-5" /> Mágica
                 </button>
             </div>
             
@@ -83,7 +83,7 @@ const ObjectRemoverPanel: React.FC = () => {
                             disabled={isLoading}
                         />
                         <button type="button" onClick={() => handleDetectObjects(magicObjectPrompt)} disabled={isLoading} className="bg-gray-800/50 hover:bg-gray-700/50 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
-                            <SparkleIcon className="w-5 h-5" />
+                            <LazyIcon name="SparkleIcon" className="w-5 h-5" />
                             Detetar
                         </button>
                     </div>
@@ -130,7 +130,7 @@ const ObjectRemoverPanel: React.FC = () => {
                     className="w-full bg-gradient-to-br from-red-600 to-orange-500 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:cursor-not-allowed"
                     disabled={isRemoveDisabled}
                 >
-                    <EraserIcon className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
+                    <LazyIcon name="EraserIcon" className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
                     {isLoading ? 'Removendo...' : 'Remover'}
                 </button>
             </div>

@@ -5,14 +5,14 @@
 
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { SunIcon } from '../icons';
 import TipBox from '../common/TipBox';
 import { validatePromptSpecificity } from '../../services/geminiService';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
-import PromptPresetPanel from '../common/PromptPresetPanel';
+import PromptPresetPanel from './common/PromptPresetPanel';
+import LazyIcon from '../LazyIcon';
 
 const lightingPresets = [
-    { name: 'Hora Dourada', prompt: 'luz quente e dourada do final da tarde, com sombras longas e suaves' },
+    { name: 'Hora Dourada', prompt: 'Reacenda a foto com uma luz quente e dourada de pôr do sol vindo da direita, com sombras longas e suaves.' },
     { name: 'Neon Noir', prompt: 'Ilumine a cena com luzes de neon azuis e roxas como se estivesse em uma rua de cyberpunk, com alto contraste e reflexos em superfícies molhadas.' },
     { name: 'Contraluz Dramático', prompt: 'iluminação de contraluz forte (rim light), criando uma silhueta com bordas iluminadas' },
     { name: 'Estúdio Suave', prompt: 'iluminação de estúdio suave e difusa (softbox), minimizando sombras fortes para um retrato limpo.' },
@@ -96,7 +96,7 @@ const RelightPanel: React.FC = () => {
                 disabled={isLoading || !customPrompt.trim()}
                 className="w-full mt-2 bg-gradient-to-br from-yellow-600 to-orange-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed"
             >
-                <SunIcon className="w-5 h-5" />
+                <LazyIcon name="SunIcon" className="w-5 h-5" />
                 Aplicar Iluminação
             </button>
         </div>

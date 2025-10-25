@@ -7,10 +7,10 @@ import { useEditor } from '../../context/EditorContext';
 import { generateLogo, generateLogoVariation } from '../../services/geminiService';
 import { dataURLtoFile, fileToDataURL } from '../../utils/imageUtils';
 import ResultViewer from './common/ResultViewer';
-import { LogoIcon, SparkleIcon, DownloadIcon, BrushIcon } from '../icons';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import Spinner from '../Spinner';
 import ImageDropzone from './common/ImageDropzone';
+import LazyIcon from '../LazyIcon';
 
 const LogoGenPanel: React.FC = () => {
     const { 
@@ -44,7 +44,6 @@ const LogoGenPanel: React.FC = () => {
             return;
         }
         setIsLoading(true);
-        setLoadingMessage("Criando seu logotipo...");
         setError(null);
         setResultImage(null);
         setLogoFile(null);
@@ -55,7 +54,7 @@ const LogoGenPanel: React.FC = () => {
             if (negativePrompt.trim()) {
                 fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
             }
-            const resultDataUrl = await generateLogo(fullPrompt);
+            const resultDataUrl = await generateLogo(fullPrompt, setToast, setLoadingMessage);
             setResultImage(resultDataUrl);
             setLogoFile(dataURLtoFile(resultDataUrl, 'generated-logo.png'));
         } catch (err) {
@@ -66,7 +65,8 @@ const LogoGenPanel: React.FC = () => {
         }
     };
 
-    const handleFileUpload = async (file: File | null) => {
+    const handleFileUpload = async (files: File[]) => {
+        const file = files[0] || null;
         setLogoFile(file);
         setVariations([]);
         setError(null);
@@ -92,9 +92,9 @@ const LogoGenPanel: React.FC = () => {
         setError(null);
         try {
             const variationPromises = [
-                generateLogoVariation(logoFile),
-                generateLogoVariation(logoFile),
-                generateLogoVariation(logoFile),
+                generateLogoVariation(logoFile, setToast),
+                generateLogoVariation(logoFile, setToast),
+                generateLogoVariation(logoFile, setToast),
             ];
             const results = await Promise.all(variationPromises);
             setVariations(results);
@@ -154,7 +154,7 @@ const LogoGenPanel: React.FC = () => {
                         disabled={isLoading || isGeneratingVariations || !prompt.trim()}
                         className="w-full mt-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                        <LogoIcon className="w-5 h-5" />
+                        <LazyIcon name="LogoIcon" className="w-5 h-5" />
                         Gerar
                     </button>
 
@@ -164,8 +164,8 @@ const LogoGenPanel: React.FC = () => {
                     </div>
 
                      <ImageDropzone 
-                        imageFile={logoFile}
-                        onFileSelect={handleFileUpload}
+                        files={logoFile ? [logoFile] : []}
+                        onFilesChange={handleFileUpload}
                         label="Carregar um logotipo"
                     />
                 </div>
@@ -178,7 +178,7 @@ const LogoGenPanel: React.FC = () => {
                             disabled={isLoading || isGeneratingVariations || !resultImage}
                             className="w-full bg-gradient-to-br from-sky-600 to-cyan-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                            <SparkleIcon className="w-5 h-5" />
+                            <LazyIcon name="SparkleIcon" className="w-5 h-5" />
                             Gerar Variações do Logotipo Atual
                         </button>
                     </div>
@@ -195,10 +195,10 @@ const LogoGenPanel: React.FC = () => {
                 {resultImage && !isLoading && !isGeneratingVariations && variations.length === 0 && (
                      <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
                         <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
+                            <LazyIcon name="DownloadIcon" className="w-5 h-5" /> Salvar Imagem
                         </button>
                         <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Usar no Editor
+                            <LazyIcon name="BrushIcon" className="w-5 h-5" /> Usar no Editor
                         </button>
                     </div>
                 )}

@@ -4,29 +4,30 @@
 */
 
 import React from 'react';
-// FIX: import from ../context/EditorContext
 import { useEditor } from '../context/EditorContext';
-import { EyeIcon, SplitScreenIcon, WorkflowIcon } from './icons';
+import LazyIcon from './LazyIcon';
 
 const FooterActions: React.FC = React.memo(() => {
     const {
         currentImageUrl,
         originalImageUrl,
-        resetHistory,
+        jumpToState,
         setIsComparisonModalOpen,
         isInlineComparisonActive,
         setIsInlineComparisonActive,
         toolHistory,
         setIsSaveWorkflowModalOpen,
+        // FIX: Property 'setIsDownloadModalOpen' does not exist on type 'EditorContextType'. This will be added to context.
+        setIsDownloadModalOpen,
     } = useEditor();
     
-    const isCompareDisabled = !originalImageUrl || originalImageUrl === currentImageUrl;
+    const isCompareDisabled = !originalImageUrl || originalImageUrl === currentImageUrl || toolHistory.length === 0;
 
     return (
         <footer className="p-4 border-t border-gray-700/50 bg-gray-900/50 flex flex-col items-center justify-center gap-4 mt-auto flex-shrink-0">
             {/* Controles de Histórico */}
             <div className="flex flex-wrap items-center justify-center gap-2">
-                <button onClick={resetHistory} disabled={isCompareDisabled} className={`text-center bg-transparent border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed`}>Resetar</button>
+                <button onClick={() => jumpToState(0)} disabled={isCompareDisabled} className={`text-center bg-transparent border border-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed`}>Resetar</button>
                 <button 
                     onClick={() => setIsInlineComparisonActive(!isInlineComparisonActive)}
                     disabled={isCompareDisabled}
@@ -35,7 +36,7 @@ const FooterActions: React.FC = React.memo(() => {
                     aria-label="Alternar comparação lado a lado"
                     aria-pressed={isInlineComparisonActive}
                 >
-                    <SplitScreenIcon className="w-5 h-5" />
+                    <LazyIcon name="SplitScreenIcon" className="w-5 h-5" />
                 </button>
                  <button 
                     onClick={() => setIsSaveWorkflowModalOpen(true)}
@@ -44,9 +45,18 @@ const FooterActions: React.FC = React.memo(() => {
                     title="Salvar como Fluxo de Trabalho"
                     aria-label="Salvar como Fluxo de Trabalho"
                 >
-                    <WorkflowIcon className="w-5 h-5" />
+                    <LazyIcon name="WorkflowIcon" className="w-5 h-5" />
                 </button>
             </div>
+
+             {/* Ação de Exportar */}
+            <button
+                onClick={() => setIsDownloadModalOpen(true)}
+                className="w-full max-w-xs text-center font-semibold py-3 rounded-lg transition-all text-sm flex items-center justify-center gap-2 bg-green-600/20 border border-green-500/50 text-green-300 hover:bg-green-600/40"
+            >
+                <LazyIcon name="DownloadIcon" className="w-5 h-5" />
+                Exportar Imagem
+            </button>
             
             {/* Ação de Comparação */}
             <button
@@ -54,7 +64,7 @@ const FooterActions: React.FC = React.memo(() => {
                 disabled={isCompareDisabled}
                 className="w-full max-w-xs text-center font-semibold py-3 rounded-lg transition-all text-sm flex items-center justify-center gap-2 bg-blue-600/20 border border-blue-500/50 text-blue-300 hover:bg-blue-600/40 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                <EyeIcon className="w-5 h-5" />
+                <LazyIcon name="EyeIcon" className="w-5 h-5" />
                 Comparar Original
             </button>
         </footer>

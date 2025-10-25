@@ -4,25 +4,27 @@
 */
 import React from 'react';
 import { useEditor } from '../context/EditorContext';
-import { WorkflowIcon, SparkleIcon, FaceSmileIcon, PaletteIcon } from './icons';
 import { type Workflow, type WorkflowIconType } from '../types';
+import LazyIcon from './LazyIcon';
 
-const iconMap: Record<WorkflowIconType, React.ReactNode> = {
-    product: <SparkleIcon className="w-8 h-8 text-yellow-400" />,
-    restore: <FaceSmileIcon className="w-8 h-8 text-pink-400" />,
-    creative: <PaletteIcon className="w-8 h-8 text-amber-400" />,
-    custom: <WorkflowIcon className="w-8 h-8 text-blue-400" />,
+const iconMap: Record<WorkflowIconType, { name: string, className: string }> = {
+    product: { name: 'SparkleIcon', className: 'text-yellow-400' },
+    restore: { name: 'FaceSmileIcon', className: 'text-pink-400' },
+    creative: { name: 'PaletteIcon', className: 'text-amber-400' },
+    custom: { name: 'WorkflowIcon', className: 'text-blue-400' },
 };
 
 const WorkflowCard: React.FC<{ workflow: Workflow }> = ({ workflow }) => {
     const { executeWorkflow } = useEditor();
+    const iconInfo = iconMap[workflow.icon];
+
     return (
         <div
             className="group relative bg-gray-800/50 border border-gray-700 rounded-xl p-6 text-left transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-blue-500/10"
         >
             <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center bg-gray-900/50 rounded-lg transition-all duration-300 group-hover:scale-110 group-hover:bg-blue-500/20">
-                    {iconMap[workflow.icon]}
+                    <LazyIcon name={iconInfo.name} className={`w-8 h-8 ${iconInfo.className}`} />
                 </div>
                 <div className="flex-grow">
                     <h3 className="font-semibold text-lg text-white">{workflow.name}</h3>
@@ -50,7 +52,7 @@ const SavedWorkflows: React.FC = () => {
         <div className="mb-12 animate-fade-in">
             <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-white flex items-center justify-center gap-3">
-                    <WorkflowIcon className="w-7 h-7" />
+                    <LazyIcon name="WorkflowIcon" className="w-7 h-7" />
                     Seus Fluxos de Trabalho Rápidos
                 </h2>
                 <p className="text-gray-400 mt-1">Atalhos salvos com base no seu uso.</p>

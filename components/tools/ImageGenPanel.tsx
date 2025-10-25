@@ -4,18 +4,16 @@
 */
 
 import React, { useState, useEffect } from 'react';
-// FIX: import from ../../context/EditorContext
 import { useEditor } from '../../context/EditorContext';
 import { generateImageFromText, validatePromptSpecificity } from '../../services/geminiService';
 import ResultViewer from './common/ResultViewer';
-import { PhotoIcon, AspectRatioSquareIcon, AspectRatioLandscapeIcon, AspectRatioPortraitIcon, DownloadIcon, BrushIcon } from '../icons'; // Adicione ícones
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
-// 1. IMPORTE O NOVO COMPONENTE
-import PromptPresetPanel from '../common/PromptPresetPanel';
-import { dataURLtoFile } from '../../utils/imageUtils'; // Importe a função utilitária
+import PromptPresetPanel from './common/PromptPresetPanel';
+import { dataURLtoFile } from '../../utils/imageUtils';
+import LazyIcon from '../LazyIcon';
 
 const ImageGenPanel: React.FC = () => {
-    const { isLoading, error, setError, setIsLoading, setLoadingMessage, setToast, addPromptToHistory, initialPromptFromMetadata, setInitialImage, setActiveTool } = useEditor();
+    const { isLoading, error, setError, setIsLoading, setLoadingMessage, setToast, addPromptToHistory, initialPromptFromMetadata, setInitialImage, setActiveTool, loadingMessage } = useEditor();
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [prompt, setPrompt] = useState('Uma vasta biblioteca interior com livros que se estendem até um teto abobadado, feixes de luz empoeirados, estilo de fantasia cinematográfica, detalhado.');
     const [negativePrompt, setNegativePrompt] = useState('');
@@ -27,10 +25,10 @@ const ImageGenPanel: React.FC = () => {
         }
     }, [initialPromptFromMetadata]);
 
-    const aspectRatios: { id: string, name: string, icon: React.ReactNode }[] = [
-        { id: '1:1', name: 'Quadrado', icon: <AspectRatioSquareIcon className="w-6 h-6" /> },
-        { id: '16:9', name: 'Paisagem', icon: <AspectRatioLandscapeIcon className="w-6 h-6" /> },
-        { id: '9:16', name: 'Retrato', icon: <AspectRatioPortraitIcon className="w-6 h-6" /> },
+    const aspectRatios: { id: string, name: string, icon: string }[] = [
+        { id: '1:1', name: 'Quadrado', icon: 'AspectRatioSquareIcon' },
+        { id: '16:9', name: 'Paisagem', icon: 'AspectRatioLandscapeIcon' },
+        { id: '9:16', name: 'Retrato', icon: 'AspectRatioPortraitIcon' },
     ];
 
     const handleGenerate = async () => {
@@ -53,12 +51,11 @@ const ImageGenPanel: React.FC = () => {
                 return; // Interrompe a execução
             }
 
-            setLoadingMessage('Gerando sua imagem...');
             let fullPrompt = prompt;
             if (negativePrompt.trim()) {
                 fullPrompt += `. Evite o seguinte: ${negativePrompt}`;
             }
-            const result = await generateImageFromText(fullPrompt, aspectRatio);
+            const result = await generateImageFromText(fullPrompt, aspectRatio, setToast, setLoadingMessage);
             setResultImage(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Ocorreu um erro desconhecido.");
@@ -107,7 +104,6 @@ const ImageGenPanel: React.FC = () => {
                   negativePromptHelperText="Ex: texto, desfocado, baixa qualidade."
                 />
 
-                {/* 2. ADICIONE O COMPONENTE DE PRESETS AQUI */}
                 <PromptPresetPanel 
                     toolId="imageGen"
                     onSelectPreset={(selectedPrompt) => setPrompt(selectedPrompt)}
@@ -126,7 +122,7 @@ const ImageGenPanel: React.FC = () => {
                                 className={`p-3 rounded-lg text-sm font-semibold transition-all flex flex-col items-center justify-center gap-2 aspect-square ${aspectRatio === id ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-800/70 hover:bg-gray-700/70 text-gray-300'}`}
                                 aria-label={name}
                             >
-                                {icon}
+                                <LazyIcon name={icon} className="w-6 h-6" />
                                 <span>{name}</span>
                             </button>
                         ))}
@@ -138,7 +134,7 @@ const ImageGenPanel: React.FC = () => {
                     disabled={isLoading || !prompt.trim()}
                     className="w-full mt-auto bg-gradient-to-br from-purple-600 to-indigo-500 text-white font-bold py-3 px-5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg active:scale-95"
                 >
-                    <PhotoIcon className={`w-6 h-6 ${isLoading ? 'animate-pulse' : ''}`} />
+                    <LazyIcon name="PhotoIcon" className={`w-6 h-6 ${isLoading ? 'animate-pulse' : ''}`} />
                     {isLoading ? 'Gerando...' : 'Gerar Imagem'}
                 </button>
             </aside>
@@ -147,19 +143,8 @@ const ImageGenPanel: React.FC = () => {
                     isLoading={isLoading}
                     error={error}
                     resultImage={resultImage}
-                    loadingMessage="Gerando sua imagem..."
+                    loadingMessage={loadingMessage}
                 />
-                {/* BLOCO DE BOTÕES ADICIONADO */}
-                {resultImage && !isLoading && (
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3 animate-fade-in">
-                        <button onClick={handleDownload} className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-gray-200 font-semibold py-2 px-4 rounded-md transition-colors text-sm">
-                            <DownloadIcon className="w-5 h-5" /> Salvar Imagem
-                        </button>
-                        <button onClick={handleUseInEditor} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                            <BrushIcon className="w-5 h-5" /> Usar no Editor
-                        </button>
-                    </div>
-                )}
             </main>
         </div>
     );

@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
-import { MagicWandIcon } from '../icons';
+import LazyIcon from '../LazyIcon';
 
 const GlobalMagicPrompt: React.FC = () => {
   const { handleMagicPrompt, isLoading } = useEditor();
@@ -29,7 +29,7 @@ const GlobalMagicPrompt: React.FC = () => {
     <div className="p-2">
       <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700/50 flex flex-col gap-3">
         <h3 className="text-md font-semibold text-gray-200 flex items-center justify-center gap-2">
-          <MagicWandIcon className="w-5 h-5 text-purple-400" />
+          <LazyIcon name="MagicWandIcon" className="w-5 h-5 text-purple-400" />
           Prompt Mágico
         </h3>
         <p className="text-xs text-gray-400 text-center -mt-2">
