@@ -255,7 +255,7 @@ export const optimizeImage = (
         };
 
         worker.onerror = (error) => {
-            reject(new Error(\`Erro no Web Worker de otimização: \${error.message}\`));
+            reject(new Error(`Erro no Web Worker de otimização: ${error.message}`));
             worker.terminate();
         };
 
@@ -300,7 +300,7 @@ export const applyBackgroundColor = (dataUrl: string, color: string): Promise<st
 
 export const buildFilterString = (filters: Partial<FilterState>): string => {
     const { brightness = 100, contrast = 100, saturate = 100, grayscale = 0, sepia = 0, hueRotate = 0, invert = 0, blur = 0 } = filters;
-    return \`brightness(\${brightness}%) contrast(\${contrast}%) saturate(\${saturate}%) grayscale(\${grayscale}%) sepia(\${sepia}%) hue-rotate(\${hueRotate}deg) invert(\${invert}%) blur(\${blur}px)\`;
+    return `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) grayscale(${grayscale}%) sepia(${sepia}%) hue-rotate(${hueRotate}deg) invert(${invert}%) blur(${blur}px)`;
 };
 
 export const getCroppedImg = (image: HTMLImageElement, crop: PixelCrop): Promise<string> => {
