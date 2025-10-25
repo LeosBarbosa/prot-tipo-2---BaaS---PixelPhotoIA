@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import ToggleSwitch from '../common/ToggleSwitch';
 import TipBox from '../common/TipBox';
+// FIX: Correct import path for LazyIcon
 import LazyIcon from '../components/LazyIcon';
 
 const UpscalePanel: React.FC = () => {

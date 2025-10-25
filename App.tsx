@@ -4,9 +4,8 @@
 */
 
 import React from 'react';
-// FIX: Correcting import path for context
 import { EditorProvider } from './context/EditorContext';
-import StudioLayout from './components/StudioLayout';
+import StudioLayout from './config/components/StudioLayout';
 
 
 const App: React.FC = () => {

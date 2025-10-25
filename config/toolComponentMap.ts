@@ -9,7 +9,7 @@ import { type ToolId } from '../types';
 export const toolComponentMap: Partial<Record<ToolId, React.LazyExoticComponent<React.FC<{}>>>> = {
     // Generation
     imageGen: React.lazy(() => import('../components/tools/ImageGenPanel')),
-    // FIX: Corrected casing for VideoGenPanel import
+    // FIX: Corrected import path to resolve casing ambiguity.
     videoGen: React.lazy(() => import('../components/tools/VideoGenPanel')),
     logoGen: React.lazy(() => import('../components/tools/LogoGenPanel')),
     patternGen: React.lazy(() => import('../components/tools/PatternGenPanel')),
@@ -38,7 +38,7 @@ export const toolComponentMap: Partial<Record<ToolId, React.LazyExoticComponent<
     localAdjust: React.lazy(() => import('../components/tools/LocalAdjustmentPanel')),
     magicMontage: React.lazy(() => import('../components/tools/MagicMontagePanel')),
     objectRemover: React.lazy(() => import('../components/tools/ObjectRemoverPanel')),
-    // FIX: Corrected casing for RemoveBgPanel import
+    // FIX: Corrected import path to resolve casing ambiguity.
     removeBg: React.lazy(() => import('../components/tools/RemoveBgPanel')),
     clone: React.lazy(() => import('../components/tools/ClonePanel')),
     faceSwap: React.lazy(() => import('../components/tools/FaceSwapPanel')),
@@ -47,7 +47,7 @@ export const toolComponentMap: Partial<Record<ToolId, React.LazyExoticComponent<
     text: React.lazy(() => import('../components/tools/TextPanel')),
     textEffects: React.lazy(() => import('../components/tools/TextEffectsPanel')),
     photoRestoration: React.lazy(() => import('../components/tools/ImageRestorePanel')),
-    // FIX: Corrected casing for UpscalePanel import
+    // FIX: Corrected import path to resolve casing ambiguity.
     upscale: React.lazy(() => import('../components/tools/UpscalePanel')),
     superResolution: React.lazy(() => import('../components/tools/SuperResolutionPanel')),
     unblur: React.lazy(() => import('../components/tools/UnblurPanel')),

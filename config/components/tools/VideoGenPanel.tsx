@@ -2,7 +2,6 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-
 import React, { useState, useEffect } from 'react';
 import { useEditor } from '../../context/EditorContext';
 import { type VideoAspectRatio } from '../../types';
@@ -10,7 +9,6 @@ import PromptEnhancer from './common/PromptEnhancer';
 import Spinner from '../Spinner';
 import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
 import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
-// FIX: Correct import path for LazyIcon
 import LazyIcon from '../LazyIcon';
 
 const VideoGenPanel: React.FC = () => {
@@ -73,7 +71,7 @@ const VideoGenPanel: React.FC = () => {
     };
 
     return (
-        <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6">
+        <div className="p-4 md:p-6 flex flex-col md:flex-row gap-6 h-full">
             <aside className="w-full md:w-96 flex-shrink-0 bg-gray-900/30 rounded-lg p-4 flex flex-col gap-4 border border-gray-700/50">
                 <form onSubmit={handleGenerate} className="w-full flex flex-col gap-4 animate-fade-in flex-grow">
                     <div className="text-center">

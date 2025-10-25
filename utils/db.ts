@@ -37,6 +37,7 @@ interface CacheEntry {
     id: string; 
     blob: Blob; 
     timestamp: number;
+    lastAccessed: number;
 }
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
@@ -136,10 +137,12 @@ export const saveImageToCache = async (key: string, data: Blob | File): Promise<
   try {
       if (!data) return;
       const db = await initDB();
+      const now = Date.now();
       const entry: CacheEntry = {
           id: key,
           blob: data,
-          timestamp: Date.now(),
+          timestamp: now,
+          lastAccessed: now,
       };
       await db.put(IMAGE_CACHE_STORE, entry);
       cleanImageCache(); 
@@ -151,15 +154,27 @@ export const saveImageToCache = async (key: string, data: Blob | File): Promise<
 export const loadImageFromCache = async (key: string): Promise<Blob | undefined> => {
   try {
       const db = await initDB();
-      const entry: CacheEntry | undefined = await db.get(IMAGE_CACHE_STORE, key);
-      return entry?.blob;
+      const tx = db.transaction(IMAGE_CACHE_STORE, 'readwrite');
+      const store = tx.objectStore(IMAGE_CACHE_STORE);
+      const entry: CacheEntry | undefined = await store.get(key);
+      
+      if (entry) {
+          // Atualiza o timestamp de último acesso
+          entry.lastAccessed = Date.now();
+          await store.put(entry);
+          await tx.done;
+          return entry.blob;
+      }
+      
+      await tx.done;
+      return undefined;
   } catch (e) {
       console.error("Falha ao carregar imagem do cache:", e);
       return undefined;
   }
 };
 
-export const cleanImageCache = async (maxAgeMs: number = 7 * 24 * 60 * 60 * 1000): Promise<void> => {
+export const cleanImageCache = async (maxAgeMs: number = 14 * 24 * 60 * 60 * 1000): Promise<void> => {
   try {
       const db = await initDB();
       const tx = db.transaction(IMAGE_CACHE_STORE, 'readwrite');
@@ -169,7 +184,10 @@ export const cleanImageCache = async (maxAgeMs: number = 7 * 24 * 60 * 60 * 1000
       
       let cursor = await store.openCursor();
       while (cursor) {
-          if (cursor.value.timestamp < cutoff) {
+          const value = cursor.value;
+          // Usa lastAccessed se disponível, senão usa o timestamp de criação como fallback
+          const timestampToCheck = value.lastAccessed || value.timestamp;
+          if (timestampToCheck < cutoff) {
               cursor.delete();
           }
           cursor = await cursor.continue();

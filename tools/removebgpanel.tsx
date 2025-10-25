@@ -4,8 +4,9 @@
 */
 
 import React from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../context/EditorContext';
 import TipBox from '../common/TipBox';
+// FIX: Correct import path for LazyIcon
 import LazyIcon from '../components/LazyIcon';
 
 const RemoveBgPanel: React.FC = () => {

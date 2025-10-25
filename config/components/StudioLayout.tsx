@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { Suspense, useMemo } from 'react';
-import { useEditor } from '../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import HomePage from './HomePage';
-// FIX: Correct import path for EditorLayout
 import EditorLayout from './EditorLayout';
-import { type ToolId } from '../types';
-import { tools } from '../config/tools';
-import { toolComponentMap } from '../config/toolComponentMap';
+import { type ToolId } from '../../types';
+import { tools } from '../tools';
+import { toolComponentMap } from '../toolComponentMap';
 import ToolModal from './ToolModal';
 import Spinner from './Spinner';
 import ComparisonModal from './ComparisonModal';
@@ -19,7 +18,6 @@ import SaveWorkflowModal from './SaveWorkflowModal';
 import DownloadModal from './DownloadModal';
 import LoadingOverlay from './LoadingOverlay';
 import OnboardingTour from './OnboardingTour';
-// FIX: Import PreviewScreen to show after file upload.
 import PreviewScreen from './PreviewScreen';
 
 const StudioLayout: React.FC = () => {
