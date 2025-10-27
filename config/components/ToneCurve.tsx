@@ -4,7 +4,7 @@
 */
 
 import React, { useRef, useEffect, useState } from 'react';
-import { createCurveLUT } from '../utils/imageProcessing';
+import { createCurveLUT } from '../../utils/imageProcessing';
 
 interface ToneCurveProps {
   histogram: { r: number[], g: number[], b: number[] } | null;
@@ -18,7 +18,8 @@ const PADDING = 10;
 const GRAPH_SIZE = CANVAS_SIZE - PADDING * 2;
 const POINT_RADIUS = 6;
 
-const ToneCurve: React.FC<ToneCurveProps> = ({ histogram, onCurveChange, onReset, disabled }) => {
+// FIX: Changed to a named export to resolve module loading issues.
+export const ToneCurve: React.FC<ToneCurveProps> = ({ histogram, onCurveChange, onReset, disabled }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [controlPoints, setControlPoints] = useState([{ x: 0.25, y: 0.75 }, { x: 0.75, y: 0.25 }]);
   const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
@@ -129,31 +130,36 @@ const ToneCurve: React.FC<ToneCurveProps> = ({ histogram, onCurveChange, onReset
         const x = PADDING + p.x * GRAPH_SIZE;
         const y = PADDING + p.y * GRAPH_SIZE;
         ctx.beginPath();
+        ctx.arc(x, y, POINT_RADIUS, 0, Math.PI * 2);
         ctx.fillStyle = draggingPointIndex === i ? '#3B82F6' : '#FFFFFF';
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.arc(x, y, POINT_RADIUS, 0, 2 * Math.PI);
         ctx.fill();
+        ctx.strokeStyle = '#1F2937'; // gray-800 for a border
+        ctx.lineWidth = 2;
         ctx.stroke();
     });
+    
+  }, [controlPoints, histogram, draggingPointIndex]);
 
-  }, [histogram, controlPoints, draggingPointIndex]);
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_SIZE}
-        height={CANVAS_SIZE}
-        className={`bg-gray-900/50 rounded-md border border-gray-700 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-      />
-      <button onClick={handleReset} disabled={disabled} className="text-xs text-gray-400 hover:text-white disabled:opacity-50">Redefinir Curva</button>
-    </div>
+      <div className="relative" style={{ width: CANVAS_SIZE, height: CANVAS_SIZE }}>
+        <canvas
+            ref={canvasRef}
+            width={CANVAS_SIZE}
+            height={CANVAS_SIZE}
+            className={`bg-gray-900 rounded-lg border border-gray-700 ${disabled ? 'opacity-50' : 'cursor-pointer'}`}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+        />
+        <button 
+            onClick={handleReset} 
+            disabled={disabled}
+            className="absolute top-2 right-2 text-xs bg-gray-700/50 hover:bg-gray-600/50 text-white font-semibold py-1 px-2 rounded-md transition-colors disabled:opacity-50"
+        >
+            Reset
+        </button>
+      </div>
   );
 };
-
-export default ToneCurve;

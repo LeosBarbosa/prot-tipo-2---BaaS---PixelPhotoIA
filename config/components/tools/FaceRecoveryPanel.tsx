@@ -4,7 +4,7 @@
 */
 
 import React from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../../../context/EditorContext';
 // FIX: Correct import path for LazyIcon
 import LazyIcon from '../LazyIcon';
 

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
+import React, { useState, useEffect } from 'react';
+import { useEditor } from '../../../context/EditorContext';
 import TipBox from '../common/TipBox';
 import LazyIcon from '../LazyIcon';
 
@@ -13,7 +13,7 @@ const ObjectRemoverPanel: React.FC = () => {
         isLoading,
         maskDataUrl,
         clearMask,
-        handleObjectRemove,
+        handleGenerativeEdit, // Corrected function call
         brushSize,
         setBrushSize,
         detectedObjects,
@@ -23,11 +23,16 @@ const ObjectRemoverPanel: React.FC = () => {
         handleSelectObject,
         layers,
         activeLayerId,
+        setIsBrushActive,
     } = useEditor();
     
     type SelectionMode = 'brush' | 'magic';
     const [selectionMode, setSelectionMode] = useState<SelectionMode>('brush');
     const [magicObjectPrompt, setMagicObjectPrompt] = useState('');
+
+    useEffect(() => {
+        setIsBrushActive(selectionMode === 'brush');
+    }, [selectionMode, setIsBrushActive]);
 
     const activeLayer = layers.find(l => l.id === activeLayerId);
     const isImageLayerActive = activeLayer?.type === 'image';
@@ -40,6 +45,11 @@ const ObjectRemoverPanel: React.FC = () => {
         if (detectedObjects) {
             setHighlightedObject(null);
         }
+    };
+
+    const handleRemoveClick = () => {
+        // We call handleGenerativeEdit with an empty prompt to signify removal
+        handleGenerativeEdit();
     };
 
     return (
@@ -82,7 +92,7 @@ const ObjectRemoverPanel: React.FC = () => {
                             className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-base"
                             disabled={isLoading}
                         />
-                        <button type="button" onClick={() => handleDetectObjects(magicObjectPrompt)} disabled={isLoading} className="bg-gray-800/50 hover:bg-gray-700/50 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <button type="button" onClick={() => handleDetectObjects(magicObjectPrompt)} disabled={isLoading || !magicObjectPrompt.trim()} className="bg-gray-800/50 hover:bg-gray-700/50 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
                             <LazyIcon name="SparkleIcon" className="w-5 h-5" />
                             Detetar
                         </button>
@@ -126,7 +136,7 @@ const ObjectRemoverPanel: React.FC = () => {
                 </button>
                 <button
                     type="button"
-                    onClick={handleObjectRemove}
+                    onClick={handleRemoveClick}
                     className="w-full bg-gradient-to-br from-red-600 to-orange-500 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:from-gray-600 disabled:cursor-not-allowed"
                     disabled={isRemoveDisabled}
                 >

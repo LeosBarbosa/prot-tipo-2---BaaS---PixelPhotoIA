@@ -4,12 +4,13 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor, DEFAULT_LOCAL_FILTERS } from '../../context/EditorContext';
-import ToneCurve from '../ToneCurve';
+import { useEditor, DEFAULT_LOCAL_FILTERS } from '../../../context/EditorContext';
+// FIX: Changed to a named import for ToneCurve to resolve module loading error.
+import { ToneCurve } from '../ToneCurve';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
 import TipBox from '../common/TipBox';
 // FIX: Correct import to use AdjustmentLayer
-import { type AdjustmentLayer, type FilterState } from '../../types';
+import { type AdjustmentLayer, type FilterState } from '../../../types';
 import LazyIcon from '../LazyIcon';
 import Slider from '../common/Slider';
 
@@ -27,6 +28,7 @@ const AdjustmentPanel: React.FC = () => {
         layers,
         activeLayerId,
         handleApplyAIAdjustment,
+        handleApplySepiaFilter,
     } = useEditor();
     
     const [aiPrompt, setAiPrompt] = useState('');
@@ -102,6 +104,23 @@ const AdjustmentPanel: React.FC = () => {
                     </button>
                 </div>
             </div>
+
+            <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50">
+                <h4 className="font-bold text-white text-md mb-3 flex items-center gap-2">
+                    <LazyIcon name="SparkleIcon" className="w-5 h-5 text-yellow-400"/>
+                    Filtros Rápidos
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                        onClick={() => handleApplySepiaFilter()}
+                        disabled={isLoading}
+                        className="w-full bg-amber-800/50 hover:bg-amber-700/50 text-amber-200 font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        <LazyIcon name="CameraIcon" className="w-5 h-5" />
+                        Sépia Vintage
+                    </button>
+                </div>
+            </div>
             
             <div className="text-center p-3 rounded-lg bg-blue-900/40 border border-blue-700/60">
                 <h4 className="font-bold text-sm text-blue-300 flex items-center justify-center gap-2">
@@ -151,47 +170,46 @@ const AdjustmentPanel: React.FC = () => {
             </div>
             
             <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50">
-                <h4 className="text-md font-semibold text-gray-300 text-center mb-3 flex items-center justify-center gap-2">
-                    <LazyIcon name="ToneCurveIcon" className="w-5 h-5"/>
+                <h4 className="font-bold text-white text-md mb-3 flex items-center gap-2">
+                    <LazyIcon name="ToneCurveIcon" className="w-5 h-5 text-rose-400"/> 
                     Curva de Tons
-                    <span className="ml-2 text-xs font-bold text-blue-400 bg-blue-900/50 px-2 py-0.5 rounded-full border border-blue-800">LIVE</span>
+                    <span className="ml-auto text-xs font-bold text-blue-400 bg-blue-900/50 px-2 py-0.5 rounded-full border border-blue-800">LIVE</span>
                 </h4>
-                <ToneCurve 
-                    histogram={histogram} 
-                    onCurveChange={handleApplyCurve}
-                    onReset={() => setLocalFilters(prev => ({...prev, curve: undefined}))}
-                    disabled={isLoading || isEditingAdjustmentLayer}
-                />
+                 <div className="flex justify-center">
+                    <ToneCurve 
+                        histogram={histogram}
+                        onCurveChange={handleApplyCurve}
+                        onReset={handleReset}
+                        disabled={isLoading || isEditingAdjustmentLayer}
+                    />
+                 </div>
             </div>
+            
+            <TipBox>
+                Para edições permanentes, aplique os ajustes. Os ajustes 'Live' são apenas pré-visualizações.
+            </TipBox>
 
             {isGif && <ApplyToAllToggle checked={applyToAll} onChange={setApplyToAll} />}
-            
-            {isEditingAdjustmentLayer && (
-                <TipBox>Ajustes não-destrutivos não são suportados para GIFs. Por favor, selecione uma camada de imagem para fazer edições destrutivas.</TipBox>
-            )}
 
-            <div className="flex gap-2 mt-2">
+             <div className="flex gap-2 mt-2">
                 <button
                     onClick={handleReset}
                     disabled={isLoading || !hasAdjustments || isEditingAdjustmentLayer}
-                    className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-4 rounded-lg transition-transform disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                    className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50"
                 >
                     Resetar
                 </button>
                 <button
                     onClick={handleApplyClick}
                     disabled={isLoading || !hasAdjustments || isEditingAdjustmentLayer}
-                    className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg shadow-green-500/20 hover:shadow-xl disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed active:scale-95 flex items-center justify-center gap-2"
+                    className="w-full bg-gradient-to-br from-green-600 to-green-500 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                    {isLoading ? (
-                        <span className="animate-pulse">Aplicando...</span>
-                    ) : isApplied ? (
+                    {isApplied ? (
                         <>
-                            <LazyIcon name="CheckCircleIcon" className="w-5 h-5" />
-                            <span>Aplicado!</span>
+                          <LazyIcon name="CheckCircleIcon" className="w-5 h-5"/> Aplicado!
                         </>
                     ) : (
-                        'Aplicar Ajustes Manuais'
+                        'Aplicar Ajustes'
                     )}
                 </button>
             </div>

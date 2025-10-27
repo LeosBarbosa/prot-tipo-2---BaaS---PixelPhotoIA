@@ -3,10 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React from 'react';
-import { useEditor } from '../../context/EditorContext';
+import React, { useMemo } from 'react';
+import { useEditor } from '../../../context/EditorContext';
 import TipBox from '../common/TipBox';
 import LazyIcon from '../LazyIcon';
+
+// Função auxiliar para encontrar o maior divisor comum
+const gcd = (a: number, b: number): number => {
+    return b === 0 ? a : gcd(b, a % b);
+};
 
 const CropPanel: React.FC = () => {
     const {
@@ -33,6 +38,22 @@ const CropPanel: React.FC = () => {
         { name: 'Inverter V.', type: 'flip-v' as const, icon: 'FlipVerticalIcon' },
     ];
 
+    const { width, height, ratio } = useMemo(() => {
+        if (!completedCrop?.width || !completedCrop?.height) {
+            return { width: '---', height: '---', ratio: '---' };
+        }
+        const w = Math.round(completedCrop.width);
+        const h = Math.round(completedCrop.height);
+        
+        if (w === 0 || h === 0) {
+            return { width: '0', height: '0', ratio: '---' };
+        }
+
+        const commonDivisor = gcd(w, h);
+        const ratioStr = `${w / commonDivisor}:${h / commonDivisor}`;
+        return { width: w.toString(), height: h.toString(), ratio: ratioStr };
+    }, [completedCrop]);
+
     return (
         <div className="w-full flex flex-col gap-6 animate-fade-in">
             <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50">
@@ -50,6 +71,24 @@ const CropPanel: React.FC = () => {
                             <span className="text-xs">{name}</span>
                         </button>
                     ))}
+                </div>
+            </div>
+
+            <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-700/50">
+                <h3 className="font-bold text-white text-md mb-3 text-center">Dimensões da Seleção</h3>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                        <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Largura</p>
+                        <p className="text-lg font-mono text-white mt-1">{width} px</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Altura</p>
+                        <p className="text-lg font-mono text-white mt-1">{height} px</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Proporção</p>
+                        <p className="text-lg font-mono text-white mt-1">{ratio}</p>
+                    </div>
                 </div>
             </div>
 

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import { type Workflow } from '../../types';
+import { useEditor } from '../../../context/EditorContext';
+import { type Workflow } from '../../../types';
 import ImageDropzone from './common/ImageDropzone';
 import LazyIcon from '../LazyIcon';
 import Spinner from '../Spinner';

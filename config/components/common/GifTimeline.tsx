@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import { frameToDataURL } from '../../utils/imageUtils';
+import { useEditor } from '../../../context/EditorContext';
+import { frameToDataURL } from '../../../utils/imageUtils';
 import LazyIcon from '../LazyIcon';
 
 const GifTimeline: React.FC = () => {

@@ -4,15 +4,15 @@
 */
 
 import React, { useMemo, useEffect, useRef, lazy, Suspense } from 'react';
-import { useEditor } from '../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import ImageViewer from './ImageViewer';
 import FloatingControls from './FloatingControls';
-import { type TabId, type ToolConfig } from '../types';
+import { type TabId, type ToolConfig } from '../../types';
 import GifTimeline from './common/GifTimeline';
 import RightPanel from './RightPanel';
 import MobileBottomNav from './MobileBottomNav';
-import { toolToTabMap, tools } from '../config/tools';
-import { toolComponentMap as panelComponents } from '../config/toolComponentMap';
+import { toolToTabMap, tools } from '../tools';
+import { toolComponentMap as panelComponents } from '../toolComponentMap';
 import Spinner from './Spinner';
 
 const LeftPanel = lazy(() => import('./LeftPanel'));
@@ -99,7 +99,7 @@ const EditorModalLayout: React.FC = () => {
             )}
 
             {/* Left Panel */}
-            <aside className={`fixed lg:relative z-40 h-screen lg:self-start lg:h-auto w-full max-w-sm lg:w-80 flex-shrink-0 transition-transform duration-300 ease-in-out ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+            <aside className={`fixed lg:relative z-40 h-screen lg:h-auto w-full sm:max-w-sm lg:w-80 flex-shrink-0 transition-transform duration-300 ease-in-out ${isLeftPanelVisible ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
                 <Suspense fallback={<div className="w-full h-full flex items-center justify-center bg-gray-800/80"><Spinner /></div>}>
                     <LeftPanel />
                 </Suspense>
@@ -117,7 +117,7 @@ const EditorModalLayout: React.FC = () => {
             </main>
 
             {/* Right Panel */}
-            <aside className={`fixed lg:relative right-0 z-40 h-screen lg:self-start lg:h-auto w-full max-w-sm lg:w-96 flex-shrink-0 transition-transform duration-300 ease-in-out ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
+            <aside className={`fixed lg:relative right-0 z-40 h-screen lg:h-auto w-full sm:max-w-sm lg:w-96 flex-shrink-0 transition-transform duration-300 ease-in-out ${isRightPanelVisible ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
                 <RightPanel activeToolConfig={activeToolConfig as ToolConfig | undefined} panelComponents={panelComponents} />
             </aside>
 

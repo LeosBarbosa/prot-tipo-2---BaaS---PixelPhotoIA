@@ -4,16 +4,16 @@
 */
 
 import React, { useState, useMemo, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
-import { useEditor } from '../context/EditorContext';
-import { tools, toolToTabMap } from '../config/tools';
-import { type ToolConfig, type ToolCategory, type PredefinedSearch, type ToolId, type TabId } from '../types';
+import { useEditor } from '../../context/EditorContext';
+import { tools, toolToTabMap } from '../tools';
+import { type ToolConfig, type ToolCategory, type PredefinedSearch, type ToolId, type TabId } from '../../types';
 import SearchModule from './SearchModule';
 import SmartSearchResultCard from './SmartSearchResultCard';
 import Spinner from './Spinner';
-import { predefinedSearches } from '../config/predefinedSearches';
+import { predefinedSearches } from '../predefinedSearches';
 import PredefinedSearchCard from './PredefinedSearchCard';
 import StartScreen from './StartScreen';
-import { quickStyles } from '../config/trends';
+import { quickStyles } from '../trends';
 import TrendCard from './TrendCard';
 import RestoredSessionCard from './RestoredSessionCard';
 import LazyIcon from './LazyIcon';
@@ -204,7 +204,7 @@ const HomePage: React.FC = () => {
 
     return (
         <div className="container mx-auto px-4 py-8 sm:py-12 animate-fade-in">
-            <div className="mb-12">
+            <div className="mb-8 md:mb-12">
                  <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-center bg-gradient-to-r from-blue-400 via-purple-500 to-pink-400 text-transparent bg-clip-text animate-text-gradient-pan">
                     Dê Vida às Suas Imagens
                 </h1>
@@ -216,7 +216,7 @@ const HomePage: React.FC = () => {
                 ) : (
                     <>
                         <StartScreen onFileSelect={handleFileSelect} />
-                         <div className="text-center my-12 relative">
+                         <div className="text-center my-8 md:my-12 relative">
                             <hr className="border-t border-gray-700" />
                             <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-4 text-gray-500 font-bold uppercase">OU</span>
                         </div>
@@ -252,7 +252,7 @@ const HomePage: React.FC = () => {
                         <SavedWorkflows />
                     </Suspense>
 
-                    <div className="text-center my-12">
+                    <div className="text-center my-8 md:my-12">
                          <h2 className="text-2xl font-bold text-white flex items-center justify-center gap-3">
                             <LazyIcon name="LayersIcon" className="w-7 h-7" />
                             Explorar Todas as Ferramentas
@@ -295,7 +295,7 @@ const HomePage: React.FC = () => {
                 </div>
             )}
 
-             <div className="text-center my-16">
+             <div className="text-center my-12 md:my-16">
                  <h2 className="text-2xl font-bold text-white mb-6">Estilos Rápidos Populares</h2>
                  <div className="flex justify-center gap-6 overflow-x-auto pb-4 -mx-4 px-4">
                      {quickStyles.map(trend => <TrendCard key={trend.name} trend={trend} />)}

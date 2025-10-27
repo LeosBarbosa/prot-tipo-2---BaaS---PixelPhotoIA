@@ -4,9 +4,9 @@
 */
 
 import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../../../context/EditorContext';
 import TipBox from '../common/TipBox';
-import { validatePromptSpecificity } from '../../services/geminiService';
+import { validatePromptSpecificity } from '../../../services/geminiService';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import PromptPresetPanel from './common/PromptPresetPanel';
 import LazyIcon from '../LazyIcon';

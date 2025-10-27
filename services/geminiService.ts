@@ -280,19 +280,19 @@ export const applyDustAndScratches = async (imageFile: File, setToast: (toast: T
 export const denoiseImage = async (imageFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
     const prompt = 'Remova o ruído e a granulação desta imagem, preservando os detalhes finos e a nitidez.';
     const imagePart = await fileToPart(imageFile);
-    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
 };
 
 export const applyFaceRecovery = async (imageFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
     const prompt = 'Restaure e melhore os detalhes faciais nesta imagem. Aumente a clareza, corrija imperfeições e melhore a qualidade geral do rosto.';
     const imagePart = await fileToPart(imageFile);
-    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
 };
 
 export const generateProfessionalPortrait = async (imageFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {
     const prompt = 'Transforme esta foto em um retrato profissional de negócios. Mantenha o rosto da pessoa, mas gere roupas de negócios, um fundo de escritório desfocado e iluminação de estúdio.';
     const imagePart = await fileToPart(imageFile);
-    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
 };
 
 export const restorePhoto = async (imageFile: File, colorize: boolean, setToast: (toast: Toast | null) => void): Promise<string> => {
@@ -301,19 +301,19 @@ export const restorePhoto = async (imageFile: File, colorize: boolean, setToast:
         prompt += ' Se a foto for em preto e branco, adicione cores realistas.';
     }
     const imagePart = await fileToPart(imageFile);
-    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
 };
 
 export const upscaleImage = async (imageFile: File, factor: number, preserveFace: boolean, setToast: (toast: Toast | null) => void): Promise<string> => {
     const prompt = `Aumente a resolução desta imagem em ${factor}x. Melhore a nitidez e os detalhes. ${preserveFace ? 'Preste atenção especial para preservar e aprimorar os detalhes faciais de forma realista.' : ''}`;
     const imagePart = await fileToPart(imageFile);
-    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
 };
 
 export const unblurImage = async (imageFile: File, sharpenLevel: number, denoiseLevel: number, model: string, setToast: (toast: Toast | null) => void): Promise<string> => {
     const prompt = `Corrija o desfoque nesta imagem usando o modelo '${model}'. Aplique ${sharpenLevel}% de nitidez e ${denoiseLevel}% de redução de ruído.`;
     const imagePart = await fileToPart(imageFile);
-    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
 };
 
 export const applyStyle = async (imageFile: File, stylePrompt: string, setToast: (toast: Toast | null) => void): Promise<string> => {
@@ -330,7 +330,7 @@ export const generativeEdit = async (imageFile: File, prompt: string, mode: 'fil
     const imagePart = await fileToPart(imageFile);
     const maskPart = await fileToPart(options.maskImage);
     const parts = [imagePart, maskPart, { text: fullPrompt }];
-    return generateImageWithGemini('gemini-2.5-pro', { parts }, setToast, { responseModalities: [Modality.IMAGE] });
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts }, setToast, { responseModalities: [Modality.IMAGE] });
 };
 
 export const applyStyleToImage = async (imageFile: File, prompt: string, setToast: (toast: Toast | null) => void): Promise<string> => {
@@ -343,8 +343,28 @@ export const detectObjects = async (imageFile: File, prompt?: string): Promise<D
     const imagePart = await fileToPart(imageFile);
     const textPart = { text: `Detecte os seguintes objetos na imagem: ${prompt || 'todos os objetos principais'}. Para cada objeto, forneça um 'label' (rótulo em português) e uma 'box' (caixa delimitadora com coordenadas normalizadas x_min, y_min, x_max, y_max). Retorne um array de objetos JSON.` };
     const response = await ai.models.generateContent({ model: 'gemini-2.5-pro', contents: { parts: [imagePart, textPart] }, config: { responseMimeType: 'application/json' } });
-    const result = JSON.parse(response.text);
-    return Array.isArray(result) ? result : [];
+    
+    try {
+        const result = JSON.parse(response.text);
+        if (Array.isArray(result)) {
+            // Filter out any objects that don't have a valid 'box' property with all coordinates
+            const validObjects = result.filter(obj => 
+                obj &&
+                typeof obj === 'object' &&
+                obj.box &&
+                typeof obj.box.x_min === 'number' &&
+                typeof obj.box.y_min === 'number' &&
+                typeof obj.box.x_max === 'number' &&
+                typeof obj.box.y_max === 'number'
+            );
+            return validObjects;
+        }
+    } catch (e) {
+        console.error("Failed to parse Gemini response for object detection:", e, "Response text:", response.text);
+        return []; // Return empty array on parsing error
+    }
+    
+    return [];
 };
 
 export const detectFaces = async (imageFile: File): Promise<DetectedObject[]> => {
@@ -355,14 +375,72 @@ export const retouchFace = async (imageFile: File, maskFile: File, setToast: (to
     const prompt = 'Na área indicada pela máscara, retoque a pele do rosto. Suavize imperfeições, uniformize o tom de pele e reduza o brilho, mantendo uma aparência natural e preservando a textura da pele.';
     const imagePart = await fileToPart(imageFile);
     const maskPart = await fileToPart(maskFile);
-    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, maskPart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, maskPart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
 };
 
-export const faceSwap = async (targetImageFile: File, sourceImageFile: File, userPrompt: string, setToast: (toast: Toast | null) => void): Promise<string> => {
-    const prompt = `Troque o rosto da pessoa na primeira imagem (imagem alvo) pelo rosto da pessoa na segunda imagem (imagem fonte). Misture os tons de pele e a iluminação para um resultado realista. ${userPrompt}`;
+export const faceSwap = async (targetImageFile: File, sourceImageFile: File, userPrompt: string, negativePrompt: string, setToast: (toast: Toast | null) => void, maskFile?: File): Promise<string> => {
+    let prompt = `Aja como um especialista em retoque digital de classe mundial, especializado em trocas de rosto hiper-realistas e imperceptíveis para produções cinematográficas de ponta. Sua tarefa é transplantar o rosto da imagem 'fonte' para a cabeça na imagem 'alvo'.
+
+**DIRETIVA PRINCIPAL: REALISMO ABSOLUTO E PRESERVAÇÃO DO CONTEXTO.**
+
+**REGRAS NÃO NEGOCIÁVEIS:**
+1.  **CONTEXTO IDÊNTICO:** Você deve preservar **100%** do contexto da imagem 'alvo'. Isso inclui, mas não se limita a:
+    *   **Fundo e Ambiente:** Intocados.
+    *   **Iluminação:** A mesma direção, cor, temperatura e dureza/suavidade das sombras devem ser perfeitamente replicadas no novo rosto.
+    *   **Cabelo:** O penteado original, a linha do cabelo e quaisquer fios soltos devem permanecer idênticos.
+    *   **Roupas e Corpo:** O corpo, pescoço, roupas e acessórios são invioláveis.
+2.  **TRANSFERÊNCIA DE IDENTIDADE IMPECÁVEL:** A identidade facial (olhos, nariz, boca, queixo, estrutura óssea) da imagem 'fonte' deve ser perfeitamente transferida.
+3.  **MESCLAGEM PERFEITA:** A integração deve ser invisível a olho nu.
+    *   **Tom e Textura da Pele:** Corresponda perfeitamente ao tom, compleição e textura da pele do alvo (poros, linhas finas).
+    *   **Bordas:** A transição na linha da mandíbula, pescoço e cabelo deve ser completamente suave, sem bordas visíveis ou mudanças de cor.
+4.  **FOTORREALISMO É ESSENCIAL:** O resultado final deve ser indistinguível de uma fotografia real e não editada. Evite qualquer efeito de vale da estranheza, distorções, faixas de cor ou outros artefatos digitais.
+`;
+
+    if (maskFile) {
+        prompt += `
+**ÁREA ALVO (MÁSCARA):**
+- Uma terceira imagem, uma máscara preta e branca, é fornecida.
+- Você DEVE realizar a troca de rosto APENAS dentro da área branca desta máscara. A área preta deve permanecer completamente intocada.
+- Esta máscara define precisamente a região do rosto alvo na imagem alvo.
+
+**ORDEM DE ENTRADA:**
+- Imagem 1: Imagem alvo (a cena e o corpo a serem usados).
+- Imagem 2: Imagem fonte (o rosto a ser transplantado).
+- Imagem 3: Imagem da máscara (a área a ser modificada na Imagem 1).
+`;
+    } else {
+        prompt += `
+**ORDEM DE ENTRADA:**
+- Imagem 1: Imagem alvo (a cena e o corpo a serem usados).
+- Imagem 2: Imagem fonte (o rosto a ser transplantado).
+`;
+    }
+
+    prompt += `
+**MODIFICAÇÕES DO USUÁRIO:**
+-   Instruções do usuário: "${userPrompt || 'Nenhuma instrução adicional.'}"
+-   Coisas a evitar: "${negativePrompt || 'Nenhuma instrução negativa.'}"
+
+**SAÍDA:**
+Uma única imagem fotorrealista de alta qualidade com a troca de rosto concluída de acordo com todas as instruções.`;
+
     const targetPart = await fileToPart(targetImageFile);
     const sourcePart = await fileToPart(sourceImageFile);
-    return generateImageWithGemini('gemini-2.5-pro', { parts: [targetPart, sourcePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+    // FIX: Explicitly type `parts` array to allow both image and text parts.
+    const parts: any[] = [targetPart, sourcePart];
+
+    if (maskFile) {
+        const maskPart = await fileToPart(maskFile);
+        parts.push(maskPart);
+    }
+    parts.push({ text: prompt });
+
+    return generateImageWithGemini(
+        'gemini-2.5-flash-image',
+        { parts },
+        setToast,
+        { responseModalities: [Modality.IMAGE] }
+    );
 };
 
 export const generateVideo = async (imageFile: File, prompt: string, aspectRatio: VideoAspectRatio, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void): Promise<string> => {
@@ -417,7 +495,7 @@ export const outpaintImage = async (imageFile: File, prompt: string, aspectRatio
 };
 
 export const generateImageFromParts = async (parts: any[], setToast: (toast: Toast | null) => void): Promise<string> => {
-    return generateImageWithGemini('gemini-2.5-pro', { parts }, setToast, { responseModalities: [Modality.IMAGE] });
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts }, setToast, { responseModalities: [Modality.IMAGE] });
 };
 
 export const generateImageWithDescription = async (imageFile: File, description: string, setToast: (toast: Toast | null) => void): Promise<string> => {
@@ -426,9 +504,11 @@ export const generateImageWithDescription = async (imageFile: File, description:
     return generateImageFromParts([imagePart, textPart], setToast);
 };
 
+// FIX: Awaits file-to-part conversion before calling generateImageFromParts.
 export const generateSuperheroFusion = (person: File, hero: File, setToast: (toast: Toast | null) => void): Promise<string> => {
     const prompt = "Faça a fusão da pessoa na primeira imagem com o super-herói na segunda imagem. Mantenha o rosto da primeira pessoa, mas aplique o traje e o estilo do herói.";
-    return generateImageFromParts([fileToPart(person), fileToPart(hero), { text: prompt }], setToast);
+    const parts = Promise.all([fileToPart(person), fileToPart(hero)]);
+    return parts.then(p => generateImageFromParts([...p, { text: prompt }], setToast));
 };
 
 export const generateCreativeFusion = (compositionFile: File, styleFiles: File[], setToast: (toast: Toast | null) => void): Promise<string> => {
@@ -470,7 +550,7 @@ export const getSceneryDescription = async (sceneryPrompt: string, location: { l
 export const generateProductPhoto = async (objectFile: File, sceneryPrompt: string, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void): Promise<string> => {
     const prompt = `Coloque o objeto da imagem em um novo cenário descrito por: "${sceneryPrompt}". A iluminação no objeto deve corresponder à iluminação do novo cenário. O resultado deve ser fotorrealista.`;
     const imagePart = await fileToPart(objectFile);
-    return generateImageWithGemini('gemini-2.5-pro', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
+    return generateImageWithGemini('gemini-2.5-flash-image', { parts: [imagePart, { text: prompt }] }, setToast, { responseModalities: [Modality.IMAGE] });
 };
 
 export const generateAnimationFromImage = async (imageFile: File, prompt: string, aspectRatio: VideoAspectRatio, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void): Promise<string> => {
@@ -518,13 +598,13 @@ export const generateInteriorDesign = (imageFile: File, maskFile: File, roomType
     const fullPrompt = `Você é um designer de interiores de IA. Na área da imagem indicada pela máscara, redesenhe o espaço. Tipo de ambiente: ${roomType}. Estilo de design: ${roomStyle}. Instruções adicionais: ${prompt}. O resultado deve se misturar perfeitamente com as partes não mascaradas da imagem.`;
     const imagePart = fileToPart(imageFile);
     const maskPart = fileToPart(maskFile);
-    return Promise.all([imagePart, maskPart]).then(([img, mask]) => generateImageWithGemini('gemini-2.5-pro', { parts: [img, mask, { text: fullPrompt }] }, setToast, { responseModalities: [Modality.IMAGE] }));
+    return Promise.all([imagePart, maskPart]).then(([img, mask]) => generateImageWithGemini('gemini-2.5-flash-image', { parts: [img, mask, { text: fullPrompt }] }, setToast, { responseModalities: [Modality.IMAGE] }));
 };
 
 export const renderSketch = (sketchFile: File, prompt: string, setToast: (toast: Toast | null) => void, setLoadingMessage: (message: string | null) => void): Promise<string> => {
     const fullPrompt = `Transforme este esboço em uma imagem final com base na seguinte descrição: ${prompt}.`;
     const imagePart = fileToPart(sketchFile);
-    return imagePart.then(part => generateImageWithGemini('gemini-2.5-pro', { parts: [part, { text: fullPrompt }] }, setToast, { responseModalities: [Modality.IMAGE] }));
+    return imagePart.then(part => generateImageWithGemini('gemini-2.5-flash-image', { parts: [part, { text: fullPrompt }] }, setToast, { responseModalities: [Modality.IMAGE] }));
 };
 
 export const generateLogoVariation = (logoFile: File, setToast: (toast: Toast | null) => void): Promise<string> => {

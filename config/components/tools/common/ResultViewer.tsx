@@ -4,9 +4,8 @@
 */
 import React from 'react';
 import Spinner from '../../Spinner';
-import { useEditor } from '../../../context/EditorContext';
-import { dataURLtoFile } from '../../../utils/imageUtils';
-// FIX: Correct import path for LazyIcon
+import { useEditor } from '../../../../context/EditorContext';
+import { dataURLtoFile } from '../../../../utils/imageUtils';
 import LazyIcon from '../../LazyIcon';
 
 interface ResultViewerProps {

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useEffect } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import * as geminiService from '../../services/geminiService';
+import { useEditor } from '../../../context/EditorContext';
+import * as geminiService from '../../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import TipBox from '../common/TipBox';

@@ -4,8 +4,8 @@
 */
 
 import React, { useMemo, useCallback, useEffect, useRef } from 'react';
-import { useEditor } from '../context/EditorContext';
-import { LayerStateSnapshot, ImageLayer } from '../types';
+import { useEditor } from '../../context/EditorContext';
+import { LayerStateSnapshot, ImageLayer } from '../../types';
 
 const HistoryItem: React.FC<{ snapshot: LayerStateSnapshot; index: number; isCurrent: boolean; onSelect: (index: number) => void; }> = React.memo(({ snapshot, index, isCurrent, onSelect }) => {
     const file = useMemo(() => {

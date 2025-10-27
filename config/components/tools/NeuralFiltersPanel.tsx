@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../../../context/EditorContext';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
 import StylePreview from '../common/StylePreview';
 import TipBox from '../common/TipBox';
 import { SparkleIcon } from '../icons';
-import { Trend } from '../../types';
+import { Trend } from '../../../types';
 
 const filters: Trend[] = [
     { name: 'Sonho', prompt: 'aplique um efeito de sonho suave e etéreo com um brilho suave e cores pastel', bg: 'bg-gradient-to-br from-pink-300 to-purple-400', icon: 'SparkleIcon' },

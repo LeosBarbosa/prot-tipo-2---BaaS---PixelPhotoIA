@@ -4,11 +4,11 @@
 */
 
 import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import { generateProfessionalPortrait } from '../../services/geminiService';
+import { useEditor } from '../../../context/EditorContext';
+import { generateProfessionalPortrait } from '../../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { dataURLtoFile } from '../../utils/imageUtils';
+import { dataURLtoFile } from '../../../utils/imageUtils';
 import LazyIcon from '../LazyIcon';
 
 const AIPortraitPanel: React.FC = () => {

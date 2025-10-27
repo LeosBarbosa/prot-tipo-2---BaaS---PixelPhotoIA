@@ -16,6 +16,7 @@ export const tools: ToolConfig[] = [
   { id: 'magicWorkflow', name: 'Fluxo de Trabalho Mágico', description: "Descreva uma tarefa complexa em linguagem natural (ex: 'remover o fundo e melhorar a resolução') e a IA executará os passos para você.", icon: 'MagicWandIcon', category: 'workflow', isEditingTool: false },
   { id: 'magicScenery', name: 'Cenário Mágico', description: "Coloque um objeto de uma imagem em um novo cenário gerado por IA. Use sua localização para prompts como 'perto de mim'.", icon: 'MapPinIcon', category: 'workflow', isEditingTool: false, tag: 'new' },
   { id: 'voiceAssistant', name: 'Assistente de Voz', description: 'Controle o editor usando comandos de voz. Clique para iniciar uma sessão de edição por voz.', icon: 'MicrophoneIcon', category: 'workflow', isEditingTool: false, tag: 'tip' },
+  { id: 'tryOn', name: 'Provador Virtual', description: 'Vista um modelo com roupas e sapatos em um cenário gerado por IA.', icon: 'ShirtIcon', category: 'workflow', isEditingTool: false, tag: 'new' },
 
 
   // Editing

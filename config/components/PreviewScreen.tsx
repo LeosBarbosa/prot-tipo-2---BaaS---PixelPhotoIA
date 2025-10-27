@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import LazyIcon from './LazyIcon';
-import { useEditor } from '../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 
 const formatBytes = (bytes: number, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
@@ -17,7 +17,6 @@ const formatBytes = (bytes: number, decimals = 2) => {
 };
 
 const PreviewScreen: React.FC = () => {
-    // FIX: Destructure missing properties from context
     const { uploadedFile, confirmAndStartEditing, cancelPreview } = useEditor();
     const [imageDimensions, setImageDimensions] = useState<{ width: number, height: number } | null>(null);
 

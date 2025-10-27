@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useEffect, useState } from 'react';
-import { useEditor } from '../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import LazyIcon from './LazyIcon';
 
 interface ProactiveSuggestionProps {

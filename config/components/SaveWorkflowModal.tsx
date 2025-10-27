@@ -4,8 +4,8 @@
 */
 
 import React, { useState } from 'react';
-import { useEditor } from '../context/EditorContext';
-import { type Workflow, type WorkflowIconType } from '../types';
+import { useEditor } from '../../context/EditorContext';
+import { type Workflow, type WorkflowIconType } from '../../types';
 import LazyIcon from './LazyIcon';
 
 const icons: { id: WorkflowIconType, iconName: string }[] = [

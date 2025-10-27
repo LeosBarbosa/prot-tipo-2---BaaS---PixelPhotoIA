@@ -4,7 +4,7 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../../../context/EditorContext';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import TipBox from '../common/TipBox';

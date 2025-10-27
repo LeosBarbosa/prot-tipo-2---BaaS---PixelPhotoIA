@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import { generateLogo, generateLogoVariation } from '../../services/geminiService';
-import { dataURLtoFile, fileToDataURL } from '../../utils/imageUtils';
+import { useEditor } from '../../../context/EditorContext';
+import { generateLogo, generateLogoVariation } from '../../../services/geminiService';
+import { dataURLtoFile, fileToDataURL } from '../../../utils/imageUtils';
 import ResultViewer from './common/ResultViewer';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import Spinner from '../Spinner';

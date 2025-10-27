@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { type ToolConfig, type ToolId } from '../types';
+import { type ToolConfig, type ToolId } from '../../types';
 import LazyIcon from './LazyIcon';
 
 interface SearchModuleProps {

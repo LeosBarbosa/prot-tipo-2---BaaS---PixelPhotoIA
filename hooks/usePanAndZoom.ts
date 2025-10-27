@@ -151,30 +151,28 @@ export const usePanAndZoom = () => {
   }, []);
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (e.ctrlKey) {
-        e.preventDefault();
-        
-        const zoomDirection = e.deltaY < 0 ? 1 : -1;
-        const zoomStep = 0.2;
-        const currentZoom = zoom;
-        const newZoom = Math.max(1, Math.min(5, currentZoom + zoomDirection * zoomStep));
+    e.preventDefault();
+    
+    const zoomDirection = e.deltaY < 0 ? 1 : -1;
+    const zoomStep = 0.2;
+    const currentZoom = zoom;
+    const newZoom = Math.max(1, Math.min(5, currentZoom + zoomDirection * zoomStep));
 
-        if (newZoom === currentZoom) return;
+    if (newZoom === currentZoom) return;
 
-        const rect = e.currentTarget.getBoundingClientRect();
-        
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
+    const rect = e.currentTarget.getBoundingClientRect();
+    
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-        const imageX = (mouseX - panOffset.x) / currentZoom;
-        const imageY = (mouseY - panOffset.y) / currentZoom;
-        
-        const newPanX = mouseX - imageX * newZoom;
-        const newPanY = mouseY - imageY * newZoom;
+    const imageX = (mouseX - panOffset.x) / currentZoom;
+    const imageY = (mouseY - panOffset.y) / currentZoom;
+    
+    const newPanX = mouseX - imageX * newZoom;
+    const newPanY = mouseY - imageY * newZoom;
 
-        setZoom(newZoom);
-        setPanOffset({ x: newPanX, y: newPanY });
-    }
+    setZoom(newZoom);
+    setPanOffset({ x: newPanX, y: newPanY });
   };
 
   const resetZoomAndPan = useCallback(() => {

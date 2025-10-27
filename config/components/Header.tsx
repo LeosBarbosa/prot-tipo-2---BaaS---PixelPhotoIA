@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { useEditor } from '../context/EditorContext';
+// FIX: Import 'useEditor' from the correct path in 'context/EditorContext'.
+import { useEditor } from '../../context/EditorContext';
 import LazyIcon from './LazyIcon';
 
 const Header: React.FC = () => {
@@ -74,8 +75,8 @@ const Header: React.FC = () => {
         </button>
         {showEditorControls && (
           <>
-            {/* Undo/Redo for Desktop only */}
-            <div className="hidden lg:flex items-center gap-2">
+            {/* Undo/Redo Buttons */}
+            <div className="flex items-center gap-2">
                 <button 
                 onClick={undo}
                 disabled={!canUndo}
@@ -99,7 +100,7 @@ const Header: React.FC = () => {
             {/* Save & New Image */}
             <button 
               onClick={() => handleExplicitSave()}
-              className="flex items-center gap-2 bg-gray-800/50 hover:bg-gray-700/50 text-gray-200 font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out active:scale-95 text-sm"
+              className="flex items-center justify-center gap-2 bg-gray-800/50 hover:bg-gray-700/50 text-gray-200 font-semibold transition-all duration-200 ease-in-out active:scale-95 text-sm w-10 h-10 rounded-full p-0 md:w-auto md:h-auto md:py-2 md:px-4 md:rounded-md"
               title="Salvar Sessão"
               aria-label="Salvar Sessão"
             >
@@ -108,7 +109,7 @@ const Header: React.FC = () => {
             </button>
             <button 
               onClick={handleUploadNew}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 px-4 rounded-md transition-all duration-200 ease-in-out active:scale-95 text-sm"
+              className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-all duration-200 ease-in-out active:scale-95 text-sm w-10 h-10 rounded-full p-0 md:w-auto md:h-auto md:py-2 md:px-4 md:rounded-md"
               title="Carregar nova imagem"
               aria-label="Carregar nova imagem"
             >

@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useMemo, useEffect } from 'react';
-import { type TabId, type ToolCategory, type ToolConfig } from '../types';
-import { useEditor } from '../context/EditorContext';
-import { tools } from '../config/tools';
-import { categoryConfig } from '../config/categoryConfig';
+import { type TabId, type ToolCategory, type ToolConfig } from '../../types';
+import { useEditor } from '../../context/EditorContext';
+import { tools } from '../tools';
+import { categoryConfig } from '../categoryConfig';
 import LazyIcon from './LazyIcon';
 
 const categoryOrder: ToolCategory[] = ['generation', 'workflow', 'editing'];

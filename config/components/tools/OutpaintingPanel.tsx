@@ -4,15 +4,15 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import { outpaintImage } from '../../services/geminiService';
+import { useEditor } from '../../../context/EditorContext';
+import { outpaintImage } from '../../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import TipBox from '../common/TipBox';
-import * as db from '../../utils/db';
-import { dataURLtoFile } from '../../utils/imageUtils';
-import { hashFile, sha256 } from '../../utils/cryptoUtils';
+import * as db from '../../../utils/db';
+import { dataURLtoFile } from '../../../utils/imageUtils';
+import { hashFile, sha256 } from '../../../utils/cryptoUtils';
 import LazyIcon from '../LazyIcon';
 
 const OutpaintingPanel: React.FC = () => {

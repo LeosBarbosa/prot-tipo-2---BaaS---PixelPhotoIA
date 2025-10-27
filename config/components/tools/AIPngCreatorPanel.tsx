@@ -4,14 +4,14 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import * as geminiService from '../../services/geminiService';
+import { useEditor } from '../../../context/EditorContext';
+import * as geminiService from '../../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
 import ToggleSwitch from '../common/ToggleSwitch';
 import TipBox from '../common/TipBox';
-import { dataURLtoFile } from '../../utils/imageUtils';
+import { dataURLtoFile } from '../../../utils/imageUtils';
 import LazyIcon from '../LazyIcon';
 
 const AIPngCreatorPanel: React.FC = () => {

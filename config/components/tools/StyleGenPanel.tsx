@@ -4,7 +4,8 @@
 */
 
 import React from 'react';
-import { useEditor } from '../../context/EditorContext';
+// FIX: Import 'useEditor' from the correct path in 'context/EditorContext'.
+import { useEditor } from '../../../context/EditorContext';
 import TipBox from '../common/TipBox';
 import LazyIcon from '../LazyIcon';
 

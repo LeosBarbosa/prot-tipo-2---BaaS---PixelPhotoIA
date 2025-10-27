@@ -4,7 +4,7 @@
 */
 
 import React, { useState } from 'react';
-import { type ArtStyle, artStyleCategories, artStyleCategoryOrder, categoryLabels, type ArtStyleCategory } from '../../../config/artStyles';
+import { type ArtStyle, artStyleCategories, artStyleCategoryOrder, categoryLabels, type ArtStyleCategory } from '../../../artStyles';
 
 interface ArtStyleSelectorProps {
   selectedStyleId: string | null;

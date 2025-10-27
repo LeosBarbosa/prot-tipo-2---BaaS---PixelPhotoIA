@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../../../context/EditorContext';
 import TipBox from '../common/TipBox';
 import LazyIcon from '../LazyIcon';
 
@@ -54,10 +54,4 @@ const SharpenPanel: React.FC = () => {
                 className="w-full mt-4 bg-gradient-to-br from-cyan-600 to-sky-500 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 ease-in-out shadow-lg shadow-cyan-500/20 hover:shadow-xl hover:shadow-cyan-500/40 hover:-translate-y-px active:scale-95 text-base disabled:from-gray-600 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
                 <LazyIcon name="SharpenIcon" className={`w-5 h-5 ${isLoading ? 'animate-pulse' : ''}`} />
-                {isLoading ? 'Aplicando...' : 'Aplicar Nitidez'}
-            </button>
-        </div>
-    );
-};
-
-export default SharpenPanel;
+                {isLoading ? '

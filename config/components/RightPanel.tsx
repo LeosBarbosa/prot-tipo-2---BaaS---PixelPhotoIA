@@ -7,7 +7,7 @@ import React, { Suspense } from 'react';
 import FooterActions from './FooterActions';
 import LayersPanel from './LayersPanel';
 import Spinner from './Spinner';
-import { type ToolId, type ToolConfig } from '../types';
+import { type ToolId, type ToolConfig } from '../../types';
 import LazyIcon from './LazyIcon';
 
 interface PanelProps {

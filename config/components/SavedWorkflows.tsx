@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { useEditor } from '../context/EditorContext';
-import { type Workflow, type WorkflowIconType } from '../types';
+import { useEditor } from '../../context/EditorContext';
+import { type Workflow, type WorkflowIconType } from '../../types';
 import LazyIcon from './LazyIcon';
 
 const iconMap: Record<WorkflowIconType, { name: string, className: string }> = {

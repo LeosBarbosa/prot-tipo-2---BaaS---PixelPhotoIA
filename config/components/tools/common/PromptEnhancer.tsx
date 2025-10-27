@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
-import { enhancePrompt } from '../../../services/promptEnhancementService';
-import { type ToolId } from '../../../types';
+import { enhancePrompt } from '../../../../services/promptEnhancementService';
+import { type ToolId } from '../../../../types';
 // FIX: Correct import path for LazyIcon
 import LazyIcon from '../../LazyIcon';
 

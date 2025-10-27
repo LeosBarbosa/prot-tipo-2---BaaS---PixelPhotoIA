@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useEffect } from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../../../context/EditorContext';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';

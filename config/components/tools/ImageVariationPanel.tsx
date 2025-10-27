@@ -4,12 +4,12 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import { generateImageVariation } from '../../services/geminiService';
+import { useEditor } from '../../../context/EditorContext';
+import { generateImageVariation } from '../../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import Spinner from '../Spinner';
-import { dataURLtoFile } from '../../utils/imageUtils';
-import { type Layer } from '../../types';
+import { dataURLtoFile } from '../../../utils/imageUtils';
+import { type Layer } from '../../../types';
 import LazyIcon from '../LazyIcon';
 
 

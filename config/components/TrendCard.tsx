@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { useEditor } from '../context/EditorContext';
-import { type Trend } from '../types';
+import { useEditor } from '../../context/EditorContext';
+import { type Trend } from '../../types';
 import LazyIcon from './LazyIcon';
 
 interface TrendCardProps {
@@ -12,7 +12,6 @@ interface TrendCardProps {
 }
 
 const TrendCard: React.FC<TrendCardProps> = ({ trend }) => {
-    // FIX: Property 'setIsEditingSessionActive' does not exist on type 'EditorContextType'. This will be added to the context.
     const { baseImageFile, handleApplyStyle, setToast, setIsEditingSessionActive, setActiveTab } = useEditor();
 
     const handleClick = () => {

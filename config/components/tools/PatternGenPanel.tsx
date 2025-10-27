@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import { generateSeamlessPattern } from '../../services/geminiService';
+import { useEditor } from '../../../context/EditorContext';
+import { generateSeamlessPattern } from '../../../services/geminiService';
 import ResultViewer from './common/ResultViewer';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
-import { dataURLtoFile } from '../../utils/imageUtils';
+import { dataURLtoFile } from '../../../utils/imageUtils';
 import LazyIcon from '../LazyIcon';
 
 const PatternGenPanel: React.FC = () => {

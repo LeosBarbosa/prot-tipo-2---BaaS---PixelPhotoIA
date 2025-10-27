@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useEffect } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import { generateAnimationFromImage } from '../../services/geminiService';
+import { useEditor } from '../../../context/EditorContext';
+import { generateAnimationFromImage } from '../../../services/geminiService';
 import ImageDropzone from './common/ImageDropzone';
 import PromptEnhancer from './common/PromptEnhancer';
 import Spinner from '../Spinner';
 import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
-import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import { usePromptSuggestions } from '../../../hooks/usePromptSuggestions';
 import LazyIcon from '../LazyIcon';
 
 const BananimatePanel: React.FC = () => {

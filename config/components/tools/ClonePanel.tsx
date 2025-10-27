@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React from 'react';
-import { useEditor } from '../../context/EditorContext';
+import React, { useEffect } from 'react';
+import { useEditor } from '../../../context/EditorContext';
 import TipBox from '../common/TipBox';
 import LazyIcon from '../LazyIcon';
 
@@ -17,8 +17,16 @@ const ClonePanel: React.FC = () => {
         brushSize,
         setBrushSize,
         cloneSource,
-        setCloneSource,
+        handleSetCloneSource,
+        setIsBrushActive,
     } = useEditor();
+
+    useEffect(() => {
+        setIsBrushActive(true);
+        return () => {
+            setIsBrushActive(false);
+        };
+    }, [setIsBrushActive]);
     
     const isDisabled = isLoading || !maskDataUrl || !cloneSource;
 
@@ -62,7 +70,7 @@ const ClonePanel: React.FC = () => {
 
             <button
                 type="button"
-                onClick={() => setCloneSource(null)}
+                onClick={() => handleSetCloneSource(null)}
                 disabled={isLoading || !cloneSource}
                 className="w-full bg-gray-800/50 hover:bg-gray-700/50 text-white font-semibold py-2 px-3 rounded-lg transition-colors text-sm disabled:opacity-50"
             >

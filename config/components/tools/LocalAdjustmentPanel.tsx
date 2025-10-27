@@ -4,7 +4,7 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor, DEFAULT_LOCAL_FILTERS } from '../../context/EditorContext';
+import { useEditor, DEFAULT_LOCAL_FILTERS } from '../../../context/EditorContext';
 import TipBox from '../common/TipBox';
 import LazyIcon from '../LazyIcon';
 
@@ -47,12 +47,17 @@ const LocalAdjustmentPanel: React.FC = () => {
         setHighlightedObject,
         handleSelectObject,
         handleApplyLocalAdjustments,
+        setIsBrushActive,
     } = useEditor();
 
     const [localFilters, setLocalFilters] = useState(DEFAULT_LOCAL_FILTERS);
     const [selectionMode, setSelectionMode] = useState<'brush' | 'magic'>('brush');
     const [magicObjectPrompt, setMagicObjectPrompt] = useState('');
     const [isApplied, setIsApplied] = useState(false);
+
+    useEffect(() => {
+        setIsBrushActive(selectionMode === 'brush');
+    }, [selectionMode, setIsBrushActive]);
 
     useEffect(() => {
         // Reset filters when mask is cleared

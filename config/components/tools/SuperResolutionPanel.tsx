@@ -4,7 +4,7 @@
 */
 
 import React from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../../../context/EditorContext';
 import TipBox from '../common/TipBox';
 import ToggleSwitch from '../common/ToggleSwitch';
 import LazyIcon from '../LazyIcon';
@@ -12,6 +12,7 @@ import LazyIcon from '../LazyIcon';
 const SuperResolutionPanel: React.FC = () => {
     const { 
         isLoading, 
+        // FIX: Call the correct upscaling function from the context.
         handleEnhanceResolutionAndSharpness,
         layers, 
         activeLayerId 
@@ -22,7 +23,9 @@ const SuperResolutionPanel: React.FC = () => {
     const isDisabled = isLoading || !activeLayer || activeLayer.type !== 'image';
 
     const handleApply = () => {
-        // Using a fixed factor of 4x and intensity of 75% for a powerful one-click effect
+        // Using a fixed factor of 4x for a powerful one-click effect
+        // FIX: Call the correct upscaling function from the context. Using handleEnhanceResolutionAndSharpness
+        // to include generative sharpness as described in the component. Using a default intensity of 75.
         handleEnhanceResolutionAndSharpness(4, 75, preserveFace);
     };
 

@@ -4,12 +4,12 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import { generateImageFromText, validatePromptSpecificity } from '../../services/geminiService';
+import { useEditor } from '../../../context/EditorContext';
+import { generateImageFromText, validatePromptSpecificity } from '../../../services/geminiService';
 import ResultViewer from './common/ResultViewer';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import PromptPresetPanel from './common/PromptPresetPanel';
-import { dataURLtoFile } from '../../utils/imageUtils';
+import { dataURLtoFile } from '../../../utils/imageUtils';
 import LazyIcon from '../LazyIcon';
 
 const ImageGenPanel: React.FC = () => {

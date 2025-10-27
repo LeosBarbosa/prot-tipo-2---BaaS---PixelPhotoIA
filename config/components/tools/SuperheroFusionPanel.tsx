@@ -4,10 +4,10 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../../../context/EditorContext';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
-import { dataURLtoFile } from '../../utils/imageUtils';
+import { dataURLtoFile } from '../../../utils/imageUtils';
 import TipBox from '../common/TipBox';
 // FIX: Correct import path for LazyIcon
 import LazyIcon from '../LazyIcon';

@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useEffect } from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../../../context/EditorContext';
 import ImageDropzone from './common/ImageDropzone';
 import ResultViewer from './common/ResultViewer';
 import PromptEnhancer from './common/PromptEnhancer';
 import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
-import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import { usePromptSuggestions } from '../../../hooks/usePromptSuggestions';
 import PromptPresetPanel from './common/PromptPresetPanel';
 import LazyIcon from '../LazyIcon';
 

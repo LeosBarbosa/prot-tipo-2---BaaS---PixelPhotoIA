@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { SparkleIcon } from '../icons';
 import { type ToolId } from '../../types';
-import { promptPresets } from '../../config/promptPresets';
+import { promptPresets } from '../../promptPresets';
+import LazyIcon from '../LazyIcon';
 
 interface PromptPresetPanelProps {
   toolId: ToolId;
@@ -17,13 +17,13 @@ const PromptPresetPanel: React.FC<PromptPresetPanelProps> = ({ toolId, onSelectP
   const presets = promptPresets[toolId];
 
   if (!presets || presets.length === 0) {
-    return null; // Não renderiza nada se não houver presets para a ferramenta
+    return null; // Don't render if no presets for this tool
   }
 
   return (
     <div className="mt-4">
       <h4 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
-        <SparkleIcon className="w-5 h-5 text-yellow-400" />
+        <LazyIcon name="SparkleIcon" className="w-5 h-5 text-yellow-400" />
         Predefinições de Prompt
       </h4>
       <div className="flex flex-col gap-2">

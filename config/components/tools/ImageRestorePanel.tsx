@@ -4,7 +4,7 @@
 */
 
 import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../../../context/EditorContext';
 import TipBox from '../common/TipBox';
 import ToggleSwitch from '../common/ToggleSwitch';
 import LazyIcon from '../LazyIcon';

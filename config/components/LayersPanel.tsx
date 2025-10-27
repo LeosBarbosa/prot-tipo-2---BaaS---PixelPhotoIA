@@ -4,8 +4,8 @@
 */
 
 import React, { useState, useEffect } from 'react';
-import { useEditor } from '../context/EditorContext';
-import { type Layer, type BlendMode } from '../types';
+import { useEditor } from '../../context/EditorContext';
+import { type Layer, type BlendMode } from '../../types';
 import LazyIcon from './LazyIcon';
 
 const blendModes: BlendMode[] = [

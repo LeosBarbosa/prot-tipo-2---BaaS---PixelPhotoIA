@@ -10,9 +10,11 @@ interface ComparisonSliderProps {
   originalSrc: string;
   modifiedSrc: string;
   filterStyle?: string;
+  mode?: 'slider' | 'opacity';
+  opacity?: number; // 0-100
 }
 
-const ComparisonSlider: React.FC<ComparisonSliderProps> = ({ originalSrc, modifiedSrc, filterStyle }) => {
+const ComparisonSlider: React.FC<ComparisonSliderProps> = ({ originalSrc, modifiedSrc, filterStyle, mode = 'slider', opacity = 50 }) => {
   const [sliderPosition, setSliderPosition] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -69,6 +71,37 @@ const ComparisonSlider: React.FC<ComparisonSliderProps> = ({ originalSrc, modifi
           handleInteractionEnd();
       }
   }, [handleInteractionEnd]);
+  
+  if (mode === 'opacity') {
+    return (
+      <div
+        ref={containerRef}
+        className="relative w-full max-w-full max-h-full aspect-auto select-none overflow-hidden rounded-lg"
+      >
+        {/* Original Image (Before) - Bottom layer */}
+        <img
+          src={originalSrc}
+          alt="Original"
+          draggable={false}
+          className="block w-full h-auto max-h-full object-contain"
+        />
+        <div className="absolute top-2 left-2 bg-black/50 text-white text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-md pointer-events-none z-10">Antes</div>
+
+        {/* Modified Image (After) - Top layer with opacity */}
+        <img
+          src={modifiedSrc}
+          alt="Modificado"
+          draggable={false}
+          className="absolute top-0 left-0 block w-full h-auto max-h-full object-contain transition-opacity duration-100"
+          style={{ 
+            opacity: opacity / 100,
+            filter: filterStyle, 
+          }}
+        />
+        <div className="absolute top-2 right-2 bg-black/50 text-white text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-md pointer-events-none z-10" style={{ opacity: opacity / 100 }}>Depois</div>
+      </div>
+    );
+  }
 
   return (
     <div

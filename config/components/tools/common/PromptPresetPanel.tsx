@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { type ToolId } from '../../../types';
-import { promptPresets } from '../../../config/promptPresets';
+import { type ToolId } from '../../../../types';
+import { promptPresets } from '../../../promptPresets';
 import LazyIcon from '../../LazyIcon';
 
 interface PromptPresetPanelProps {

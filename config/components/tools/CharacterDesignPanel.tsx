@@ -4,8 +4,8 @@
 */
 
 import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import { generateCharacter } from '../../services/geminiService';
+import { useEditor } from '../../../context/EditorContext';
+import { generateCharacter } from '../../../services/geminiService';
 import ResultViewer from './common/ResultViewer';
 import CollapsibleToolPanel from '../CollapsibleToolPanel';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';

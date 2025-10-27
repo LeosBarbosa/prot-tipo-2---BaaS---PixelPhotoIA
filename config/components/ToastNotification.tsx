@@ -5,7 +5,7 @@
 
 import React, { useEffect } from 'react';
 import LazyIcon from './LazyIcon';
-import { type ToastType } from '../types';
+import { type ToastType } from '../../types';
 
 interface ToastNotificationProps {
   message: string;

@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React, { useState, useEffect } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import { type VideoAspectRatio } from '../../types';
+import { useEditor } from '../../../context/EditorContext';
+import { type VideoAspectRatio } from '../../../types';
 import PromptEnhancer from './common/PromptEnhancer';
 import Spinner from '../Spinner';
 import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
-import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import { usePromptSuggestions } from '../../../hooks/usePromptSuggestions';
 import LazyIcon from '../LazyIcon';
 
 const VideoGenPanel: React.FC = () => {
@@ -17,6 +17,36 @@ const VideoGenPanel: React.FC = () => {
     const [aspectRatio, setAspectRatio] = useState<VideoAspectRatio>('16:9');
     const [showSuggestions, setShowSuggestions] = useState(false);
     const suggestions = usePromptSuggestions(prompt, 'videoGen');
+
+    // FIX: Add state and effects to handle mandatory API key selection for video generation.
+    const [apiKeyReady, setApiKeyReady] = useState(false);
+    const [keyCheckComplete, setKeyCheckComplete] = useState(false);
+
+    useEffect(() => {
+        const checkApiKey = async () => {
+            if (window.aistudio && (typeof window.aistudio.hasSelectedApiKey === 'function')) {
+                const hasKey = await window.aistudio.hasSelectedApiKey();
+                setApiKeyReady(hasKey);
+            }
+            setKeyCheckComplete(true);
+        };
+        checkApiKey();
+    }, []);
+
+    // If an API key error is received from the service layer, reset the key state to prompt the user again.
+    useEffect(() => {
+        if (error?.includes('chave de API pode ser inválida')) {
+            setApiKeyReady(false);
+        }
+    }, [error]);
+
+    const handleSelectKey = async () => {
+        if (window.aistudio && (typeof window.aistudio.openSelectKey === 'function')) {
+            await window.aistudio.openSelectKey();
+            // Assume success to mitigate potential race conditions, as per guidelines.
+            setApiKeyReady(true);
+        }
+    };
 
     useEffect(() => {
         setShowSuggestions(suggestions.length > 0);
@@ -61,6 +91,11 @@ const VideoGenPanel: React.FC = () => {
 
     const handleGenerate = (e: React.FormEvent) => {
         e.preventDefault();
+        // FIX: Check for API key readiness before generating.
+        if (!apiKeyReady) {
+            handleSelectKey();
+            return;
+        }
         if (!prompt.trim()) {
             setError("Por favor, descreva a cena que você quer criar.");
             return;
@@ -118,14 +153,30 @@ const VideoGenPanel: React.FC = () => {
                         </div>
                     </div>
 
-                    <button
-                        type="submit"
-                        className="w-full mt-auto bg-gradient-to-br from-red-600 to-orange-500 text-white font-bold py-3 px-6 rounded-lg transition-all disabled:from-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        disabled={isLoading || !prompt.trim()}
-                    >
-                        <LazyIcon name="SparkleIcon" className="w-5 h-5" />
-                        Gerar Vídeo
-                    </button>
+                    {/* FIX: Conditionally render API key selection button or generate button. */}
+                    {!apiKeyReady && keyCheckComplete ? (
+                        <div className="mt-auto flex flex-col gap-2">
+                            <p className="text-xs text-center text-yellow-300 bg-yellow-900/30 p-2 rounded-md">É necessária uma chave de API para a geração de vídeo.</p>
+                            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="text-xs text-center text-blue-400 hover:underline">Saiba mais sobre faturação.</a>
+                            <button
+                                type="button"
+                                onClick={handleSelectKey}
+                                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2"
+                            >
+                                <LazyIcon name="SparkleIcon" className="w-5 h-5" />
+                                Selecionar Chave de API
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            type="submit"
+                            className="w-full mt-auto bg-gradient-to-br from-red-600 to-orange-500 text-white font-bold py-3 px-6 rounded-lg transition-all disabled:from-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            disabled={isLoading || !prompt.trim()}
+                        >
+                            <LazyIcon name="SparkleIcon" className="w-5 h-5" />
+                            Gerar Vídeo
+                        </button>
+                    )}
                 </form>
             </aside>
              <main className="flex-grow bg-black/20 rounded-lg border border-gray-700/50 flex flex-col items-center justify-center p-4">

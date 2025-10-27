@@ -4,7 +4,7 @@
 */
 
 import React from 'react';
-import { useEditor } from '../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import LazyIcon from './LazyIcon';
 
 const MobileBottomNav: React.FC = () => {
@@ -53,10 +53,10 @@ const MobileBottomNav: React.FC = () => {
             <button
                 onClick={handleViewToggle}
                 className={`flex flex-col items-center justify-center gap-1 py-3 px-2 rounded-lg transition-colors w-24 ${isViewMode ? 'text-blue-400' : 'text-gray-400 hover:text-white'}`}
-                aria-label="Modo de visualização"
+                aria-label="Ver imagem"
                 aria-pressed={isViewMode}
             >
-                <LazyIcon name="EyeIcon" className="w-6 h-6" />
+                <LazyIcon name="PhotoIcon" className="w-6 h-6" />
                 <span className="text-xs font-semibold">Visualizar</span>
             </button>
             <button

@@ -4,14 +4,10 @@
 */
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import ReactCrop, { type Crop } from 'react-image-crop';
-import { useEditor } from '../context/EditorContext';
-import { type DetectedObject } from '../types';
+import { useEditor } from '../../context/EditorContext';
+import { type DetectedObject } from '../../types';
 import ComparisonSlider from './ComparisonSlider';
-
-// Função auxiliar para encontrar o maior divisor comum para calcular a proporção
-const gcd = (a: number, b: number): number => {
-    return b === 0 ? a : gcd(b, a % b);
-};
+import Spinner from './Spinner';
 
 const ImageViewer: React.FC = () => {
     const {
@@ -57,6 +53,7 @@ const ImageViewer: React.FC = () => {
         cloneStrokeStart,
         isEditCompleted,
         setIsEditCompleted,
+        isBrushActive,
     } = useEditor();
 
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -261,7 +258,6 @@ const ImageViewer: React.FC = () => {
 
 
     const isCropping = activeTab === 'crop';
-    const isDrawingOnCanvas = ['generativeEdit', 'objectRemover', 'localAdjust', 'clone'].includes(activeTab) && !detectedObjects;
     const isTextToolActive = activeTab === 'text';
     const showComparisonSlider = isInlineComparisonActive && originalImageUrl && displayedImageUrl && !isCropping;
 
@@ -270,16 +266,14 @@ const ImageViewer: React.FC = () => {
         if (c.width && c.height) {
             const w = Math.round(c.width);
             const h = Math.round(c.height);
-            const commonDivisor = gcd(w, h);
-            const ratioStr = `${w / commonDivisor}:${h / commonDivisor}`;
-            setCropDimensions(`${w} x ${h} (${ratioStr})`);
+            setCropDimensions(`${w} x ${h}`);
         } else {
             setCropDimensions(null);
         }
     };
 
     const handleMouseMoveForBrush = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!isDrawingOnCanvas || isPanModeActive || isCurrentlyPanning) {
+        if (!isBrushActive || isPanModeActive || isCurrentlyPanning) {
             if (brushPreview) setBrushPreview(null);
             if (cloneSourcePreview) setCloneSourcePreview(null);
             return;
@@ -361,9 +355,9 @@ const ImageViewer: React.FC = () => {
     const cursorStyle = useMemo(() => {
         if (isPanModeActive) return isCurrentlyPanning ? 'grabbing' : 'grab';
         if (activeTab === 'clone' && !cloneSource) return 'crosshair';
-        if (isDrawingOnCanvas) return 'none'; // Hide cursor when brush preview is active
+        if (isBrushActive) return 'none'; // Hide cursor when brush preview is active
         return 'default';
-    }, [isPanModeActive, isCurrentlyPanning, isDrawingOnCanvas, activeTab, cloneSource]);
+    }, [isPanModeActive, isCurrentlyPanning, isBrushActive, activeTab, cloneSource]);
 
 
     const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -452,6 +446,11 @@ const ImageViewer: React.FC = () => {
             onMouseMove={handleMouseMoveForBrush}
             onMouseLeave={handleMouseLeaveForBrush}
         >
+            {isLoading && (
+                <div className="absolute inset-0 z-30 flex items-center justify-center bg-gray-900/70 backdrop-blur-sm">
+                    <Spinner />
+                </div>
+            )}
             {generatedVideoUrl && (
                 <div className="w-full h-full flex items-center justify-center z-10">
                     <video src={generatedVideoUrl} controls autoPlay loop className="max-w-full max-h-full rounded-lg" />
@@ -508,9 +507,9 @@ const ImageViewer: React.FC = () => {
                         <div
                             className="absolute bg-black/70 text-white text-xs font-mono py-1 px-2 rounded-md pointer-events-none"
                             style={{
-                                top: (crop.y || 0) + (crop.height || 0) + 10,
-                                left: (crop.x || 0) + (crop.width || 0) / 2,
-                                transform: 'translateX(-50%)',
+                                top: `${crop.y || 0}px`,
+                                left: `${(crop.x || 0) + (crop.width || 0) / 2}px`,
+                                transform: 'translate(-50%, 8px)',
                                 zIndex: 10,
                             }}
                         >
@@ -530,7 +529,7 @@ const ImageViewer: React.FC = () => {
                         />
                     )}
                     
-                     {isDrawingOnCanvas && !showComparisonSlider && (
+                     {isBrushActive && !showComparisonSlider && (
                         <canvas
                             ref={canvasRef}
                             width={imgRef.current?.naturalWidth}
@@ -540,7 +539,7 @@ const ImageViewer: React.FC = () => {
                             onMouseMove={draw}
                             onMouseLeave={stopDrawing}
                             className="absolute top-0 left-0 w-full h-full opacity-50"
-                            style={{ pointerEvents: isLoading ? 'none' : 'auto' }}
+                            style={{ pointerEvents: isLoading ? 'none' : 'auto', cursor: 'none' }}
                         />
                     )}
 

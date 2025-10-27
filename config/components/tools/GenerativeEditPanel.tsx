@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
+import React, { useState, useEffect } from 'react';
+import { useEditor } from '../../../context/EditorContext';
 import TipBox from '../common/TipBox';
-import { validatePromptSpecificity } from '../../services/geminiService';
+import { validatePromptSpecificity } from '../../../services/geminiService';
 import CollapsiblePromptPanel from './common/CollapsiblePromptPanel';
 import LazyIcon from '../LazyIcon';
 
@@ -31,6 +31,7 @@ const GenerativeEditPanel: React.FC = () => {
         setLoadingMessage,
         setIsLoading,
         addPromptToHistory,
+        setIsBrushActive,
     } = useEditor();
 
     type SelectionMode = 'brush' | 'magic';
@@ -38,6 +39,9 @@ const GenerativeEditPanel: React.FC = () => {
     const [magicObjectPrompt, setMagicObjectPrompt] = useState('');
     const [negativePrompt, setNegativePrompt] = useState('');
 
+    useEffect(() => {
+        setIsBrushActive(selectionMode === 'brush');
+    }, [selectionMode, setIsBrushActive]);
 
     const activeLayer = layers.find(l => l.id === activeLayerId);
     const isImageLayerActive = activeLayer?.type === 'image';

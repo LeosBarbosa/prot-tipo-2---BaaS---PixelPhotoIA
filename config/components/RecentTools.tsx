@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { useEditor } from '../context/EditorContext';
-import { tools } from '../config/tools';
+import { useEditor } from '../../context/EditorContext';
+import { tools } from '../tools';
 import LazyIcon from './LazyIcon';
 
 const RecentTools: React.FC = () => {

@@ -4,13 +4,13 @@
 */
 
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { useEditor } from '../../context/EditorContext';
-import { useMaskCanvas } from '../../hooks/useMaskCanvas';
-import { generateInteriorDesign } from '../../services/geminiService';
-import { dataURLtoFile } from '../../utils/imageUtils';
+import { useEditor } from '../../../context/EditorContext';
+import { useMaskCanvas } from '../../../hooks/useMaskCanvas';
+import { generateInteriorDesign } from '../../../services/geminiService';
+import { dataURLtoFile } from '../../../utils/imageUtils';
 import PromptEnhancer from './common/PromptEnhancer';
 import PromptSuggestionsDropdown from '../common/PromptSuggestionsDropdown';
-import { usePromptSuggestions } from '../../hooks/usePromptSuggestions';
+import { usePromptSuggestions } from '../../../hooks/usePromptSuggestions';
 import LazyIcon from '../LazyIcon';
 
 const ArchitecturalVizPanel: React.FC = () => {

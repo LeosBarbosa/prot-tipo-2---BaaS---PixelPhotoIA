@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { useEditor } from '../context/EditorContext';
-import { type PredefinedSearch } from '../types';
+import { useEditor } from '../../context/EditorContext';
+import { type PredefinedSearch } from '../../types';
 import LazyIcon from './LazyIcon';
 
 interface PredefinedSearchCardProps {

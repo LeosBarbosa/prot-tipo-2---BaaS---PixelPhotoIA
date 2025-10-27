@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React from 'react';
-import { useEditor } from '../context/EditorContext';
+import React, { useState, useEffect } from 'react';
+import { useEditor } from '../../context/EditorContext';
 import LazyIcon from './LazyIcon';
 
 const FloatingControls: React.FC = () => {
@@ -14,7 +14,23 @@ const FloatingControls: React.FC = () => {
         isPanModeActive,
         setIsPanModeActive,
         resetZoomAndPan,
+        isLeftPanelVisible,
+        isRightPanelVisible,
     } = useEditor();
+
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    // On mobile, hide controls when a panel is open to avoid clutter
+    if (isMobile && (isLeftPanelVisible || isRightPanelVisible)) {
+        return null;
+    }
 
     const handleZoomIn = () => setZoom(prev => Math.min(5, prev + 0.2));
     const handleZoomOut = () => setZoom(prev => Math.max(1, prev - 0.2));
@@ -26,7 +42,7 @@ const FloatingControls: React.FC = () => {
     const zoomPercentage = Math.round(zoom * 100);
 
     return (
-        <div className="flex-shrink-0 w-full bg-gray-900/70 backdrop-blur-sm border-t border-gray-700/50 p-2 flex items-center justify-center gap-4">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 bg-gray-900/70 backdrop-blur-sm border border-gray-700/50 p-2 flex items-center justify-center gap-4 rounded-lg shadow-lg">
             <button
                 onClick={() => setIsPanModeActive(!isPanModeActive)}
                 disabled={zoom <= 1}

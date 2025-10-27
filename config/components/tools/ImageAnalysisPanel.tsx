@@ -4,7 +4,7 @@
 */
 
 import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../../../context/EditorContext';
 import LazyIcon from '../LazyIcon';
 import Spinner from '../Spinner';
 

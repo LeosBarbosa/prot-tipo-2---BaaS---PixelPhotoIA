@@ -4,11 +4,11 @@
 */
 
 import React, { useState } from 'react';
-import { useEditor } from '../../context/EditorContext';
+import { useEditor } from '../../../context/EditorContext';
 import ApplyToAllToggle from '../common/ApplyToAllToggle';
 import TipBox from '../common/TipBox';
 import StylePreview from '../common/StylePreview';
-import { Trend } from '../../types';
+import { Trend } from '../../../types';
 import LazyIcon from '../LazyIcon';
 
 const styles: Trend[] = [

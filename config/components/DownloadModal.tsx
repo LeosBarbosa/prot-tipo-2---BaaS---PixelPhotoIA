@@ -4,7 +4,7 @@
 */
 
 import React from 'react';
-import { useEditor } from '../context/EditorContext';
+import { useEditor } from '../../context/EditorContext';
 import LazyIcon from './LazyIcon';
 
 const DownloadModal: React.FC = () => {
